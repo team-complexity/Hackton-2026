@@ -2,7 +2,7 @@
 
 - **ID**: `003-infraestructura-demo`
 - **Fecha**: `2026-11-17`
-- **Estado**: `Aprobada`. Hugo la aprobó el 2026-11-17, después de las aclaraciones y de la QA, y pidió la entrevista a continuación; la entrevista (E-1 a E-5) se hizo y se aplicó el mismo día, sin QA nueva. Lo redactó Claude el 2026-11-17 con `/speckit-specify`, a partir de la descripción que Hugo ajustó ese día: alcance Supabase + AWS + CI, imagen del QR guardada (decisión de #94) y tope de gasto con apagado automático. El mismo día se resolvieron 5 aclaraciones con `/speckit-clarify` (sección "Aclaraciones"), incluidas las dos marcas del borrador. La QA del 2026-11-17 (QA-1 a QA-11) está decidida y aplicada el mismo día, con sus 4 erratas. Se entrega en dos cortes (§1.2). Propone el cambio C-6 a la spec 001 y el C-7 a la spec 002 (§8.2). El cambio C-8 a esta spec, aprobado y aplicado el 2026-11-17, permite redactar el plan antes de que se unan los PR #72 y #96.
+- **Estado**: `Aprobada`. Hugo la aprobó el 2026-11-17, después de las aclaraciones y de la QA, y pidió la entrevista a continuación; la entrevista (E-1 a E-5) se hizo y se aplicó el mismo día, sin QA nueva. Lo redactó Claude el 2026-11-17 con `/speckit-specify`, a partir de la descripción que Hugo ajustó ese día: alcance Supabase + AWS + CI, imagen del QR guardada (decisión de #94) y tope de gasto con apagado automático. El mismo día se resolvieron 5 aclaraciones con `/speckit-clarify` (sección "Aclaraciones"), incluidas las dos marcas del borrador. La QA del 2026-11-17 (QA-1 a QA-11) está decidida y aplicada el mismo día, con sus 4 erratas. Se entrega en dos cortes (§1.2). Propone el cambio C-6 a la spec 001 y el C-7 a la spec 002 (§8.2). El cambio C-8 a esta spec, aprobado y aplicado el 2026-11-17, permite redactar el plan antes de que se unan los PR #72 y #96. El cambio C-9 (dominio propio y tramo cifrado hasta el servidor, RF-024, RF-056 y CE-015) salió de la QA del plan (QP-7) y se aplicó el mismo día; la misma QA amplió C-6 y C-7 y corrigió las dependencias de §7 (QP-9).
 - **Rama**: `feature/90-infraestructura-demo` (propuesta; la crea Hugo)
 - **Issues**: #90 (guardar cobros y pagos), #19 (conexión y cambios de estructura con un comando), #34 y #65 (publicar en AWS con HTTPS y el aviso de pey), #35 (CI), #94 (de dónde sale la imagen del QR). Con el pago real de esta spec se cierran #27 y #64; #29 queda abierto hasta el inicio de sesión (#24), porque también pide que un negocio no reciba avisos de otro (QA-6).
 - **Entrada**: "Infraestructura de la demo pública: el backend guarda cobros, pagos y avisos de webhook en Supabase (PostgreSQL) en lugar de en memoria, con el esquema del PR #97, y backend y web se publican en AWS con HTTPS, el webhook de pey dado de alta y CI en cada pull request. Issues: #90, #19, #34 y #65, #35, #94 y el pago real de $0.01 que cierra #27, #29 y #64. Debe cumplir: después de reiniciar el servidor, un cobro pendiente sigue ahí, su pago se avisa y la web puede volver a mostrar su QR; la imagen del QR es la que manda pey y se guarda con el cobro, en una columna nueva de `cobros` que esta spec agrega con una migración sobre el esquema de #97, y si pey no la manda la web sigue mostrando el mensaje de C-3; un pago se registra una sola vez; las pruebas automáticas no usan ni la base de datos real ni pey real; las credenciales solo viven en el backend y en el hosting; el servicio de AWS no corta el canal de 20 minutos y corre un solo proceso; se mide que suene en menos de 2 s con el webhook activo, en Android y en iPhone; tope de gasto de 200 dólares de crédito hasta el 31 de enero de 2027, con correos al 50 %, 80 % y 100 % y por pronóstico, apagado automático al 100 % y presupuesto medido antes del crédito. Fuera de alcance: inicio de sesión (#24), historial (#38), cuenta bancaria por negocio y logs y monitoreo (#45)."
@@ -74,7 +74,7 @@ Mientras no esté el corte 2, Hugo publica a mano desde `main` siguiendo su guí
 
 - P: ¿Cómo evitamos que la base de datos de Supabase se pause antes del 31 de enero? → R: Plan gratuito, y el servidor publicado consulta la base de datos al menos una vez al día para que nunca pase una semana sin uso (RF-039, CE-012).
 - P: Si el presupuesto apaga el servidor al llegar a 200 dólares, ¿quién lo vuelve a encender y con qué criterio? → R: Solo Hugo, después de revisar qué consumió el crédito y corregir la causa (RF-040, RF-041).
-- P: ¿Con qué dirección se publica la demo? → R: La que asigna AWS, con su HTTPS, sin dominio propio (RF-024).
+- P: ¿Con qué dirección se publica la demo? → R: La que asigna AWS, con su HTTPS, sin dominio propio (RF-024). *Sustituida por C-9 (QA del plan, QP-7): dominio propio comprado por Hugo.*
 - P: ¿Cómo se publica una versión nueva del servidor y la web en la demo? → R: Automáticamente cada vez que se une un pull request a `main` (RF-042 a RF-045).
 - P: ¿Se aplican también solos los cambios de estructura de la base de datos al publicar? → R: No. La publicación solo sube código; Hugo aplica las migraciones a mano con el comando, después de revisarlas (RF-046, RF-047).
 
@@ -240,7 +240,8 @@ Mientras no esté el corte 2, Hugo publica a mano desde `main` siguiendo su guí
 
 **Demo pública** (historias 2 y 3)
 
-- **RF-024** (Ubicuo): EL SISTEMA publicará la web y el servidor en la dirección con HTTPS que asigna el hosting, sin dominio propio, y cualquier celular la abrirá sin invitación ni inicio de sesión.
+- **RF-024** (Ubicuo): EL SISTEMA publicará la web y el servidor en un dominio propio del equipo con HTTPS, y cualquier celular la abrirá sin invitación ni inicio de sesión (C-9).
+- **RF-056** (Ubicuo): EL SISTEMA cifrará también el tramo entre el intermediario del hosting y el servidor, porque por ahí pasan los avisos de pey con los datos bancarios de quien paga (C-9).
 - **RF-025** (Ubicuo): EL SISTEMA recibirá los avisos de pey en la dirección pública del servidor, dada de alta en el portal de pey con su secreto.
 - **RF-026** (Estado): MIENTRAS un canal de avisos está dentro de la ventana de escucha de su cobro, EL SISTEMA lo mantendrá abierto, sin cortes de la infraestructura, hasta que el servidor lo cierre (hasta 20 minutos).
 - **RF-027** (Ubicuo): EL SISTEMA aceptará peticiones del navegador solo desde el dominio publicado de la web (aplica RF-035 de la spec 001 con la dirección real).
@@ -309,6 +310,7 @@ Los límites por IP y los canales abiertos **no** se guardan: siguen en la memor
 | El gasto llega al 90 % del presupuesto | El servidor se apaga solo y la demo deja de responder. Como AWS actualiza el gasto hasta tres veces al día (8 a 12 horas entre una y otra), el apagado puede llegar horas después; el 10 % restante es el margen para ese retraso. Solo Hugo lo vuelve a encender, después de revisar qué consumió el crédito y corregir la causa. | RF-034, RF-040, RF-041 |
 | El servidor lleva días apagado por el presupuesto | Nadie hace la consulta diaria (RF-039) y Supabase puede pausar el proyecto. Al volver a encender, Hugo comprueba la salud del servidor y, si hace falta, reactiva el proyecto con su guía. | RF-039, RF-050 |
 | Aviso por pronóstico en las primeras semanas | AWS no calcula el pronóstico hasta tener unas 5 semanas de datos: antes de eso solo llegan los avisos por gasto real. | RF-033 |
+| El dominio propio vence o deja de apuntar a la demo | La demo deja de abrir en su dirección. El dominio se compra por un año, más allá del 31 de enero; su renovación es decisión de Hugo. | RF-024 |
 | **Devolución** | Fuera de alcance, como en la spec 001: pey no ofrece devoluciones por API. | — |
 
 ---
@@ -325,7 +327,6 @@ Los límites por IP y los canales abiertos **no** se guardan: siguen en la memor
 | Guardar los límites por IP y los canales abiertos | No hace falta mientras corra un solo servidor |
 | Varios servidores a la vez, escalado automático o publicar sin dejar de responder | No hace falta para la demo; la spec 001 exige un solo proceso y se acepta el corte de RF-055 (E-4) |
 | Página de "demo en pausa" cuando el servidor está apagado o caído | No se construye: se ve el error del navegador (E-3) |
-| Dominio propio (por ejemplo `pagofacil.mx`) | No entra en el hackathon: la demo usa la dirección de AWS (aclaración del 2026-11-17) |
 | Cupones | #37 |
 | Congelar la demo después de la entrega | #57 |
 
@@ -347,6 +348,7 @@ Los límites por IP y los canales abiertos **no** se guardan: siguen en la memor
 - **CE-012**: durante 8 días seguidos sin cobros, los registros del servidor publicado muestran al menos una consulta diaria a la base de datos, y el proyecto de Supabase sigue activo al final. Es del corte 2 y se comprueba después de cerrar la spec, sin bloquearla (QA-5).
 - **CE-013**: un pull request unido a `main` queda publicado en la demo sin que nadie haga nada, y una búsqueda en el repositorio y en su configuración de GitHub no encuentra credenciales de AWS.
 - **CE-014**: en tres publicaciones seguidas de la demo, cada una deja de responder menos de 1 minuto y una pantalla con un cobro abierto se reconecta sola sin perder sus pagos (E-4).
+- **CE-015**: la demo abre en el dominio propio con HTTPS, y una conexión sin cifrar al servidor desde fuera de la instancia no recibe respuesta (C-9).
 
 ---
 
@@ -355,6 +357,7 @@ Los límites por IP y los canales abiertos **no** se guardan: siguen en la memor
 **Supuestos**
 
 - Los 200 dólares son crédito de AWS y no cubren Supabase ni otros servicios (lo confirma Hugo).
+- El dominio propio (C-9) lo compra y lo paga Hugo: un `.xyz` cuesta cerca de 1 dólar el primer año, y basta con un año porque la demo vive hasta el 31 de enero. Los créditos de AWS no pagan registros de dominios; sí la zona DNS de Route 53.
 - Supabase se queda en el plan gratuito. Su documentación dice que "may pause" los proyectos gratuitos con poca actividad en 7 días, sin definir qué cuenta como actividad, y que el plan gratuito no incluye respaldos (QA-5). Se supone que una consulta diaria basta; si aun así se pausa, Hugo lo reactiva (RF-050). Pasar al plan de pago es una decisión nueva de Hugo.
 - AWS actualiza el gasto del presupuesto hasta tres veces al día y solo calcula el pronóstico tras unas 5 semanas de datos. Sus acciones automáticas solo detienen instancias EC2 o RDS, o aplican políticas de permisos: el plan elige un servicio que el presupuesto pueda detener o conecta el aviso a una función que lo detenga (QA-2).
 - Solo Hugo tiene acceso a la cuenta de AWS; Juan y Miguel no lo necesitan para esta spec.
@@ -369,7 +372,10 @@ Los límites por IP y los canales abiertos **no** se guardan: siguen en la memor
 
 | Dependencia | Para qué | Dueño | Estado |
 |---|---|---|---|
-| PR #97 unido (esquema inicial) | RF-018 y todo el guardado | Juan, revisa Hugo | Aprobado por Hugo el 2026-11-17; falta que Juan lo una |
+| PR #97 unido (esquema inicial) | RF-018 y todo el guardado | Hugo revisa y une (constitución 2.0.0: nadie une su propio PR) | Aprobado por Hugo el 2026-11-17; falta unirlo (QP-9) |
+| Dominio propio comprado, con su zona en Route 53 | RF-024, RF-056 (C-9) | Hugo (lo paga él; el crédito de AWS no cubre dominios) | Pendiente; antes de F4 |
+| Región del proyecto de Supabase de la demo | Elegir la región de la instancia (plan, DP-24) | Hugo, en el panel de Supabase | Pendiente (QP-9) |
+| AWS CLI y el complemento de Session Manager en la computadora de Hugo | Publicar a mano (plan, contrato de publicación) | Hugo | Pendiente (QP-9) |
 | Proyecto de Supabase creado | Base de datos de la demo | Juan (#19) | Creado, según Hugo y el PR #97 |
 | Credenciales de Supabase en `backend/.env` y en el hosting | RF-020 | Hugo | Pendiente |
 | Cuenta de AWS con los 200 dólares de crédito | Historias 2 y 4 | Hugo | Pendiente de confirmar |
@@ -410,8 +416,9 @@ Decisiones tomadas antes de redactar, el 2026-11-17:
 
 | # | Spec | Cambio propuesto | Origen | Estado |
 |---|---|---|---|---|
-| C-6 | 001 | (a) §4, fila "Reinicio del servidor": los cobros, pagos y avisos se conservan (spec 003), ya no se pierden. (b) §4, fila "Aviso de pago de un cobro desconocido": quitar "por ejemplo, tras reiniciar el servidor". (c) RF-038 y `contracts/salud.md`: la salud también indica si la base de datos está configurada y responde (RF-023 de esta spec). (d) §5, fila "Base de datos: los cobros se pierden al reiniciar": resuelto por la spec 003. (e) `data-model.md` (línea 5 y §5 y §6), `quickstart.md:80`, `contracts/ver-cobro.md:22` ("o se perdió al reiniciar") y `backend/README.md:118`: los cobros, pagos y avisos se guardan en la base de datos; los límites por IP y los canales siguen en memoria. (f) `contracts/aviso-pey.md:42`: el manejador ya hace una llamada de red (guardar en la base de datos); la meta de responder en menos de 1 s (CE-010 de la 001) se mantiene. | Esta spec y QA-7 | Propuesto |
-| C-7 | 002 | RF-057: quitar el ejemplo "(por ejemplo, porque se reinició)", porque con la spec 003 un reinicio ya no hace que el servidor olvide un cobro. El comportamiento no cambia. | QA-7 | Propuesto |
+| C-6 | 001 | (a) §4, fila "Reinicio del servidor": los cobros, pagos y avisos se conservan (spec 003), ya no se pierden. (b) §4, fila "Aviso de pago de un cobro desconocido": quitar "por ejemplo, tras reiniciar el servidor". (c) RF-038 y `contracts/salud.md`: la salud también indica si la base de datos está configurada y responde (RF-023 de esta spec). (d) §5, fila "Base de datos: los cobros se pierden al reiniciar": resuelto por la spec 003. (e) `data-model.md` (línea 5 y §5 y §6), `quickstart.md:80`, `contracts/ver-cobro.md:22` ("o se perdió al reiniciar") y `backend/README.md:118`: los cobros, pagos y avisos se guardan en la base de datos; los límites por IP y los canales siguen en memoria. (f) `contracts/aviso-pey.md:42`: el manejador ya hace una llamada de red (guardar en la base de datos); la meta de responder en menos de 1 s (CE-010 de la 001) se mantiene. (g) `contracts/aviso-pey.md`, respuesta 400: un `amount` de 0 o negativo se rechaza igual que uno ilegible, sin marcar el `webhook-id`, porque la base de datos no acepta pagos de 0 o menos (QP-3 del plan de la 003). | Esta spec, QA-7 y QP-3 | Propuesto |
+| C-7 | 002 | (a) RF-057: quitar el ejemplo "(por ejemplo, porque se reinició)", porque con la spec 003 un reinicio ya no hace que el servidor olvide un cobro. El comportamiento no cambia. (b) El flujo local abre la web desde el servidor en `http://localhost:8000` (el servidor la entrega, plan de la 003, DP-21) en lugar del puerto 5173 con `config.js` en `http://localhost:8000`: `quickstart.md:32-40`, `verification-guide.md:79-82` y `web/README.md:34-45`. (c) La política de seguridad de contenido queda en `connect-src 'self'`: `research.md:128-130` y `plan.md:379`, como ya anticipaba `quickstart.md:55`. | QA-7 y QP-8 | Propuesto |
+| C-9 | 003 | RF-024: la demo se publica en un dominio propio del equipo con HTTPS, en lugar de la dirección de AWS. Nuevo RF-056: el tramo entre el intermediario del hosting y el servidor también va cifrado. Nuevo CE-015. Se quita de §5 la fila "Dominio propio". §7: el dominio como dependencia de Hugo y como supuesto de costo. La aclaración del 2026-11-17 sobre la dirección queda sustituida. | QA del plan, QP-7 (Hugo, 2026-11-17) | Aprobado por Hugo y aplicado el 2026-11-17 |
 | C-8 | 003 | §7 y QA-9: los PR #72 y #96 unidos pasan de "antes del plan" a "antes de aprobar el plan". El plan se redacta ya, contra la constitución 2.0.0 del PR #96 (Juan ya aprobó su contenido) y el código de la rama del PR #72; su QA (`/qa-spec 003 plan`) no lo aprueba hasta que los dos estén en `main`. Si al unirse cambian algo que el plan usa, se ajusta en esa QA. | Hugo, por el corte 1 (≤ 22 nov) | Aprobado por Hugo y aplicado el 2026-11-17 |
 
 ### 8.3 Propuestas

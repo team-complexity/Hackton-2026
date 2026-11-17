@@ -65,15 +65,17 @@ Todas las escrituras van primero a la base de datos y después a la memoria y al
 
 | Operación | SQL (resumen) | Si la base de datos falla | Requisitos |
 |---|---|---|---|
-| Crear cobro | `insert into cobros (…) values (…)` sin QR, **antes** de llamar a pey | 503 y no se llama a pey | RF-001, RF-012 |
+| Crear cobro | `insert into cobros (…) values (…)` sin QR, **antes** de llamar a pey; espera como máximo 2 s (DP-35) | 503 y no se llama a pey | RF-001, RF-012 |
 | pey no creó el QR | `delete from cobros where id = …` | Se registra la falla; el cobro queda sin QR en la base de datos (limitación, §11 del plan) | RF-052, RF-016 |
-| pey creó el QR | `update cobros set codi_qr_id, qr, qr_imagen where id = …` | 503 sin QR; el cobro sale de la memoria | RF-001, RF-013 |
+| pey creó el QR | `update cobros set codi_qr_id, qr, qr_imagen where id = …`; espera como máximo 2 s (DP-35) | 503 sin QR; el cobro sale de la memoria | RF-001, RF-013 |
 | Registrar pago | Dentro del candado del cobro, en una transacción: `insert into pagos … on conflict (transaccion_id) do nothing returning id` y, si viene de un aviso, `insert into avisos_webhook … on conflict do nothing` | Aviso: 503 a pey y el aviso queda en la lista de reintentos (RF-014, RF-048). Consulta: se registra la falla y se reintenta en la próxima consulta | RF-002, RF-003, RF-007, RF-008 |
 | Aviso ignorado (otro tipo, QR desconocido) | `insert into avisos_webhook … on conflict do nothing` | 503 a pey | RF-003 |
 | Cancelar | `update cobros set cancelado_en = … where id = … and cancelado_en is null` | 503 | RF-004 |
 | Consulta de vida | `select 1` cada 6 h (y en la salud, DP-31) | Se registra la falla | RF-039, RF-023 |
 
-**Lecturas**: un cobro se carga por `id` (ver, cancelar, canal) o por `codi_qr_id` (aviso), con sus pagos, solo si no está ya en memoria (RF-005). Para saber si un `webhook-id` ya se vio, se mira primero la memoria y después la tabla.
+**Lecturas**: un cobro se carga por `id` (ver, cancelar, canal) o por `codi_qr_id` (aviso), con sus pagos, solo si no está ya en memoria (RF-005). Si dos peticiones lo cargan a la vez, se queda el primer objeto que entró a la memoria y las dos usan ese mismo (DP-33).
+
+**Datos que el esquema no acepta**: un `amount` de 0 o negativo se rechaza antes de llegar a la base de datos, y un aviso sin `type` se guarda con `tipo` vacío (DP-34). Para saber si un `webhook-id` ya se vio, se mira primero la memoria y después la tabla.
 
 ## 4. Lista de reintentos de avisos (solo en memoria)
 

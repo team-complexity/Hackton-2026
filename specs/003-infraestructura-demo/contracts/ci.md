@@ -21,7 +21,7 @@ RF-036, RF-037, RF-038, CE-006, CE-007, CE-011.
 | Trabajo | Pasos | Cuándo corre | Requisitos |
 |---|---|---|---|
 | `servidor` | `uv sync --locked`; `ruff check .`; `ruff format --check .`; `pytest -q` (en `backend/`) | Siempre | RF-036 |
-| `web` | Lo anterior más `playwright install --with-deps chromium webkit`; `ruff check` y `ruff format --check` de `../web` con la configuración del backend; `pytest ../web -q` | Solo si existe `web/tests/` | RF-036 |
+| `web` | Lo anterior más `playwright install --with-deps chromium webkit`; `ruff check` y `ruff format --check` de `../web` con la configuración del backend; `pytest ../web -q` | Siempre (el CI llega después de unir el #72, QP-1) | RF-036 |
 | `base-de-datos` | Servicio PostgreSQL 17; crea los roles `anon` y `authenticated`; corre `python -m app.migraciones aplicar --entorno local` **dos veces** (la segunda debe decir que no había nada que aplicar); corre las pruebas del almacén con `PRUEBAS_DATABASE_URL` apuntando al servicio | Desde F2 | RF-036, CE-007 |
 
 - Python 3.12 en `ubuntu-latest`, con `astral-sh/setup-uv` y su caché.

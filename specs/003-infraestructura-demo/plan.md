@@ -3,7 +3,7 @@
 - **Rama**: `feature/90-infraestructura-demo`
 - **Fecha**: 2026-11-17
 - **Spec**: [spec.md](spec.md), estado: Aprobada el 2026-11-17 (con el cambio C-8 del mismo día)
-- **Estado del plan**: `Borrador`. Lo redactó Claude el 2026-11-17 con `/speckit-plan`, antes de que se unan los PR #72 y #96, como permite C-8: se revisa contra la constitución 2.0.0 del PR #96 (commit `aa187d7`) y el código de esta rama. Hugo decidió DP-1 a DP-5 el mismo día, todas como se recomendaba (§9.2). Falta la QA (`/qa-spec 003 plan`), que no lo aprueba hasta que los dos PR estén en `main`.
+- **Estado del plan**: `Borrador`. Lo redactó Claude el 2026-11-17 con `/speckit-plan`, antes de que se unan los PR #72 y #96, como permite C-8: se revisa contra la constitución 2.0.0 del PR #96 (commit `aa187d7`) y el código de esta rama. Hugo decidió DP-1 a DP-5 el mismo día, todas como se recomendaba (§9.2). La QA del mismo día (QP-1 a QP-9, §9.3) está decidida y aplicada; trajo el cambio C-9 a la spec (dominio propio y tramo cifrado hasta el servidor) y amplió C-6 y C-7. Al aplicarla salió DP-37 (cómo obtiene su certificado el servidor), que Hugo decidió el mismo día: certbot con Route 53. El plan no se aprueba hasta unir los dos PR (C-8).
 - **Entrada**: la spec de `specs/003-infraestructura-demo/spec.md`
 
 > **Notas para los comandos de spec-kit.**
@@ -22,7 +22,7 @@ El enfoque:
 
 - **Guardar**: el servidor de la 001 sigue trabajando con sus objetos en memoria, pero la memoria pasa a ser una caché de escritura directa sobre un *almacén* de PostgreSQL (Supabase, esquema del PR #97). Cada escritura va primero a la base de datos. Después de un reinicio, un cobro se carga al pedirlo. Los pagos se registran con un candado por cobro (DP-6 a DP-14).
 - **Migraciones**: un comando propio aplica en orden los archivos de `supabase/migraciones/`, anota cada uno y separa los datos de prueba con una marca de entorno (DP-3, DP-17 a DP-20).
-- **Demo pública**: una instancia EC2 pequeña, con IP elástica, detrás de CloudFront, que pone el HTTPS en `*.cloudfront.net`. El servidor entrega también la web, en el mismo origen. El presupuesto detiene la instancia con la acción nativa de AWS Budgets (DP-1, DP-21 a DP-26).
+- **Demo pública**: una instancia EC2 pequeña, con IP elástica, detrás de CloudFront, en el dominio propio del equipo con HTTPS (C-9). El tramo de CloudFront a la instancia también va por HTTPS, con un certificado propio en el servidor (DP-37). El servidor entrega también la web, en el mismo origen. El presupuesto detiene la instancia con la acción nativa de AWS Budgets (DP-1, DP-21 a DP-26).
 - **CI**: GitHub Actions, sin secretos, con trabajos para el servidor, la web y un PostgreSQL desechable. La publicación automática del corte 2 usa OIDC (DP-27 a DP-29).
 
 ### 0.1 Hechos del código y de las fuentes
@@ -56,7 +56,7 @@ El enfoque:
 - **Dependencias principales**: FastAPI, httpx, pydantic-settings, standardwebhooks y uvicorn, como hoy. **Nuevas** (DP-2): `psycopg[binary]` 3 y `psycopg-pool`, fijadas a versiones publicadas hace al menos dos semanas.
 - **Almacenamiento**: PostgreSQL de Supabase, plan gratuito: un proyecto para la demo y otro para local (RF-049). Conexión por el *pooler* en modo sesión (research R-11). En las pruebas de la API, almacén en memoria.
 - **Pruebas**: pytest con pey simulado (`httpx.MockTransport`), `RelojFalso`, almacén en memoria y almacén que falla a propósito. Las pruebas del almacén de PostgreSQL y de las migraciones corren contra un PostgreSQL 17 desechable (research R-12). Playwright para la web, como hoy.
-- **Plataforma de destino**: AWS (DP-1), creada con la guía en la consola (DP-4): una instancia EC2 `t4g.micro` con Ubuntu 24.04, IP elástica, systemd y uvicorn en el puerto 8000; CloudFront delante, con HTTPS en `*.cloudfront.net`. La web, en el mismo servidor. CI y publicación automática en GitHub Actions.
+- **Plataforma de destino**: AWS (DP-1), creada con la guía en la consola (DP-4): una instancia EC2 `t4g.micro` con Ubuntu 24.04, IP elástica, systemd y uvicorn con HTTPS en el puerto 443, con el certificado de `origen.<dominio>` (DP-37); CloudFront delante, en `<dominio>` con un certificado gratuito de AWS Certificate Manager; DNS en Route 53 (C-9). La web, en el mismo servidor. CI y publicación automática en GitHub Actions.
 - **Tipo de proyecto**: servicio web con PWA, como en las specs 001 y 002.
 - **Metas de rendimiento**: QR en menos de 3 s en 9 de cada 10 intentos (CE-003); "Pago recibido" en menos de 2 s después del aviso de pey (CE-002); canal de 20 minutos sin cortes (CE-004); de vuelta en menos de 1 minuto después de publicar (RF-055); aviso de pey respondido en menos de 1 s (CE-010 de la 001, que se mantiene, C-6 f). Cada escritura en la base de datos agrega unos milisegundos si la instancia está en la región de Supabase (DP-24).
 - **Restricciones**: un solo proceso (QP-5 de la 001); credenciales solo en `backend/.env` o en `/etc/pago-facil/entorno` (principio III); ninguna prueba automática con pey real ni con la base de datos real (principio V, CE-011); sin llaves de AWS en GitHub (RF-043); costo ≤ 150 dólares hasta el 31 de enero (RF-035).
@@ -72,13 +72,13 @@ El enfoque:
 |---|---|---|
 | I. El pago se confirma en el servidor | No cambia: solo el aviso firmado y la consulta de respaldo registran pagos. La base de datos no se puede escribir desde fuera del servidor (RLS y `revoke` del PR #97, grupo de seguridad, RF-022) | Cumple |
 | II. Una orden nunca se ejecuta dos veces | `transaccion_id` único con `on conflict do nothing`, candado por cobro, `webhook-id` guardado en la misma transacción que su pago. El evento `pago` sigue saliendo de una sola función, y solo si el `insert` devolvió fila (DP-8, DP-9) | Cumple |
-| III. Los secretos nunca salen del backend | `DATABASE_URL` y las llaves de pey solo en `backend/.env` o en `/etc/pago-facil/entorno` (DP-26). Los registros nunca llevan el texto de un error de conexión (DP-15). Sin llaves de AWS en GitHub: OIDC (DP-29). La web y las apps nunca hablan con Supabase | Cumple |
+| III. Los secretos nunca salen del backend | `DATABASE_URL` y las llaves de pey solo en `backend/.env` o en `/etc/pago-facil/entorno` (DP-26). Todo el camino de un aviso de pey va cifrado, también de CloudFront al servidor (RF-056, DP-37). Los registros nunca llevan el texto de un error de conexión (DP-15). Sin llaves de AWS en GitHub: OIDC (DP-29). La web y las apps nunca hablan con Supabase | Cumple |
 | IV. Alcance anclado y trabajo documentado | Solo lo que pide la spec. Una nota de implementación por cada issue (#90, #19, #34, #65, #35, #94) en FN. C-6 y C-7 se aplican solo cuando Hugo lo pida | Cumple |
 | V. Pruebas primero, en todo | Cada pieza tiene su prueba antes (§7). El almacén en memoria y el que falla a propósito sustituyen a la base de datos en las pruebas de la API; el SQL se prueba contra un PostgreSQL desechable, que no es la base de datos real (research R-12). Reloj controlado también en la tarea de fondo (DP-14) | Cumple |
 | VI. CoDi real, reacción real | F5: pago real de $0.01 desde la demo pública, en Android y en iPhone, con autorización de Hugo (CE-001, CE-002) | Cumple |
 | VII. Pensado para el mostrador | Mensajes de falla para el dueño (DP-32). QR en menos de 3 s y aviso en menos de 3 s (en la spec, menos de 2 s) | Cumple |
 | VIII. Un pago no prueba identidad ni entrega | Pago tardío, monto distinto y falla de pey: sin cambios respecto a la 001. Falla de la base de datos: reintentos en memoria (RF-048) y consulta de respaldo. Devoluciones: fuera de alcance | Cumple |
-| IX. Lo más simple que gane la demo | Piezas nuevas justificadas por la spec (base de datos, hosting, CI). Cada herramienta nueva con comparativa y decisión de Hugo: DP-1 a DP-4 (research R-1, R-8, R-9, R-14). Las comparativas se copian a las notas de implementación. Una sola tarea de fondo, justificada en §12 | Cumple, con excepción justificada en §12 |
+| IX. Lo más simple que gane la demo | Piezas nuevas justificadas por la spec (base de datos, hosting, CI). Cada herramienta nueva con comparativa y decisión de Hugo: DP-1 a DP-4 y DP-37 (research R-1, R-8, R-9, R-14 y R-19). Las comparativas se copian a las notas de implementación. Una sola tarea de fondo, justificada en §12 | Cumple, con excepción justificada en §12 |
 | X. Si no se ve, no existe | `/salud` agrega `base_de_datos` y `estructura` sin valores (contrato de [salud](contracts/salud.md)). Cada falla de la base de datos y cada consulta de vida dejan su línea en el registro (RF-016, RF-039) | Cumple |
 
 **Después del diseño (Fase 1)**: sin cambios; la tabla sigue igual con los contratos y el modelo de datos escritos, y con las decisiones DP-1 a DP-5 de Hugo. No quedan `[NECESITA ACLARACIÓN]`.
@@ -156,11 +156,11 @@ web/
 | `almacen.py` · `AlmacenEnMemoria` | La misma interfaz con diccionarios. Para las pruebas de la API y para un servidor sin `DATABASE_URL` (DP-16). Un almacén nuevo sobre los mismos diccionarios simula un reinicio | RF-005, CE-005 |
 | `almacen.py` · `ErrorDeAlmacen` | La única excepción que ve el resto del código cuando la base de datos no responde; lleva la operación y el nombre de la clase del error original, nunca su texto | RF-016, RF-021 |
 | `almacen_postgres.py` · `AlmacenPostgres` | El SQL de data-model §3 con psycopg y un *pool* de 1 a 3 conexiones; traduce Unix ↔ `timestamptz` y `""` ↔ `null`; espera 5 s como máximo por operación; convierte cualquier error de conexión o de servidor en `ErrorDeAlmacen` | RF-001 a RF-009, RF-020, RF-022 |
-| `cobros.py` · `RepositorioCobros` | Caché de escritura directa: escribe en el almacén y después cambia la memoria (DP-7); carga al pedir lo que no está (RF-005); `registrar_pago` dentro del candado del cobro (DP-8); calcula el estado con el `Reloj` (DP-11) | RF-002, RF-005 a RF-008 |
+| `cobros.py` · `RepositorioCobros` | Caché de escritura directa: escribe en el almacén y después cambia la memoria (DP-7); carga al pedir lo que no está (RF-005) y garantiza un solo objeto por cobro aunque dos peticiones lo carguen a la vez (DP-33); `registrar_pago` dentro del candado del cobro (DP-8); calcula el estado con el `Reloj` (DP-11) | RF-002, RF-005 a RF-008 |
 | `respaldo.py` · `ConsultaDeRespaldo` | Igual que en la 001, con `await` al registrar; pasa a pey las transacciones **del cobro** (DP-13); si el almacén falla, registra y sigue | RF-005, RF-007, RF-016 |
-| `main.py` · `crear_cobro` | Guarda el cobro (si falla, 503 sin llamar a pey); llama a pey; si pey falla, borra el cobro; guarda el QR (si falla, 503 sin QR); con el corte 2, rechaza si la estructura está pendiente | RF-001, RF-012, RF-013, RF-047, RF-052 |
+| `main.py` · `crear_cobro` | Guarda el cobro (si falla, 503 sin llamar a pey); llama a pey; si pey falla, borra el cobro; guarda el QR (si falla, 503 sin QR). Cada una de esas dos escrituras espera como máximo 2 s (DP-35). Con el corte 2, rechaza si la estructura está pendiente | RF-001, RF-012, RF-013, RF-047, RF-052 |
 | `main.py` · `ver_cobro`, `eventos_cobro`, `cancelar_cobro` | Cargan del almacén si hace falta; 503 si no responde, nunca 404 por una falla | RF-004, RF-005, RF-015 |
-| `main.py` · `webhook_pey` | Busca el cobro (memoria, luego almacén); registra el pago y el `webhook-id` en una transacción; si falla, 503 a pey y el aviso entra a la lista de reintentos | RF-003, RF-007, RF-014 |
+| `main.py` · `webhook_pey` | Rechaza con 400 un `amount` de 0 o negativo, sin marcar el `webhook-id` (DP-34); busca el cobro (memoria, luego almacén); registra el pago y el `webhook-id` en una transacción; si la base de datos no responde, 503 a pey y el aviso entra a la lista de reintentos; un error de datos responde 400 y nunca entra a la lista (DP-34) | RF-003, RF-007, RF-014 |
 | `tareas.py` · `ReintentosDeAvisos` | Lista en memoria por `webhook_id` (data-model §4); cada 15 s intenta registrar y, al lograrlo, emite por el canal | RF-014, RF-048 |
 | `tareas.py` · consulta de vida | Cada 6 h, `select 1` y la línea "Consulta de vida de la base de datos: responde" (o la falla) | RF-039, CE-012 |
 | `main.py` · ciclo de vida | Abre y cierra el *pool*; arranca y detiene la tarea de fondo con el `Reloj` inyectado | RF-039, RF-048 |
@@ -172,9 +172,9 @@ web/
 | `supabase/migraciones/0002_imagen_del_qr.sql` | Columna `qr_imagen` | RF-010, RF-018 |
 | `web/index.html` | CSP `connect-src 'self'` | RF-029 |
 | `.github/workflows/ci.yml` | Contrato [ci](contracts/ci.md) | RF-036 a RF-038 |
-| `infra/servidor/*` | systemd con un solo proceso de uvicorn (`--workers 1`) y `EnvironmentFile`; preparación de la instancia; publicación con vuelta atrás | RF-024, RF-030, RF-044, RF-046, RF-055 |
+| `infra/servidor/*` | systemd con un solo proceso de uvicorn (`--workers 1`), con HTTPS en el puerto 443 y el certificado de `origen.<dominio>` (DP-37), y `EnvironmentFile`; preparación de la instancia; publicación con vuelta atrás | RF-024, RF-030, RF-044, RF-046, RF-055, RF-056 |
 | `.github/workflows/publicar.yml` | Contrato [publicación](contracts/publicacion.md), corte 2 | RF-042 a RF-045 |
-| `docs/operacion-demo.md` | Presupuesto (primero), EC2, IP elástica, grupo de seguridad, CloudFront, secretos, publicar, reencender después del presupuesto, reactivar Supabase, copia antes de migrar, rol de OIDC | RF-031 a RF-035, RF-040, RF-041, RF-050, RF-051 |
+| `docs/operacion-demo.md` | Presupuesto (primero), dominio y zona de Route 53, certificados (CloudFront y servidor), EC2, IP elástica, grupo de seguridad, CloudFront, secretos y límites de la demo (DP-36), publicar, reencender después del presupuesto, reactivar Supabase, copia antes de migrar, rol de OIDC | RF-031 a RF-035, RF-040, RF-041, RF-050, RF-051 |
 
 ---
 
@@ -220,7 +220,7 @@ El detalle va en [data-model.md](data-model.md). En resumen:
 | RF-002 | `test_el_pago_se_guarda_antes_de_emitirse_por_el_canal` | integración |
 | RF-003 | `test_el_webhook_id_procesado_queda_guardado` | integración |
 | RF-004 | `test_la_cancelacion_queda_guardada_con_su_hora` | integración |
-| RF-005 | `test_tras_un_reinicio_se_puede_ver_cancelar_y_escuchar_un_cobro_guardado`; `test_tras_un_reinicio_el_aviso_de_pey_registra_el_pago`; `test_tras_un_reinicio_la_consulta_de_respaldo_encuentra_el_pago` | integración |
+| RF-005 | `test_dos_cargas_a_la_vez_del_mismo_cobro_dan_el_mismo_objeto` (DP-33); `test_tras_un_reinicio_se_puede_ver_cancelar_y_escuchar_un_cobro_guardado`; `test_tras_un_reinicio_el_aviso_de_pey_registra_el_pago`; `test_tras_un_reinicio_la_consulta_de_respaldo_encuentra_el_pago` | integración |
 | RF-006 | `test_el_estado_tras_un_reinicio_se_calcula_con_el_reloj_del_servidor`; `test_las_horas_guardadas_son_las_del_reloj_del_servidor` (almacén de PostgreSQL) | integración |
 | RF-007, CE-005 | `test_un_aviso_reenviado_no_duplica_el_pago`; `test_el_aviso_y_la_consulta_a_la_vez_registran_un_solo_pago`; `test_el_mismo_pago_antes_y_despues_de_un_reinicio_se_registra_una_vez`; `test_on_conflict_no_duplica_la_transaccion` (PostgreSQL) | integración |
 | RF-008 | `test_tras_un_reinicio_el_siguiente_pago_es_el_numero_3`; `test_dos_pagos_distintos_a_la_vez_quedan_con_numeros_1_y_2` | integración |
@@ -228,8 +228,8 @@ El detalle va en [data-model.md](data-model.md). En resumen:
 | RF-011 | `test_sin_imagen_de_pey_el_cobro_guardado_vuelve_sin_imagen` | integración |
 | RF-012 | `test_si_la_base_no_responde_al_crear_no_se_llama_a_pey` | integración |
 | RF-052 | `test_si_pey_falla_el_cobro_guardado_se_borra` | integración |
-| RF-013 | `test_si_la_base_falla_al_guardar_el_qr_no_se_devuelve_el_qr` | integración |
-| RF-014 | `test_si_la_base_falla_con_un_aviso_se_responde_503_y_no_se_emite` | integración |
+| RF-013 | `test_si_la_base_falla_al_guardar_el_qr_no_se_devuelve_el_qr`; `test_al_crear_cada_escritura_espera_como_maximo_2_segundos` (DP-35) | integración |
+| RF-014 | `test_si_la_base_falla_con_un_aviso_se_responde_503_y_no_se_emite`; `test_un_aviso_con_monto_cero_o_negativo_se_rechaza_con_400`; `test_un_error_de_datos_responde_400_y_no_entra_a_los_reintentos` (DP-34) | integración |
 | RF-048 | `test_el_aviso_pendiente_se_registra_y_se_emite_cuando_la_base_vuelve` (con `RelojFalso`, avanza 15 s); `test_un_aviso_reenviado_mientras_esta_pendiente_no_se_duplica` | integración |
 | RF-015 | `test_si_la_base_no_responde_al_ver_un_cobro_se_responde_503_y_no_404` | integración |
 | RF-016, RF-021 | `test_cada_falla_de_la_base_deja_registro_sin_datos_de_conexion` | integración |
@@ -244,11 +244,12 @@ El detalle va en [data-model.md](data-model.md). En resumen:
 | RF-022 | `test_anon_y_authenticated_no_pueden_leer_ni_escribir` (PostgreSQL con los roles creados) | integración |
 | RF-023 | `test_la_salud_dice_si_la_base_responde_sin_mostrar_valores` (tres casos) | integración |
 | RF-039, CE-012 | `test_la_consulta_de_vida_corre_cada_6_horas` (`RelojFalso`); 8 días en la demo (F7) | integración y manual |
-| RF-024 | Quickstart §6.3 | manual |
+| RF-024 | Quickstart §6.3 (dominio propio) | manual |
+| RF-056, CE-015 | Quickstart §6.9: el puerto 443 de la instancia solo responde a CloudFront, y no hay ningún puerto sin cifrar abierto; CloudFront usa "solo HTTPS" hacia el origen | manual |
 | RF-025 | Quickstart §7.1 | manual |
 | RF-026, CE-004 | Quickstart §6.5 (20 minutos) | manual |
 | RF-027 | `test_cors_solo_acepta_el_origen_configurado` (ya existe en la 001; se repite con la dirección real) y quickstart §6.6 | integración y manual |
-| RF-028 | `test_con_cabecera_ip_real_el_limite_usa_la_ip_de_cloudfront`; `test_sin_cabecera_ip_real_se_ignora_cloudfront_viewer_address`; quickstart §6.7 | integración y manual |
+| RF-028 | `test_con_cabecera_ip_real_el_limite_usa_la_ip_de_cloudfront`; `test_sin_cabecera_ip_real_se_ignora_cloudfront_viewer_address`; quickstart §6.7, con los límites de la demo (DP-36) | integración y manual |
 | RF-029 | Prueba de la web: la CSP tiene `connect-src 'self'` y nada más en `connect-src` | integración (web) |
 | RF-030 | Quickstart §8 (misma dirección después de publicar) y §7.5 | manual |
 | RF-055, CE-014 | Quickstart §7.6 | manual |
@@ -268,15 +269,15 @@ El detalle va en [data-model.md](data-model.md). En resumen:
 
 | Fase | Fechas | Quién | Qué | Depende de |
 |---|---|---|---|---|
-| F1 CI | 18 nov | Grok (revisa Claude) | `ci.yml` con los trabajos `servidor` y `web`, en su propio PR desde `main` (DP-28). Juan lo hace obligatorio en `main` | Plan y tasks aprobados |
-| F2 Migraciones | 18–19 nov | Grok (revisa Claude) | Mover los archivos del PR #97; `0002`; `migraciones.py` con sus pruebas; trabajo `base-de-datos` del CI. Hugo aplica en local con `--entorno local --datos-de-prueba` | F1; PR #97 unido |
+| F1 CI | En cuanto se aprueben el plan y las tareas | Grok (revisa Claude) | `ci.yml` con los trabajos `servidor` y `web`, en su propio PR desde `main` (DP-28). Juan lo hace obligatorio en `main` | Plan y tasks aprobados, es decir, los PR #72 y #96 unidos (C-8; QP-1) |
+| F2 Migraciones | 18–19 nov | Grok (revisa Claude) | Mover los archivos del PR #97; `0002`; `migraciones.py` con sus pruebas; trabajo `base-de-datos` del CI. Hugo aplica en local con `--entorno local --datos-de-prueba` | F1; PR #97 unido (lo une Hugo, QP-9); segundo proyecto de Supabase (Juan, RF-049) |
 | F3 Guardar | 19–20 nov | Grok (revisa Claude) | `almacen.py`, `almacen_postgres.py`, `RepositorioCobros` asíncrono con candado, fallas 503, lista de reintentos, consulta de vida, `/salud`, configuración | F2 |
-| F4 Demo pública | 20–21 nov | Código, Grok (revisa Claude); AWS, Hugo | IP real, web desde el servidor y CSP, `infra/servidor/*`, `docs/operacion-demo.md`. Hugo: tipo de cuenta (R-7), **presupuesto primero**, instancia, CloudFront, secretos y primera publicación. **Prueba de 20 minutos al principio** (R-3). Hugo marca la base de la demo con `--entorno demo --ya-aplicada 0001` y aplica 0002, después de exportar una copia y de limpiar los datos de prueba que dejó el PR #97 (H-12) | F3; PR #72 unido (para publicar la web desde `main`) |
+| F4 Demo pública | 20–21 nov | Código, Grok (revisa Claude); AWS, Hugo | IP real, web desde el servidor y CSP, `infra/servidor/*`, `docs/operacion-demo.md`. Hugo: tipo de cuenta (R-7), región del proyecto de Supabase, AWS CLI con Session Manager, **presupuesto primero**, dominio y zona de Route 53, instancia, certificados, CloudFront, secretos y primera publicación. **Prueba de 20 minutos al principio** (R-3). Hugo marca la base de la demo con `--entorno demo --ya-aplicada 0001` y aplica 0002, después de exportar una copia y de limpiar los datos de prueba que dejó el PR #97 (H-12) | F3; PR #72 unido (para publicar la web desde `main`); dominio comprado (C-9) |
 | F5 Pago real | 21–22 nov | Hugo, con los dos celulares | Aviso de pey dado de alta; CE-001, CE-002, CE-003 y CE-014; reenvío del aviso. Cierra #27 y #64 | F4 |
 | **Fin del corte 1** | **22 nov** | | | |
 | F6 Publicación automática | 24–27 nov | Grok (revisa Claude); rol de OIDC, Hugo; variable del repositorio, Juan | `publicar.yml`, `infra/aws/rol-publicacion.json` y su guía | F5 |
 | F7 Estructura pendiente | 24–26 nov | Grok (revisa Claude) | `version_esperada`, `estructura` en la salud, rechazo de cobros (RF-047). CE-012 empieza a contar con la primera publicación de F4 y se revisa el 29 nov o después, sin bloquear | F5 |
-| FN Cierre | 28–29 nov | Hugo y Claude | C-6 y C-7 (si Hugo los aprueba), notas de implementación de #90, #19, #34, #65, #35 y #94, revisión de seguridad (constitución, flujo 6), `verification-guide.md` completo | F6, F7 |
+| FN Cierre | 28–29 nov | Hugo y Claude | C-6 y C-7 (si Hugo los aprueba), notas de implementación de #90, #19 (enlaza la decisión del PR #99 de Juan, QP-9), #34, #65, #35 y #94, revisión de seguridad (constitución, flujo 6), `verification-guide.md` completo | F6, F7 |
 | **Fin del corte 2** | **29 nov** | | | |
 
 ---
@@ -304,16 +305,20 @@ El detalle va en [data-model.md](data-model.md). En resumen:
 | DP-20 | La migración 0002 no recrea la vista `cobros_con_estado` | El servidor no la usa (DP-11); `c.*` no verá `qr_imagen`, y el historial (#38) la recrea si la necesita | Recrearla ahora: trabajo que nadie usa |
 | DP-21 | El servidor entrega la web en el mismo origen; CSP `connect-src 'self'` (R-18) | RF-027, RF-029 y una sola publicación | S3 aparte |
 | DP-22 | IP real con `CloudFront-Viewer-Address` cuando `CABECERA_IP_REAL` está puesta; el grupo de seguridad solo deja entrar a CloudFront (R-4) | `X-Forwarded-For` con todas las IP en confianza es falsificable (RF-028) | `PROXIES_CONFIABLES=*` |
-| DP-23 | CloudFront: un comportamiento sin caché, todos los métodos, política de origen `AllViewerAndCloudFrontHeaders-2022-06`, origen HTTP al puerto 8000, tiempo de respuesta de 30 s y sin tiempo de respuesta completa (R-3) | Canal de 20 minutos y avisos de pey sin cambios | Caché para la web: obliga a invalidar en cada publicación |
-| DP-24 | EC2 `t4g.micro` en la región del proyecto de Supabase de la demo, con IP elástica, IMDSv2, Session Manager (sin SSH ni puerto 22) y rol de instancia `AmazonSSMManagedInstanceCore` | Costo (R-6), latencia (R-11), misma dirección de origen tras un apagado (RF-030) | `t4g.small`: no hace falta para un proceso; se sube si la memoria no alcanza |
+| DP-23 | CloudFront: en `<dominio>` con certificado de ACM; un comportamiento sin caché, todos los métodos, política de origen `AllViewerAndCloudFrontHeaders-2022-06`, origen `origen.<dominio>` por **HTTPS** al puerto 443, tiempo de respuesta de **60 s** y sin tiempo de respuesta completa (R-3, QP-4, C-9) | Canal de 20 minutos con margen y avisos de pey cifrados de punta a punta | Caché para la web: obliga a invalidar en cada publicación. 30 s: el canal puede pasar de 30 s sin datos (QP-4) |
+| DP-24 | EC2 `t4g.micro` en la región del proyecto de Supabase de la demo, con IP elástica, IMDSv2, Session Manager (sin SSH ni puerto 22) y rol de instancia `AmazonSSMManagedInstanceCore`; el grupo de seguridad solo abre el 443 a CloudFront | Costo (R-6), latencia (R-11), misma dirección de origen tras un apagado (RF-030) | `t4g.small`: no hace falta para un proceso; se sube si la memoria no alcanza |
 | DP-25 | Publicación por carpetas de versión con vuelta atrás si la salud no responde (R-15) | RF-044 y RF-055 con un solo script para los dos cortes | `git pull` en la misma carpeta |
 | DP-26 | Secretos del servidor en `/etc/pago-facil/entorno` (de root, `0640`), cargado por systemd (R-17) | Principio III, sin otra pieza | Parameter Store |
-| DP-27 | CI con tres trabajos, `pull_request`, `permissions: contents: read` y sin secretos; el trabajo `web` solo si existe `web/tests/` (R-13) | RF-036 a RF-038 | `pull_request_target`: expone secretos a los forks |
-| DP-28 | F1 se entrega en su propio PR desde `main` (rama `feature/35-ci`) | Juan quiere ver las pruebas del #72 en GitHub antes de unirlo; esta rama sale de la del #72 | Entregar el CI junto con el resto de la spec: llega después del #72 |
+| DP-27 | CI con tres trabajos, `pull_request`, `permissions: contents: read` y sin secretos (R-13). Como el CI llega después del #72 (QP-1), `web/tests/` ya está en `main` y el trabajo `web` corre siempre | RF-036 a RF-038 | `pull_request_target`: expone secretos a los forks |
+| DP-28 | F1 se entrega en su propio PR desde `main` (rama `feature/35-ci`), antes que el resto del código de la 003 | Con C-8 sin cambios (QP-1), el CI llega después del #72; en su propio PR entra pronto a `main` y prueba los PR de F2 en adelante | Entregar el CI junto con el resto de la spec: las fases F2 a F4 se unirían sin CI |
 | DP-29 | Publicación automática con OIDC y un rol que solo puede consultar la instancia y mandar el comando; el ARN como variable del repositorio (R-16) | RF-043 y RF-045 | Llaves de IAM como secretos de GitHub |
 | DP-30 | RF-047: versión esperada = mayor versión de los archivos; se compara al arrancar y cada 60 s | Sin llamadas a la base de datos en cada petición | Comparar en cada cobro |
 | DP-31 | La salud consulta la base de datos con `select 1` y 2 s de espera, y guarda el resultado 10 s | Rápida y sin cargar la base de datos aunque la pidan muchas veces | Consultar en cada petición |
 | DP-32 | Mensajes de falla para el dueño, como en el [contrato](contracts/fallas-base-de-datos.md) | Principio VII; la web ya los muestra o reconecta | Mensajes técnicos |
+| DP-33 | Un solo objeto `Cobro` por id: después de cargar de la base de datos, se usa el que ya esté en memoria si otra petición lo cargó antes, sin `await` entre comprobar y guardar (QP-2) | El canal y el aviso comparten el mismo objeto; el canal ve el pago | Un candado por id al cargar: otra pieza que limpiar |
+| DP-34 | Un aviso con `amount` ≤ 0 responde 400 sin marcar el `webhook-id`; uno sin `type` se guarda con `tipo` vacío; un error de datos de PostgreSQL (no de conexión) se registra y responde 400, y nunca entra a la lista de reintentos (QP-3) | El esquema del PR #97 rechaza esos datos; sin esto, un aviso se reintentaría cada 15 s para siempre | Quitar las restricciones del esquema: guardaría pagos de $0 |
+| DP-35 | Al crear un cobro, cada escritura en la base de datos espera como máximo 2 s; las demás operaciones, 5 s (QP-5) | 2 + 10 (pey) + 2 = 14 s, por debajo de los 15 s que espera la web (`servidor.js:4`) | Subir la espera de la web: cambio a la 002 |
+| DP-36 | En la demo, `LIMITE_COBROS_POR_MINUTO` y `CANALES_POR_IP` valen 30, en `/etc/pago-facil/entorno` (QP-6) | Jueces en el mismo wifi o con la misma compañía comparten IP pública; los valores son configurables desde la 001 | Dejar 10: bloquearía al undécimo juez de la misma red |
 
 ### 9.2 Decisiones de Hugo
 
@@ -325,16 +330,40 @@ Cada una tiene su comparativa en research.md (principio IX); se copian a las not
 | DP-2 | ¿Qué librería de PostgreSQL? (R-8) | **psycopg 3**: una sola librería para el servidor y para las migraciones, SQL a mano, funciona con el *pooler* | **psycopg 3** (Hugo, 2026-11-17), como se recomienda |
 | DP-3 | ¿Qué herramienta de migraciones? (R-9) | **Comando propio** (`python -m app.migraciones`): sin herramientas nuevas, misma tabla para RF-047, marca de entorno para RF-054 | **Comando propio** (Hugo, 2026-11-17), como se recomienda |
 | DP-4 | ¿Cómo se crea la infraestructura? (R-14) | **Guía paso a paso en la consola** (`docs/operacion-demo.md`): cabe en el corte 1; CloudFormation queda para después | **Guía en la consola** (Hugo, 2026-11-17), como se recomienda |
+| DP-37 | ¿Cómo obtiene y renueva el servidor su certificado para `origen.<dominio>`? (R-19, salió al aplicar QP-7) | **certbot con el complemento de Route 53 y uvicorn con HTTPS directo**: el grupo de seguridad sigue abierto solo a CloudFront y no se agrega un proxy | **certbot + Route 53** (Hugo, 2026-11-17), como se recomienda |
 | DP-5 | ¿Quién implementa cada fase y quién revisa? | **Grok implementa F1 a F3, F4 (código), F6 y F7; Claude revisa cada fase; Hugo hace todo lo de AWS, el pago real y aprueba cada cierre con la guía de verificación**; Juan revisa los PR y configura `main` | **Grok implementa, Claude revisa** (Hugo, 2026-11-17), como se recomienda |
 
 ### 9.3 Revisión QA del plan
 
-Se llena con `/qa-spec 003 plan`. Según C-8, la QA no aprueba el plan hasta que los PR #72 y #96 estén unidos; si al unirse cambian algo que el plan usa, el ajuste sale como hallazgo QP-n.
+QA del 2026-11-17, en una sola pasada. Según C-8, la QA no aprueba el plan hasta que los PR #72 y #96 estén unidos; si al unirse cambian algo que el plan usa, el ajuste sale como DP-n o TK-n, no como una ronda nueva.
 
 | # | Tipo | Hallazgo | Requisitos | Recomendación | Decisión |
 |---|---|---|---|---|---|
+| QP-1 | Contradicción | C-8 deja aprobar el plan (y por tanto hacer `tasks.md` e implementar) solo después de unir los PR #72 y #96. Pero E-5 y P-1 ponen el CI primero porque desbloquea el #72, y DP-28 lo entrega antes del #72. Además, Juan sospecha que las 6 pruebas de WebKit del #72 también fallan en Linux y no tiene cómo comprobarlo sin un CI (revisión del PR #72, 2026-11-17). Con C-8 tal como está, el CI llega después del #72. | §1.2, E-5, P-1, C-8, DP-28 | Nuevo **C-9** a la 003: F1 (CI) puede tener sus tareas e implementarse en cuanto esta QA esté decidida, sin esperar a los PR #72 y #96; el resto del plan sigue C-8. | **Dejar C-8 igual** (Hugo, 2026-11-17). Se aparta de la recomendación: el CI se hace después de unir los PR #72 y #96, con el resto del plan. DP-28 y DP-27 ajustadas. Aplicada |
+| QP-2 | Caso límite | Después de un reinicio, dos peticiones del mismo cobro que llegan a la vez (la pantalla consulta y abre el canal, o llega el aviso de pey) pueden cargarlo dos veces de la base de datos y dejar **dos objetos** `Cobro` en memoria. El canal se queda con uno; el aviso registra el pago en el otro. El canal no ve el pago y puede emitir `vencido` después de pagado (`canal.py:86`). DP-7 supone un solo objeto por cobro y no dice cómo se garantiza. | RF-005, RF-007, DP-7 | Nueva **DP-33**: `RepositorioCobros` garantiza un solo objeto por id. Después de cargar, usa el que ya esté en memoria si otra petición lo cargó antes (sin `await` entre comprobar y guardar). Prueba `test_dos_cargas_a_la_vez_del_mismo_cobro_dan_el_mismo_objeto`. | **Una sola copia** (Hugo, 2026-11-17): nueva DP-33, como se recomienda. Aplicada |
+| QP-3 | Hueco | El esquema del PR #97 rechaza datos que la 001 acepta hoy: un aviso con `amount` 0 o negativo (`pagos.monto_recibido > 0`) y un aviso ignorado sin `type` (`avisos_webhook.tipo not null`). Con la base de datos, eso es un error de datos de PostgreSQL. El plan no dice qué responder: si se tratara como "no responde", el aviso entraría a la lista de reintentos y fallaría cada 15 s para siempre (RF-048). | RF-014, RF-048, contrato de fallas | Validar antes de la base de datos: `amount` ≤ 0 responde 400 "Aviso con datos no válidos" sin marcar el `webhook-id`, como un `amount` ilegible; un aviso sin `type` se guarda con `tipo` vacío. Cualquier otro error de datos (no de conexión) se registra y responde 400, y nunca entra a la lista de reintentos. | **Validar antes** (Hugo, 2026-11-17), como se recomienda: nueva DP-34 y C-6 (g). Aplicada |
+| QP-4 | Caso límite | DP-23 deja en 30 s el tiempo que CloudFront espera entre un dato y el siguiente. En el peor caso, el canal pasa más de 30 s sin mandar nada: la señal de vida sale a los 15 s o más (`canal.py:91`), después de esperar hasta 5 s (`canal.py:21`) y de una consulta a pey que recorre varias páginas de hasta 4 s cada una (`pey.py:149-171`), más las escrituras en la base de datos. CloudFront cortaría el canal. | RF-026, CE-004, R-3 | Subir el tiempo de respuesta del origen a **60 s** en DP-23 y en R-3. No retrasa nada mientras el servidor responde. | **Subir a 60 s** (Hugo, 2026-11-17), como se recomienda. Aplicada en DP-23 y R-3 |
+| QP-5 | Caso límite | La web deja de esperar a crear un cobro a los 15 s (`web/js/servidor.js:4`, `ESPERA_CREAR_MS`). En el servidor, crear puede tardar hasta 20 s: 5 s guardando + 10 s de pey + 5 s guardando el QR. Si la web se rinde antes, muestra un error y el servidor de todos modos guarda un cobro con su QR que nadie ve. | RF-012, RF-013, CE-003 | Al crear, las dos escrituras esperan como máximo **2 s** cada una (2 + 10 + 2 = 14 s, por debajo de 15). Las demás operaciones siguen con 5 s. Se anota en el contrato de fallas. | **2 s por escritura al crear** (Hugo, 2026-11-17), como se recomienda: nueva DP-35. Aplicada |
+| QP-6 | Caso límite | El límite de la 001 es por IP: 10 cobros por minuto y 10 canales abiertos (RF-034 y RF-041 de la 001). Los jueces en el wifi del evento, o varios celulares de la misma compañía telefónica (que comparten IP pública), cuentan como **una sola IP**: el undécimo juez no podría abrir su cobro. Además, el paso 7 del quickstart supone que otro celular en la misma red de datos tiene otra IP. | RF-028, quickstart §6.7 | En la demo, subir `LIMITE_COBROS_POR_MINUTO` y `CANALES_POR_IP` a **30** en `/etc/pago-facil/entorno` (son configurables; no cambia ningún RF) y anotarlo en la guía. En el quickstart, el segundo celular usa otra red (wifi frente a datos). | **30 en la demo** (Hugo, 2026-11-17), como se recomienda: nueva DP-36. Aplicada |
+| QP-7 | Seguridad | Entre CloudFront y la instancia, el tráfico va por **HTTP sin cifrar** (DP-23). El aviso de pey trae en `metadata` la CLABE, el banco y el nombre de quien paga (QA-10), y viaja sin cifrar en ese tramo, aunque sea dentro de la red de AWS. CloudFront solo usa HTTPS hacia el origen con un certificado público del nombre del origen, y eso exige un dominio propio (fuera de alcance, §5 de la spec). El plan no lo dice. | RF-009, RF-024, principio III | Aceptarlo como limitación escrita en §10 y §11, con lo que la resolvería (dominio propio con certificado en el origen). El servidor sigue sin leer ni guardar esos datos (RF-009). | **Dominio propio con C-9** (Hugo, 2026-11-17). Se aparta de la recomendación: Hugo compra un `.xyz`; nuevo C-9 a la 003 (la demo usa ese dominio con certificado de AWS en CloudFront, y el servidor, su certificado de Let's Encrypt para cifrar el tramo CloudFront → servidor). Aplicado en la spec (RF-024, RF-056, CE-015) y en el plan; salió DP-37, que Hugo decidió el mismo día (certbot + Route 53) |
+| QP-8 | Contradicción | R-18 y DP-21 quitan `http://localhost:8000` de la CSP. Con eso deja de funcionar el flujo local de la spec 002: la web en el puerto 5173 con `config.js` en `http://localhost:8000` (`specs/002-web-mvp/quickstart.md:32-40`, `verification-guide.md:79-82`, `research.md:128-130`, `plan.md:379` y `web/README.md:34-45`). C-7 no lo cubre. | RF-029, C-7 | Ampliar **C-7** a la 002: el flujo local abre la web desde el servidor en `http://localhost:8000` (`CARPETA_WEB`), y la CSP queda en `connect-src 'self'`, como ya anticipaba `quickstart.md:55` de la 002. | **Ampliar C-7** (Hugo, 2026-11-17), como se recomienda. Ampliado en la spec (§8.2); C-7 sigue Propuesto |
+| QP-9 | Hueco | Faltan dependencias con dueño. (a) La región del proyecto de Supabase de la demo, de la que depende DP-24. (b) La AWS CLI y el complemento de Session Manager en la computadora de Hugo, para publicar a mano (contrato de publicación, §4). (c) Quién une el #97: según la constitución 2.0.0, "Hugo revisa y une los de Juan", pero §7 de la spec dice "Juan, revisa Hugo". El #97 ya está aprobado y sin conflictos, así que Hugo puede unirlo. (d) "La decisión está documentada" de #19 vive en el PR #99 de Juan, que sigue abierto. | DP-24, F2, F4, #19 | Agregar (a) y (b) a los requisitos de F4; corregir en §7 de la spec que Hugo une el #97 (errata de estado); y que la nota de #19 de FN enlace el PR #99. | **Anotarlas** (Hugo, 2026-11-17), como se recomienda: Hugo une el #97. Aplicada en §7 de la spec y en F2, F4 y FN |
 
-**Bloques de la pasada:** pendiente.
+**Bloques de la pasada:**
+
+1. **Coherencia interna:** con un script, cada RF-001 a RF-055 y cada CE-001 a CE-014 tiene prueba o paso manual en §7. DP-1 a DP-32 sin huecos ni repetidos, y cada DP citada en research, data-model y contratos existe. Verificación de la constitución completa; sin `[NECESITA ACLARACIÓN]`. El siguiente C-n libre es C-9. Salen QP-2, QP-3 y las erratas.
+2. **Otras specs, plan, reglas e issues:** la 001 (data-model, contratos de salud y aviso, DP-5 y DP-7 de su plan), la 002 (CSP, flujo local, espera de 15 s al crear), la constitución 2.0.0 (principios IV, V, VII y IX, revisión de PR, calendario) y los criterios de #19, #34, #35, #65, #90 y #94: todos tienen pieza o nota en FN. Las reglas del hackathon (cobro real, producción, llave fuera del cliente, sin reventa) siguen cubiertas. Salen QP-1, QP-8 y QP-9.
+3. **Código:** H-1 a H-13 comprobados en `cobros.py`, `main.py`, `respaldo.py`, `canal.py`, `pey.py`, `config.py`, `web/index.html` y `web/config.js`. Backend: 109 pruebas en verde hoy. Las 3 pruebas que construyen `RepositorioCobros` directamente tendrán que esperar con `await`. Salen QP-2, QP-4 y QP-5.
+4. **API de pey:** el plan no usa nada nuevo de pey; `PEY_API_BASE_URL` ya es configurable para la llave del ambiente de pruebas (RF-053). Los reintentos del aviso siguen sin documentar (QA-3), y RF-048 los cubre. `metadata` no se lee. Sale QP-3.
+5. **Fuentes y dependencias externas:** cuenta de AWS (R-7), presupuesto, CloudFront, Supabase (dos proyectos, *pooler*, pausa), GitHub (protección de `main`, variable de OIDC) y los celulares. Sale QP-9.
+6. **Ambigüedades y casos límite:** reinicio con peticiones simultáneas, datos del aviso fuera del esquema, tiempos de la web frente a los del servidor, IP compartida, borrado fallido (§11), base de datos pausada al publicar (`publicar.sh` vuelve atrás; se reactiva con RF-050). Salen QP-2, QP-3, QP-5 y QP-6.
+7. **Seguridad y rendimiento:** secretos, RLS y `revoke`, IP real, CORS, IMDSv2, sin SSH, OIDC sin llaves, registros sin datos de conexión; tiempos de CloudFront frente al canal. Salen QP-4 y QP-7.
+8. **Construibilidad y reparto:** fechas de los cortes, dependencias de F2 (#97) y F4 (#72), reparto de DP-5. Salen QP-1 y QP-9.
+
+**Erratas** (corregidas el 2026-11-17 junto con las decisiones):
+
+1. `contracts/fallas-base-de-datos.md`, fila del aviso: agregar "al revisar si el `webhook-id` ya se vio" a los momentos en que puede fallar.
+2. §8, F2: "Hugo aplica en local" necesita el segundo proyecto de Supabase de Juan (RF-049); agregarlo a "Depende de".
 
 ---
 
@@ -346,6 +375,7 @@ Se llena con `/qa-spec 003 plan`. Según C-8, la QA no aprueba el plan hasta que
 - **Entradas**: sin cambios en la validación de la 001. Todo el SQL usa parámetros de psycopg, nunca texto pegado.
 - **Abuso de la demo pública**: límites por IP real (DP-22); CORS solo con la dirección de CloudFront (RF-027); el origen solo acepta conexiones de CloudFront; sin SSH (DP-24).
 - **Datos de quien paga**: no se leen ni se guardan (RF-009).
+- **Cifrado de punta a punta** (RF-056, C-9): HTTPS del celular a CloudFront (certificado de ACM en `<dominio>`) y de CloudFront al servidor (certificado de `origen.<dominio>`, DP-37). La instancia no tiene ningún puerto sin cifrar abierto hacia fuera.
 - **Instancia**: IMDSv2 obligatorio, actualizaciones automáticas de seguridad de Ubuntu (`unattended-upgrades`), servicio con un usuario sin privilegios.
 
 ---
@@ -362,6 +392,8 @@ Se llena con `/qa-spec 003 plan`. Según C-8, la QA no aprueba el plan hasta que
 | Falla el borrado de un cobro cuando pey no creó su QR (RF-052) | Queda un cobro sin QR en la base de datos | Se registra (RF-016); el historial (#38) puede filtrar `codi_qr_id is null`. Limitación aceptada |
 | Supabase pausa el proyecto aunque haya consulta de vida | La demo no guarda | Salud `"no responde"`, guía de reactivación (RF-050) |
 | 5 días para el corte 1 con piezas nuevas | El corte 1 no llega | Orden por lo que más desbloquea (§1.2 de la spec); el corte 2 absorbe lo que no llegue |
+| El certificado del servidor no se renueva (DP-37) | CloudFront deja de conectar con el servidor y la demo se cae | Renovación automática con aviso en el registro; el certificado dura 90 días y la demo vive hasta el 31 de enero, así que basta con que una renovación salga bien. Se prueba en F4 con una renovación en seco |
+| La renovación del certificado reinicia el servicio | Un corte de segundos cada unos 60 días | Igual que una publicación (RF-055); la pantalla reconecta sola |
 | Una escritura en la base de datos hace más lento el aviso de pey | El aviso tarda más de 1 s (CE-010 de la 001) | Instancia en la región de Supabase (DP-24); se mide en F5 |
 
 ---
@@ -378,7 +410,9 @@ Se llena con `/qa-spec 003 plan`. Según C-8, la QA no aprueba el plan hasta que
 
 - [x] Decisiones DP-1 a DP-5 tomadas por Hugo (2026-11-17).
 - [ ] PR #72 y PR #96 unidos a `main` (C-8).
-- [ ] Plan revisado con `/qa-spec 003 plan` y todos los hallazgos QP decididos.
+- [x] Plan revisado con `/qa-spec 003 plan` y todos los hallazgos QP decididos (2026-11-17).
+- [x] Decisiones de la QA aplicadas (QP-1 a QP-9, erratas, C-9 y la ampliación de C-6 y C-7), el 2026-11-17.
+- [x] DP-37 decidida por Hugo (2026-11-17).
 - [ ] Aprobado por Hugo el [AAAA-MM-DD]. Aprobar no autoriza a empezar `tasks.md`: se espera a que Hugo lo pida.
 
 ---

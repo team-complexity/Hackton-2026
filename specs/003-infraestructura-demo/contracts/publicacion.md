@@ -19,7 +19,7 @@ Pasos (research R-15):
 1. Descarga el commit en `/opt/pago-facil/releases/<commit>`.
 2. `uv sync --locked --no-dev` en esa carpeta. Si falla → sale con código 1 y la versión anterior sigue atendiendo (RF-044).
 3. Cambia el enlace `/opt/pago-facil/actual` y reinicia `pago-facil.service` (corte de RF-055).
-4. Espera hasta 45 s a que `http://127.0.0.1:8000/salud` responda con `base_de_datos: "responde"`. Si no → devuelve el enlace a la versión anterior, reinicia y sale con código 2 (RF-044).
+4. Espera hasta 45 s a que `https://origen.<dominio>/salud`, pedida desde la propia instancia, responda con `base_de_datos: "responde"`. Si no → devuelve el enlace a la versión anterior, reinicia y sale con código 2 (RF-044).
 5. Borra las versiones más viejas y deja las 3 más recientes.
 
 **No** aplica migraciones (RF-046) y **no** toca `/etc/pago-facil/entorno`.
@@ -49,7 +49,7 @@ o en una sesión de Session Manager. Los pasos completos están en `docs/operaci
 | Trabajo 2 | Credenciales temporales por OIDC con el rol de la variable `AWS_ROL_PUBLICACION` (RF-043) |
 | | Si la instancia no está `running` → falla con "La demo está apagada; solo Hugo la enciende" y no la enciende (RF-045) |
 | | `ssm send-command` con `publicar.sh ${{ github.sha }}` y espera el resultado |
-| | Después, `GET https://<demo>/salud` debe responder 200 (RF-030, RF-055) |
+| | Después, `GET https://<dominio>/salud` debe responder 200 (RF-030, RF-055) |
 | Resultado | Verde si todo salió bien; rojo con el mensaje del script si no (RF-044) |
 | `permissions` | `id-token: write`, `contents: read` |
 | `concurrency` | Un solo `publicar` a la vez; uno nuevo espera al anterior |

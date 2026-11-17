@@ -4,7 +4,7 @@
 - **Plan**: [plan.md](plan.md)
 - **Base**: el código de la rama `feature/90-infraestructura-demo`, la constitución 2.0.0 del PR #96 (commit `aa187d7`), el esquema del PR #97 (`supabase/001_esquema_inicial.sql`, commit `891960d`) y la documentación citada en cada punto.
 
-Cada punto sigue el formato **Decisión / Por qué / Alternativas**. Los puntos con comparativa (R-1, R-8, R-9 y R-14) llevan una recomendación: decide Hugo (principio IX), y su decisión queda en el plan (§9.2).
+Cada punto sigue el formato **Decisión / Por qué / Alternativas**. Los puntos con comparativa (R-1, R-8, R-9, R-14 y R-19) llevan una recomendación: decide Hugo (principio IX), y su decisión queda en el plan (§9.2).
 
 ---
 
@@ -25,23 +25,25 @@ Cada punto sigue el formato **Decisión / Por qué / Alternativas**. Los puntos 
 **Decisión recomendada**: **A**, una instancia EC2 `t4g.micro` con IP elástica y CloudFront delante.
 **Por qué**: es la única opción que cumple a la vez el canal de 20 minutos, el HTTPS sin dominio y el apagado nativo por presupuesto, y además es de las más baratas. CloudFront entra en su capa siempre gratuita (1 TB y 10 millones de peticiones al mes).
 **Alternativas**: B, si Hugo prefiere no administrar un servidor, a cambio de escribir una función de apagado y de medir antes su corte del canal. C queda descartada por el límite de 120 s. D cuesta más y tarda más.
+**Después de la QA del plan**: con C-9, la demo no usa `*.cloudfront.net` sino el dominio propio, y el tramo de CloudFront a la instancia va por HTTPS (R-2, R-19). La comparativa no cambia: A sigue siendo la única que cumple todo.
 
-## R-2. HTTPS en la dirección que asigna AWS
+## R-2. HTTPS de punta a punta con el dominio propio (C-9)
 
-**Decisión**: el HTTPS lo pone CloudFront, con su dirección `https://<id>.cloudfront.net`. Entre CloudFront y la instancia se usa HTTP al puerto 8000, y el grupo de seguridad solo deja entrar a CloudFront (R-4).
-**Por qué**: la aclaración del 2026-11-17 pide la dirección que asigna AWS, sin dominio propio (RF-024). El balanceador de AWS no da HTTPS sin dominio, y un certificado dentro del servidor obligaría a tener un dominio.
-**Alternativas**: dominio propio con su certificado (fuera de alcance, §5 de la spec); balanceador con dominio (cuesta más y también necesita dominio).
+**Decisión**: Hugo compra un dominio barato (un `.xyz` cuesta cerca de 1 dólar el primer año) y delega su DNS a una zona de Route 53. CloudFront atiende en `<dominio>` con un certificado gratuito de AWS Certificate Manager (en `us-east-1`, como exige CloudFront). El servidor atiende en `origen.<dominio>` (registro A hacia la IP elástica) con su propio certificado (R-19), y CloudFront se conecta a él **solo por HTTPS** al puerto 443. El grupo de seguridad solo deja entrar a CloudFront (R-4).
+**Por qué**: la QA del plan (QP-7) encontró que, sin dominio, el tramo de CloudFront a la instancia va por HTTP, y por ahí pasa la `metadata` del aviso de pey con la CLABE, el banco y el nombre de quien paga. CloudFront solo se conecta por HTTPS a un origen con un certificado público válido para su nombre, y eso exige un dominio. Hugo eligió el dominio propio (C-9, RF-024 y RF-056).
+**Costo**: el dominio lo paga Hugo, porque los créditos de AWS no pagan registros de dominios ([Route 53, registrar un dominio](https://docs.aws.amazon.com/Route53/latest/DeveloperGuide/domain-register.html)); la zona de Route 53 (0.50 dólares al mes) sí la cubre el crédito (R-6).
+**Alternativas**: la dirección `*.cloudfront.net` con el tramo sin cifrar (era la recomendación de QP-7; Hugo eligió el dominio); balanceador con dominio (cuesta más).
 
 ## R-3. El canal de avisos a través de CloudFront
 
-**Decisión**: tiempo de respuesta del origen de 30 s (el valor por defecto), **sin** tiempo de respuesta completa, sin caché y sin compresión en el comportamiento del servidor. Se comprueba al principio de F4 con un canal real de 20 minutos (CE-004).
-**Por qué**: CloudFront espera el primer dato y **cada dato siguiente** hasta ese tiempo, y lo reinicia con cada dato que llega ([anuncio de julio de 2025](https://aws.amazon.com/about-aws/whats-new/2025/07/amazon-cloudfront-origin-response-timeout-controls)). El canal de la 001 manda `retry` en cuanto se abre y una señal de vida cada 15 s (`canal.py:91`), así que nunca pasan 30 s sin datos. El "tiempo de respuesta completa" sí cortaría el canal, por eso no se configura. Ver cobro y crear cobro esperan a pey como máximo 4 y 10 s (DP-13 de la 001), por debajo de 30 s.
-**Alternativas**: subir el tiempo a 60 s o más (no hace falta y alarga la espera cuando el servidor está caído).
+**Decisión**: tiempo de respuesta del origen de **60 s** (QP-4), **sin** tiempo de respuesta completa, sin caché y sin compresión en el comportamiento del servidor. Se comprueba al principio de F4 con un canal real de 20 minutos (CE-004).
+**Por qué**: CloudFront espera el primer dato y **cada dato siguiente** hasta ese tiempo, y lo reinicia con cada dato que llega ([anuncio de julio de 2025](https://aws.amazon.com/about-aws/whats-new/2025/07/amazon-cloudfront-origin-response-timeout-controls)). El canal de la 001 manda `retry` en cuanto se abre y una señal de vida cada 15 s (`canal.py:91`). Con 30 s no bastaba: en el peor caso, a esos 15 s se suman hasta 5 s de espera (`canal.py:21`), una consulta a pey de varias páginas de hasta 4 s cada una y las escrituras en la base de datos (QP-4). Con 60 s hay margen. El "tiempo de respuesta completa" sí cortaría el canal, por eso no se configura. Ver cobro y crear cobro esperan a pey como máximo 4 y 10 s (DP-13 de la 001), por debajo de 30 s.
+**Alternativas**: dejar 30 s (el canal podría quedarse más tiempo sin datos, QP-4); mandar la señal de vida más seguido (cambia el canal de la 001 y no cubre una consulta de varias páginas).
 **Riesgo**: la guía para desarrolladores que describe el comportamiento con respuestas que van llegando por partes no se pudo leer completa. Por eso la prueba de 20 minutos va al principio de F4: si CloudFront corta el canal, se cambia a B (R-1) antes de seguir.
 
 ## R-4. La IP real del celular detrás de CloudFront
 
-**Decisión**: en la demo, la IP de los límites sale de la cabecera `CloudFront-Viewer-Address` (`<ip>:<puerto>`), que CloudFront agrega cuando el comportamiento usa la política de origen administrada `AllViewerAndCloudFrontHeaders-2022-06`. El grupo de seguridad de la instancia solo acepta el puerto 8000 desde la lista de prefijos administrada `com.amazonaws.global.cloudfront.origin-facing`, así que esa cabecera no la puede mandar nadie más.
+**Decisión**: en la demo, la IP de los límites sale de la cabecera `CloudFront-Viewer-Address` (`<ip>:<puerto>`), que CloudFront agrega cuando el comportamiento usa la política de origen administrada `AllViewerAndCloudFrontHeaders-2022-06`. El grupo de seguridad de la instancia solo acepta el puerto 443 desde la lista de prefijos administrada `com.amazonaws.global.cloudfront.origin-facing`, así que esa cabecera no la puede mandar nadie más.
 **Por qué**: CloudFront **agrega** la IP del celular al final de `X-Forwarded-For` y deja lo que mandó el celular ([políticas de origen administradas](https://docs.aws.amazon.com/AmazonCloudFront/latest/DeveloperGuide/using-managed-origin-request-policies.html)). Con `PROXIES_CONFIABLES=*`, uvicorn tomaría la primera dirección de la lista, que la escribe el atacante, y cualquiera se saltaría el límite por IP (RF-028). Listar las IP de CloudFront en `PROXIES_CONFIABLES` es una lista larga que cambia. `CloudFront-Viewer-Address` trae un solo valor puesto por CloudFront ([re:Post](https://repost.aws/articles/AR-VvhzdKVRgOIYl4SJMTcHg/how-to-identify-the-real-client-ip-on-alb-when-using-cloudfront-as-a-front-end)).
 **Alternativas**: tomar la última dirección de `X-Forwarded-For` (sirve, pero depende de que nadie más agregue saltos); `ProxyHeadersMiddleware` con todas las IP de CloudFront (frágil).
 **Cómo**: variable `CABECERA_IP_REAL`. Vacía en local y en las pruebas: se sigue usando `ProxyHeadersMiddleware` con `PROXIES_CONFIABLES`, como en la 001 (DP-7). En la demo vale `CloudFront-Viewer-Address`. Si falta la cabecera, se usa la IP de la conexión.
@@ -64,7 +66,10 @@ Precios de `us-east-1`; en otras regiones de Estados Unidos son parecidos. Perio
 | CloudFront | Capa siempre gratuita (1 TB y 10 millones de peticiones al mes) | 0 |
 | Datos de EC2 a CloudFront | Sin costo | 0 |
 | Session Manager (SSM), AWS Budgets (dos presupuestos con acciones) | Sin costo | 0 |
-| **Total** | | **≈ 24.7** (12 % del presupuesto) |
+| Zona de Route 53 (C-9) | 0.50 × 2.37 meses, más consultas de DNS de centavos | 1.19 |
+| Certificado de ACM para CloudFront | Sin costo | 0 |
+| **Total con crédito** | | **≈ 25.9** (13 % del presupuesto) |
+| Dominio `.xyz`, primer año | **Lo paga Hugo**: el crédito no cubre dominios | ≈ 1 |
 
 Con `t4g.small` (2 GB), el total sube a unos 39 dólares (20 %). Los dos quedan muy por debajo de 150 (RF-035). El cálculo se repite en F4 con los precios de la región elegida (DP-24).
 
@@ -135,7 +140,7 @@ Con `t4g.small` (2 GB), el total sube a unos 39 dólares (20 %). Los dos quedan 
 **Decisión**: un flujo `.github/workflows/ci.yml` que corre con `pull_request` hacia `main` (y en `push` a `main`), con `permissions: contents: read` y tres trabajos en `ubuntu-latest`:
 
 1. **Servidor**: `uv sync --locked`, `ruff check`, `ruff format --check` y `pytest -q`.
-2. **Web**: lo mismo para `../web`, más `playwright install --with-deps chromium webkit`. Solo corre si existe `web/tests/` (todavía no está en `main` hasta que se una el #72).
+2. **Web**: lo mismo para `../web`, más `playwright install --with-deps chromium webkit`. Como el CI llega después de unir el #72 (QP-1), `web/tests/` ya está en `main`.
 3. **Base de datos** (desde F2): PostgreSQL 17 como servicio; corre el comando de migraciones dos veces (CE-007) y las pruebas del almacén.
 
 **Por qué**: RF-036 a RF-038. `pull_request` (no `pull_request_target`) no expone secretos a los forks, y el flujo no usa ninguno. Juan hace obligatorios los tres trabajos en la protección de `main` (RF-037, dependencia de §7).
@@ -181,13 +186,29 @@ No puede encender instancias (RF-045). El ARN del rol va como **variable** del r
 
 ## R-17. Dónde viven los secretos del servidor
 
-**Decisión**: en la instancia, un archivo `/etc/pago-facil/entorno`, de `root` y con permisos `0640` (grupo del servicio), que systemd carga con `EnvironmentFile`. Tiene `PEY_API_KEY`, `PEY_WEBHOOK_SECRET`, `DATABASE_URL`, `WEB_ORIGIN`, `CABECERA_IP_REAL` y `PROXIES_CONFIABLES`. Hugo lo escribe en una sesión de Session Manager; nunca pasa por el repositorio ni por GitHub.
+**Decisión**: en la instancia, un archivo `/etc/pago-facil/entorno`, de `root` y con permisos `0640` (grupo del servicio), que systemd carga con `EnvironmentFile`. Tiene `PEY_API_KEY`, `PEY_WEBHOOK_SECRET`, `DATABASE_URL`, `WEB_ORIGIN` (`https://<dominio>`), `CABECERA_IP_REAL`, `PROXIES_CONFIABLES`, `CARPETA_WEB` y los límites de la demo: `LIMITE_COBROS_POR_MINUTO=30` y `CANALES_POR_IP=30`, porque los jueces en una misma red comparten IP pública (QP-6, DP-36). Hugo lo escribe en una sesión de Session Manager; nunca pasa por el repositorio ni por GitHub.
 **Por qué**: son las "variables del hosting" del principio III. pydantic-settings ya lee variables de entorno (`config.py`).
 **Alternativas**: AWS Systems Manager Parameter Store (más piezas para el mismo resultado con una sola instancia).
 
 ## R-18. La web, desde el mismo servidor
 
 **Decisión**: el servidor entrega la carpeta `web/` en `/` cuando `CARPETA_WEB` está definida (en la demo y en local; vacía en las pruebas del servidor). La CSP de `web/index.html` queda en `connect-src 'self'`.
-**Por qué**: la web y el servidor quedan en el mismo origen. `web/config.js` ya vale `""` para ese caso (spec 002, RF-064; `web/README.md:33`). CORS no hace falta para la propia web, y `WEB_ORIGIN` solo deja pasar su dominio (RF-027). La web solo puede conectarse a su propio servidor (RF-029). Una sola publicación sube servidor y web (RF-042).
+**Por qué**: la web y el servidor quedan en el mismo origen. `web/config.js` ya vale `""` para ese caso (spec 002, RF-064; `web/README.md:33`). CORS no hace falta para la propia web, y `WEB_ORIGIN` solo deja pasar `https://<dominio>` (RF-027). La web solo puede conectarse a su propio servidor (RF-029). Una sola publicación sube servidor y web (RF-042).
 **Alternativas**: S3 con su propio comportamiento en CloudFront (otra pieza y otra publicación); dejar `connect-src https:` (incumple RF-029).
-**Consecuencia en local**: la web se abre en `http://localhost:8000` (el servidor la entrega) en lugar del puerto 5173. La forma con `config.js` en `http://localhost:8000` deja de pasar la CSP; se quita del `web/README.md`.
+**Consecuencia en local**: la web se abre en `http://localhost:8000` (el servidor la entrega) en lugar del puerto 5173. La forma con `config.js` en `http://localhost:8000` deja de pasar la CSP; se quita del `web/README.md` y de los documentos de la 002 con el cambio C-7 (b) y (c) (QP-8).
+
+## R-19. Certificado del servidor para `origen.<dominio>` (comparativa, DP-37)
+
+Salió al aplicar QP-7 (C-9). CloudFront exige al origen un certificado público válido para su nombre. Let's Encrypt lo da gratis, pero hay que demostrarle que el dominio es nuestro: por HTTP (puerto 80 o 443 abiertos a internet) o por DNS (un registro en Route 53).
+
+| | A. certbot + complemento de Route 53, uvicorn con HTTPS (recomendada) | B. Caddy delante de uvicorn, comprobación por HTTP | C. Caddy compilado con el módulo de Route 53 |
+|---|---|---|---|
+| Herramienta nueva | certbot y `python3-certbot-dns-route53` (paquetes de Ubuntu) | Caddy | Caddy compilado a medida con `xcaddy` |
+| Puertos abiertos | Solo el 443, solo a CloudFront (R-4 intacto) | 80 y 443 abiertos a internet para Let's Encrypt; hay que filtrar con una cabecera secreta que pone CloudFront, o cualquiera podría mandar `CloudFront-Viewer-Address` falsa | Solo el 443, solo a CloudFront |
+| Renovación | Automática (temporizador de certbot); al renovar, reinicia el servicio: un corte de segundos cada unos 60 días (§11) | Automática y sin corte | Automática y sin corte |
+| Proceso extra en la instancia | Ninguno: uvicorn atiende HTTPS con `--ssl-keyfile` y `--ssl-certfile` | Caddy | Caddy |
+| Permiso de AWS | El rol de la instancia puede cambiar registros `_acme-challenge` de la zona | Ninguno | El mismo que A |
+| Curva de aprendizaje | Baja | Baja, pero la cabecera secreta es otra pieza de seguridad | Media: compilar y mantener un binario propio |
+
+**Decisión recomendada**: **A**. Mantiene el origen cerrado a todo menos CloudFront, sin proxy ni secretos nuevos. El corte al renovar es como el de una publicación (RF-055).
+**Alternativas**: B, si se prefiere renovar sin corte, a cambio de abrir el 80 y el 443 a internet y validar una cabecera secreta en cada petición. C, si se quiere lo mejor de las dos, a cambio de compilar Caddy.

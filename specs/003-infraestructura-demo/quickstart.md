@@ -65,17 +65,18 @@ uv run --directory backend python -m app.migraciones estado
 Hugo, con `docs/operacion-demo.md`:
 
 1. **Primero el presupuesto** (CE-008): créalo, baja un momento el umbral del 50 % por debajo del gasto actual y comprueba que llega el correo a los tres integrantes. Regrésalo al 50 %.
-2. Crea la instancia, la IP elástica, el grupo de seguridad y CloudFront; escribe `/etc/pago-facil/entorno`; publica con `publicar.sh` (contrato de [publicación](contracts/publicacion.md)).
-3. Desde un celular **con datos móviles**, abre `https://<id>.cloudfront.net`. **Se espera**: la pantalla de cobro con HTTPS y sin advertencias (RF-024).
+2. Configura el dominio en Route 53, crea la instancia, la IP elástica, el grupo de seguridad, los dos certificados y CloudFront; escribe `/etc/pago-facil/entorno` (con los límites de la demo en 30, DP-36); publica con `publicar.sh` (contrato de [publicación](contracts/publicacion.md)).
+3. Desde un celular **con datos móviles**, abre `https://<dominio>`. **Se espera**: la pantalla de cobro con HTTPS y sin advertencias (RF-024).
 4. Crea 10 cobros y anota cuánto tarda cada QR. **Se espera**: 9 de 10 en menos de 3 s (CE-003).
 5. **Canal de 20 minutos** (CE-004): crea un cobro, no lo pagues y deja la pantalla abierta. **Se espera**: a los 10 min "vencido"; el canal sigue hasta el min 20 y termina con `fin`, sin "Reconectando…" antes. *Se hace al principio de F4 (research R-3).*
-6. **CORS** (RF-027): desde la consola del navegador en otra página (por ejemplo `https://example.com`), `fetch("https://<demo>/api/cobros", {method: "POST"})`. **Se espera**: lo bloquea el navegador.
-7. **IP real** (RF-028): crea 11 cobros en un minuto desde el mismo celular. **Se espera**: el 11.º dice "Demasiados cobros seguidos". Con otro celular, en la misma red de datos o en otra, sí deja crear.
+6. **CORS** (RF-027): desde la consola del navegador en otra página (por ejemplo `https://example.com`), `fetch("https://<dominio>/api/cobros", {method: "POST"})`. **Se espera**: lo bloquea el navegador.
+7. **IP real** (RF-028): crea 31 cobros en un minuto desde el mismo celular (el límite de la demo es 30, DP-36). **Se espera**: el 31.º dice "Demasiados cobros seguidos". Con otro celular **en otra red** (wifi frente a datos; dos celulares de la misma compañía pueden compartir IP pública), sí deja crear.
 8. Revisa que el costo estimado quede anotado en el plan (CE-009, research R-6).
+9. **Cifrado hasta el servidor** (RF-056, CE-015): desde tu computadora, `curl -m 5 http://<ip-elástica>/` y `curl -m 5 https://origen.<dominio>/salud` no reciben respuesta (el grupo de seguridad solo deja entrar a CloudFront); en CloudFront, el origen dice "solo HTTPS".
 
 ## 7. Pago real (historia 3, CE-001, CE-002) — F5, con autorización de Hugo
 
-1. Da de alta en el portal de pey el aviso `https://<demo>/webhooks/pey` con su secreto (RF-025).
+1. Da de alta en el portal de pey el aviso `https://<dominio>/webhooks/pey` con su secreto (RF-025).
 2. En un **Android** con datos móviles, cobra $0.01; paga desde otro celular con la app del banco, en CoDi.
 3. Mide desde la hora del aviso en el portal de pey hasta que suena "Pago recibido". **Se espera**: menos de 2 s (CE-002). Repite en un **iPhone**.
 4. Pide a pey reenviar el aviso desde su portal. **Se espera**: la pantalla no vuelve a sonar y el cobro sigue con un pago (historia 3, escenario 3).

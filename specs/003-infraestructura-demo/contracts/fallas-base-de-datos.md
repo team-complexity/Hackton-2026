@@ -4,11 +4,11 @@
 
 Las rutas de la spec 001 no cambian de forma: mismas peticiones, mismos cuerpos y mismos códigos de éxito. Este contrato agrega **solo** las respuestas nuevas para cuando la base de datos no responde o la estructura está pendiente. Todas siguen la forma de error de la 001: `{"detail": "<mensaje para el dueño>"}` (DP-9 de la 001).
 
-"No responde" incluye: no se puede conectar, la consulta tarda más de 5 s, o la base de datos devuelve un error que no es de los datos.
+"No responde" incluye: no se puede conectar, la operación tarda más de lo permitido (2 s en cada escritura de crear un cobro, DP-35; 5 s en las demás) o la base de datos devuelve un error que no es de los datos. Un **error de datos** (PostgreSQL rechaza el valor) no es "no responde": ver §3.1.
 
 ## 2. Requisitos
 
-RF-012, RF-013, RF-014, RF-015, RF-016, RF-047 (corte 2), RF-048, RF-052, RF-021.
+RF-012, RF-013, RF-014, RF-015, RF-016, RF-047 (corte 2), RF-048, RF-052, RF-021. Decisiones del plan DP-34 y DP-35.
 
 ## 3. Respuestas nuevas por ruta
 
@@ -21,7 +21,15 @@ RF-012, RF-013, RF-014, RF-015, RF-016, RF-047 (corte 2), RF-048, RF-052, RF-021
 | `GET /api/cobros/{id}` | Al cargar un cobro que no está en memoria | 503 | "No se pudo consultar el cobro. Intenta de nuevo." | Nunca 404: un 404 solo significa que el cobro no existe | RF-015 |
 | `GET /api/cobros/{id}/eventos` | Al cargar el cobro | 503 | "No se pudo consultar el cobro. Intenta de nuevo." | La web reconecta (spec 002, historia 4) | RF-015 |
 | `POST /api/cobros/{id}/cancelar` | Al cargar o al guardar la cancelación | 503 | "No se pudo cancelar el cobro. Intenta de nuevo." | El cobro no cambia ni se avisa por el canal | RF-004 |
-| `POST /webhooks/pey` | Al buscar el cobro, al registrar el pago o al guardar el `webhook-id` | 503 | "No se pudo registrar el aviso. Se reintentará." | Si el aviso trae un pago válido, entra en la lista de reintentos (data-model §4); no se emite nada por el canal | RF-014, RF-048 |
+| `POST /webhooks/pey` | Al revisar si el `webhook-id` ya se vio, al buscar el cobro, al registrar el pago o al guardar el `webhook-id` | 503 | "No se pudo registrar el aviso. Se reintentará." | Si el aviso trae un pago válido, entra en la lista de reintentos (data-model §4); no se emite nada por el canal | RF-014, RF-048 |
+
+### 3.1 Datos que el esquema no acepta (DP-34)
+
+| Ruta | Caso | Código | `detail` | Qué pasa además |
+|---|---|---|---|---|
+| `POST /webhooks/pey` | `amount` de 0 o negativo (firma válida) | 400 | "Aviso con datos no válidos" | Se valida antes de la base de datos; el `webhook-id` no se marca, como con un `amount` ilegible (C-6 g) |
+| `POST /webhooks/pey` | Aviso sin `type` | 200, como cualquier aviso ignorado | — | Se guarda con `tipo` vacío |
+| `POST /webhooks/pey` | Cualquier otro error de datos de PostgreSQL | 400 | "Aviso con datos no válidos" | Se registra con el nombre de la clase del error; **nunca** entra a la lista de reintentos |
 
 - La consulta de respaldo (dentro de ver cobro y del canal) no responde nada a nadie: si no puede guardar un pago, lo registra en el log y lo intenta en la próxima consulta (RF-016). Ver cobro sigue respondiendo con lo que hay en memoria.
 - Un 503 de `GET /api/cobros/{id}` ya lo trata la web como "sin conexión" y reintenta (`web/js/servidor.js`; QA de la spec, bloque 3), así que la web no cambia.
