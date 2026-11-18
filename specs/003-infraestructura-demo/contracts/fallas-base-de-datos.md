@@ -1,5 +1,7 @@
 # Contrato: respuestas cuando la base de datos falla
 
+> **Pendiente de revisar con el plan nuevo.** El 2026-11-17 la spec cambió de rumbo (D-4): ya no hay AWS, dominio, presupuesto ni publicación, y la demo sale por un túnel desde una computadora del equipo. Lo de este documento sobre el guardado, las migraciones y el CI sigue sirviendo de punto de partida; lo que menciona AWS, CloudFront, el dominio o la publicación ya no aplica.
+
 ## 1. Propósito
 
 Las rutas de la spec 001 no cambian de forma: mismas peticiones, mismos cuerpos y mismos códigos de éxito. Este contrato agrega **solo** las respuestas nuevas para cuando la base de datos no responde o la estructura está pendiente. Todas siguen la forma de error de la 001: `{"detail": "<mensaje para el dueño>"}` (DP-9 de la 001).

@@ -3,7 +3,7 @@
 - **Rama**: `feature/90-infraestructura-demo`
 - **Fecha**: 2026-11-17
 - **Spec**: [spec.md](spec.md), estado: Aprobada el 2026-11-17 (con el cambio C-8 del mismo día)
-- **Estado del plan**: `Borrador`. Lo redactó Claude el 2026-11-17 con `/speckit-plan`, antes de que se unan los PR #72 y #96, como permite C-8: se revisa contra la constitución 2.0.0 del PR #96 (commit `aa187d7`) y el código de esta rama. Hugo decidió DP-1 a DP-5 el mismo día, todas como se recomendaba (§9.2). La QA del mismo día (QP-1 a QP-9, §9.3) está decidida y aplicada; trajo el cambio C-9 a la spec (dominio propio y tramo cifrado hasta el servidor) y amplió C-6 y C-7. Al aplicarla salió DP-37 (cómo obtiene su certificado el servidor), que Hugo decidió el mismo día: certbot con Route 53. El plan no se aprueba hasta unir los dos PR (C-8).
+- **Estado del plan**: `Sustituido` (2026-11-17). La spec cambió de rumbo ese día (D-4): ya no hay AWS, dominio, presupuesto ni publicación, y la demo sale por un túnel desde una computadora del equipo. Este plan se rehace con `/speckit-plan` después de resolver las dos marcas de la spec y su QA nueva. Sirven de punto de partida F1 (CI), F2 (migraciones), F3 (guardar) y sus decisiones; F4, F6, F7, DP-1, DP-37, C-9 y todo lo que menciona AWS, CloudFront, el dominio o la publicación quedan solo como historia. Estado anterior: `Borrador`. Lo redactó Claude el 2026-11-17 con `/speckit-plan`, antes de que se unan los PR #72 y #96, como permite C-8: se revisa contra la constitución 2.0.0 del PR #96 (commit `aa187d7`) y el código de esta rama. Hugo decidió DP-1 a DP-5 el mismo día, todas como se recomendaba (§9.2). La QA del mismo día (QP-1 a QP-9, §9.3) está decidida y aplicada; trajo el cambio C-9 a la spec (dominio propio y tramo cifrado hasta el servidor) y amplió C-6 y C-7. Al aplicarla salió DP-37 (cómo obtiene su certificado el servidor), que Hugo decidió el mismo día: certbot con Route 53. El plan no se aprueba hasta unir los dos PR (C-8).
 - **Entrada**: la spec de `specs/003-infraestructura-demo/spec.md`
 
 > **Notas para los comandos de spec-kit.**
@@ -395,6 +395,7 @@ QA del 2026-11-17, en una sola pasada. Según C-8, la QA no aprueba el plan hast
 | El certificado del servidor no se renueva (DP-37) | CloudFront deja de conectar con el servidor y la demo se cae | Renovación automática con aviso en el registro; el certificado dura 90 días y la demo vive hasta el 31 de enero, así que basta con que una renovación salga bien. Se prueba en F4 con una renovación en seco |
 | La renovación del certificado reinicia el servicio | Un corte de segundos cada unos 60 días | Igual que una publicación (RF-055); la pantalla reconecta sola |
 | Una escritura en la base de datos hace más lento el aviso de pey | El aviso tarda más de 1 s (CE-010 de la 001) | Instancia en la región de Supabase (DP-24); se mide en F5 |
+| Pedir la imagen del QR a pey es lento: crear un cobro con imagen tardó entre 2.39 s y 9.09 s (TK-5 del plan 001; lo señaló Juan en la revisión del PR #98) | Incumple CE-003 (QR en menos de 3 s en 9 de 10) | Se mide en F4 (quickstart §6.4). Si no se cumple, Hugo decide con un C-n a la 003 y a la 002 si el QR se dibuja desde `qr` en vez de usar la imagen de pey (D-2) |
 
 ---
 

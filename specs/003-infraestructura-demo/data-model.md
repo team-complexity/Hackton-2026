@@ -1,5 +1,7 @@
 # Modelo de datos (Fase 1): Spec 003 — Infraestructura de la demo pública
 
+> **Pendiente de revisar con el plan nuevo.** El 2026-11-17 la spec cambió de rumbo (D-4): ya no hay AWS, dominio, presupuesto ni publicación, y la demo sale por un túnel desde una computadora del equipo. Lo de este documento sobre el guardado, las migraciones y el CI sigue sirviendo de punto de partida; lo que menciona AWS, CloudFront, el dominio o la publicación ya no aplica.
+
 - **Fecha**: 2026-11-17
 - **Plan**: [plan.md](plan.md)
 - **Parte de**: el modelo de la [spec 001](../001-backend-mvp/data-model.md) (cobro, pago, estados y reglas de registro), que **no cambia**, y del esquema del PR #97 (`supabase/001_esquema_inicial.sql`). Aquí solo va lo que se guarda, cómo se traduce y lo que se agrega.

@@ -1,5 +1,7 @@
 # Contrato: publicar una versión en la demo
 
+> **Sustituido.** El 2026-11-17 la spec cambió de rumbo (D-4): ya no hay AWS, dominio, presupuesto ni publicación, y la demo sale por un túnel desde una computadora del equipo. Este documento queda como historia de la versión con AWS y se rehace con el plan nuevo.
+
 ## 1. Propósito
 
 Subir una versión de `main` (servidor y web) a la instancia de la demo, a mano (corte 1) o sola al unir un pull request (corte 2), con un solo script y con vuelta atrás si algo falla. Supone DP-1 (EC2 + CloudFront).

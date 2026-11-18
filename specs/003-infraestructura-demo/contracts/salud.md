@@ -1,5 +1,7 @@
 # Contrato: salud del servidor (amplía el de la spec 001)
 
+> **Pendiente de revisar con el plan nuevo.** El 2026-11-17 la spec cambió de rumbo (D-4): ya no hay AWS, dominio, presupuesto ni publicación, y la demo sale por un túnel desde una computadora del equipo. Lo de este documento sobre el guardado, las migraciones y el CI sigue sirviendo de punto de partida; lo que menciona AWS, CloudFront, el dominio o la publicación ya no aplica.
+
 ## 1. Método, ruta y propósito
 
 `GET /salud`: comprobar en segundos que el servidor responde, que tiene sus credenciales y que la base de datos responde, sin mostrar ningún valor. Lo usan Hugo, el script de publicación (`publicar.sh`, DP-25) y la guía de reactivación de Supabase (RF-050).

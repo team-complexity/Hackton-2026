@@ -1,5 +1,7 @@
 # Guía rápida (Fase 1): comprobar la spec 003 de punta a punta
 
+> **Sustituido.** El 2026-11-17 la spec cambió de rumbo (D-4): ya no hay AWS, dominio, presupuesto ni publicación, y la demo sale por un túnel desde una computadora del equipo. Este documento queda como historia de la versión con AWS y se rehace con el plan nuevo.
+
 - **Fecha**: 2026-11-17
 - **Plan**: [plan.md](plan.md)
 - **Para quién**: Hugo (todo) y Juan (CI y migraciones). Cada sección dice qué comprueba y qué se espera ver. Los detalles están en los [contratos](contracts/) y en el [modelo de datos](data-model.md); los pasos de AWS, en `docs/operacion-demo.md`, que se escribe en F4.

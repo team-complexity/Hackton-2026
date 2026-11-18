@@ -1,5 +1,7 @@
 # Contrato: CI de los pull requests
 
+> **Pendiente de revisar con el plan nuevo.** El 2026-11-17 la spec cambió de rumbo (D-4): ya no hay AWS, dominio, presupuesto ni publicación, y la demo sale por un túnel desde una computadora del equipo. Lo de este documento sobre el guardado, las migraciones y el CI sigue sirviendo de punto de partida; lo que menciona AWS, CloudFront, el dominio o la publicación ya no aplica.
+
 ## 1. Flujo y propósito
 
 `.github/workflows/ci.yml`: corre las pruebas y el lint del servidor, de la web y de la base de datos en cada pull request hacia `main`, y muestra el resultado en el pull request.

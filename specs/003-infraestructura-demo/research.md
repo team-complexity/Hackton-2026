@@ -1,5 +1,7 @@
 # Investigación (Fase 0): Spec 003 — Infraestructura de la demo pública
 
+> **Sustituido.** El 2026-11-17 la spec cambió de rumbo (D-4): ya no hay AWS, dominio, presupuesto ni publicación, y la demo sale por un túnel desde una computadora del equipo. Este documento queda como historia de la versión con AWS y se rehace con el plan nuevo.
+
 - **Fecha**: 2026-11-17
 - **Plan**: [plan.md](plan.md)
 - **Base**: el código de la rama `feature/90-infraestructura-demo`, la constitución 2.0.0 del PR #96 (commit `aa187d7`), el esquema del PR #97 (`supabase/001_esquema_inicial.sql`, commit `891960d`) y la documentación citada en cada punto.

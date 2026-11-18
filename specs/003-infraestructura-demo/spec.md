@@ -1,36 +1,37 @@
-# Spec 003: Infraestructura de la demo pública: guardar los cobros, publicar con HTTPS y probar cada cambio
+# Spec 003: Infraestructura de la demo: guardar los cobros, abrir la demo local por un túnel y probar cada cambio
 
 - **ID**: `003-infraestructura-demo`
 - **Fecha**: `2026-11-17`
-- **Estado**: `Aprobada`. Hugo la aprobó el 2026-11-17, después de las aclaraciones y de la QA, y pidió la entrevista a continuación; la entrevista (E-1 a E-5) se hizo y se aplicó el mismo día, sin QA nueva. Lo redactó Claude el 2026-11-17 con `/speckit-specify`, a partir de la descripción que Hugo ajustó ese día: alcance Supabase + AWS + CI, imagen del QR guardada (decisión de #94) y tope de gasto con apagado automático. El mismo día se resolvieron 5 aclaraciones con `/speckit-clarify` (sección "Aclaraciones"), incluidas las dos marcas del borrador. La QA del 2026-11-17 (QA-1 a QA-11) está decidida y aplicada el mismo día, con sus 4 erratas. Se entrega en dos cortes (§1.2). Propone el cambio C-6 a la spec 001 y el C-7 a la spec 002 (§8.2). El cambio C-8 a esta spec, aprobado y aplicado el 2026-11-17, permite redactar el plan antes de que se unan los PR #72 y #96. El cambio C-9 (dominio propio y tramo cifrado hasta el servidor, RF-024, RF-056 y CE-015) salió de la QA del plan (QP-7) y se aplicó el mismo día; la misma QA amplió C-6 y C-7 y corrigió las dependencias de §7 (QP-9).
-- **Rama**: `feature/90-infraestructura-demo` (propuesta; la crea Hugo)
-- **Issues**: #90 (guardar cobros y pagos), #19 (conexión y cambios de estructura con un comando), #34 y #65 (publicar en AWS con HTTPS y el aviso de pey), #35 (CI), #94 (de dónde sale la imagen del QR). Con el pago real de esta spec se cierran #27 y #64; #29 queda abierto hasta el inicio de sesión (#24), porque también pide que un negocio no reciba avisos de otro (QA-6).
-- **Entrada**: "Infraestructura de la demo pública: el backend guarda cobros, pagos y avisos de webhook en Supabase (PostgreSQL) en lugar de en memoria, con el esquema del PR #97, y backend y web se publican en AWS con HTTPS, el webhook de pey dado de alta y CI en cada pull request. Issues: #90, #19, #34 y #65, #35, #94 y el pago real de $0.01 que cierra #27, #29 y #64. Debe cumplir: después de reiniciar el servidor, un cobro pendiente sigue ahí, su pago se avisa y la web puede volver a mostrar su QR; la imagen del QR es la que manda pey y se guarda con el cobro, en una columna nueva de `cobros` que esta spec agrega con una migración sobre el esquema de #97, y si pey no la manda la web sigue mostrando el mensaje de C-3; un pago se registra una sola vez; las pruebas automáticas no usan ni la base de datos real ni pey real; las credenciales solo viven en el backend y en el hosting; el servicio de AWS no corta el canal de 20 minutos y corre un solo proceso; se mide que suene en menos de 2 s con el webhook activo, en Android y en iPhone; tope de gasto de 200 dólares de crédito hasta el 31 de enero de 2027, con correos al 50 %, 80 % y 100 % y por pronóstico, apagado automático al 100 % y presupuesto medido antes del crédito. Fuera de alcance: inicio de sesión (#24), historial (#38), cuenta bancaria por negocio y logs y monitoreo (#45)."
+- **Estado**: `Borrador` (cambio de rumbo). El 2026-11-17 el equipo decidió no montar nada en la nube por ahora (D-4): esta spec, que ese mismo día estaba `Aprobada` con Supabase + AWS + CI, se reescribió para que todo corra en local. En la entrevista del cambio de rumbo (E-6 a E-8), Hugo decidió que Supabase se queda, que la demo sale entera por un túnel y que el CI se queda. La versión con AWS (spec, plan, QA del plan y C-9) queda en el historial de git, en el commit `fe837cc`, por si se retoma. Lo redactó Claude el 2026-11-17. Quedan dos marcas abiertas (§8.5). Falta la QA de una sola pasada de esta versión: §8.4 conserva la QA de la versión anterior. Propone el cambio C-6 a la spec 001 y el C-7 a la spec 002 (§8.2). Sigue vigente el C-8: el plan se aprueba cuando se unan los PR #72 y #96.
+- **Rama**: `feature/90-infraestructura-demo`
+- **Issues**: #90 (guardar cobros y pagos), #19 (conexión y cambios de estructura con un comando), #35 (CI), #94 (de dónde sale la imagen del QR) y #65 (HTTPS y aviso de pey, ahora por el túnel; su nota deja pendiente el despliegue en la nube). #34 (AWS) y #57 (mantener la demo hasta el 31 de enero) quedan fuera y siguen abiertos. Con el pago real de esta spec se cierran #27 y #64; #29 queda abierto hasta el inicio de sesión (#24), porque también pide que un negocio no reciba avisos de otro (QA-6).
+- **Entrada**: "Cambio de rumbo de la spec 003 (Hugo, 2026-11-17): por decisiones del equipo, por ahora no se monta nada en la nube; todo se hace local, y puede que se retome en el futuro. La base de datos sigue siendo Supabase (E-6). La web, el servidor y el aviso de pey salen por un túnel con HTTPS desde la computadora que corre la demo (E-7). El CI en cada pull request se queda (E-8). Salen AWS, el dominio propio, el presupuesto y la publicación." La entrada de la versión con AWS está en `fe837cc`.
 
 > **Notas para los comandos de spec-kit.**
 > - `RF-###` equivale a *Functional Requirement* (FR-###).
 > - `CE-###` equivale a *Success Criterion* (SC-###).
 > - `[NECESITA ACLARACIÓN: …]` equivale a *NEEDS CLARIFICATION*.
 >
-> La spec describe **QUÉ** y **POR QUÉ**. Están prohibidos el stack, la arquitectura, los nombres de archivos, los esquemas de datos, los algoritmos y las firmas de funciones: eso va en `plan.md` y `tasks.md`. Toda la spec se escribe en español. Supabase y AWS se nombran solo porque son decisiones ya tomadas por el equipo (constitución 2.0.0 del PR #96, tabla de restricciones técnicas); los requisitos no dependen de ellos.
+> La spec describe **QUÉ** y **POR QUÉ**. Están prohibidos el stack, la arquitectura, los nombres de archivos, los esquemas de datos, los algoritmos y las firmas de funciones: eso va en `plan.md` y `tasks.md`. Toda la spec se escribe en español. Supabase se nombra solo porque es una decisión ya tomada por el equipo (constitución 2.0.0 del PR #96, tabla de restricciones técnicas). El servicio de túnel lo elige el plan, con su comparativa (principio IX).
 
 ---
 
 ## 1. Contexto y propósito (por qué)
 
-Las specs 001 y 002 dejaron listo el recorrido completo: el dueño teclea el monto, enseña el QR, el cliente paga desde su banco y la pantalla suena. Pero hoy ese recorrido solo funciona en una computadora del equipo, y tiene dos huecos que impiden enseñarlo a los jueces y a un negocio piloto:
+Las specs 001 y 002 dejaron listo el recorrido completo: el dueño teclea el monto, enseña el QR, el cliente paga desde su banco y la pantalla suena. Pero hoy ese recorrido tiene dos huecos que impiden enseñarlo a los jueces y a un negocio piloto:
 
-1. **No hay enlace público.** Las reglas del hackathon piden una demo abierta sin invitación, y pey solo entrega sus avisos de pago a una dirección pública con HTTPS. En las pruebas del 16 de noviembre, sin aviso de pey, el primer pago tardó más de 30 segundos en reportarse, y los túneles gratuitos retenían el canal de avisos o se cortaban. La promesa de "suena en menos de 2 segundos" (spec 002, CE-001 y CE-002) no se ha podido medir.
-2. **El servidor olvida todo al reiniciarse.** Los cobros, los pagos y los avisos ya procesados viven en memoria (spec 001, §4, limitación aceptada hasta #23). En un hosting real, cada reinicio o publicación nueva borraría los cobros en curso: un cliente podría pagar un QR que el servidor ya no reconoce.
+1. **No hay un enlace público que funcione bien.** Los entregables del hackathon piden una demo pública por enlace, y pey solo entrega sus avisos de pago a una dirección pública con HTTPS. En las pruebas del 16 de noviembre, sin aviso de pey, el primer pago tardó más de 30 segundos en reportarse. Además, los túneles gratuitos que se probaron retenían el canal de avisos o se cortaban. La promesa de "suena en menos de 2 segundos" (spec 002, CE-001 y CE-002) no se ha podido medir.
+2. **El servidor olvida todo al reiniciarse.** Los cobros, los pagos y los avisos ya procesados viven en memoria (spec 001, §4, limitación aceptada hasta #23). Cada reinicio borra los cobros en curso: un cliente podría pagar un QR que el servidor ya no reconoce.
 
-Esta spec cierra los dos huecos y deja la base que van a usar las tres pantallas (web, Android e iOS) y las specs que siguen (inicio de sesión #24 e historial #38):
+Esta spec cierra los dos huecos **sin nube**, y deja la base que van a usar las tres pantallas (web, Android e iOS) y las specs que siguen (inicio de sesión #24 e historial #38):
 
 - el servidor guarda cobros, pagos y avisos en la base de datos del proyecto (Supabase, con el esquema de Juan del PR #97);
-- servidor y web se publican en AWS con HTTPS y el aviso de pey dado de alta;
-- cada pull request se prueba solo, antes de que Juan lo revise;
-- el gasto en AWS queda acotado a los 200 dólares de crédito, hasta el 31 de enero de 2027.
+- la web, el servidor y el aviso de pey salen por un túnel con HTTPS desde la computadora que corre la demo, sin que el túnel retenga ni corte el canal de avisos;
+- cada pull request se prueba solo, antes de que se revise.
 
-El comportamiento del cobro **no cambia**: lo que el dueño ve y oye es lo mismo que en las specs 001 y 002. Lo que cambia es que ahora sobrevive a un reinicio y se puede usar desde cualquier celular.
+Sin nube, la demo solo existe mientras la computadora de la demo y su túnel están encendidos (RF-060).
+
+El comportamiento del cobro **no cambia**: lo que el dueño ve y oye es lo mismo que en las specs 001 y 002. Lo que cambia es que ahora sobrevive a un reinicio y se puede usar desde cualquier celular mientras la demo está encendida.
 
 ### 1.1 Glosario
 
@@ -40,31 +41,23 @@ Los términos *cobro*, *pago*, *monto fijo*, *monto libre*, *vigencia*, *ventana
 |---|---|
 | Servidor | El backend de PAGO FÁCIL de la spec 001. Es el único que habla con pey y con la base de datos. |
 | Base de datos | Donde el servidor guarda cobros, pagos y avisos para que sobrevivan a un reinicio. Es el proyecto de Supabase que creó Juan (#19, #23). |
-| Reinicio | Cualquier momento en que el servidor deja de correr y vuelve a arrancar: una publicación nueva, una falla, un apagado del hosting o un reinicio a mano. |
-| Demo pública | La web y el servidor publicados en AWS, con una dirección HTTPS que abre cualquier celular sin invitación ni inicio de sesión. |
+| Reinicio | Cualquier momento en que el servidor deja de correr y vuelve a arrancar: una versión nueva, una falla, la computadora que se apaga o se suspende, o un reinicio a mano. |
+| Computadora de la demo | La computadora del equipo donde corren el servidor y el túnel de la demo. |
+| Túnel | El servicio que le da a la computadora de la demo una dirección pública con HTTPS y le hace llegar las peticiones de los celulares y los avisos de pey, sin abrir puertos de la red donde está. |
+| Demo pública | La web y el servidor de la computadora de la demo, abiertos por el túnel en una dirección HTTPS que cualquier celular abre sin invitación ni inicio de sesión. |
+| Demo encendida | El servidor y el túnel corriendo en la computadora de la demo. |
+| Servidor de desarrollo | El servidor que cada integrante corre en su computadora para programar y probar. Usa otra base de datos y otra llave de pey (RF-049 y RF-053). |
 | Cambio de estructura | Crear o modificar las tablas de la base de datos (una *migración*). Incluye el esquema inicial del PR #97 y la columna nueva de la imagen del QR. |
 | CI | La revisión automática que corre las pruebas y el lint en cada pull request y muestra el resultado en GitHub. |
-| Presupuesto | El tope de gasto en AWS: 200 dólares de crédito que deben alcanzar hasta el 31 de enero de 2027. |
-| Equipo | Hugo, Juan y Miguel. Son quienes reciben los correos del presupuesto. |
 
-### 1.2 Cortes de entrega (QA-1)
+### 1.2 Orden de entrega
 
-La spec se entrega en dos cortes. Cada uno se puede enseñar solo.
+Una sola entrega, hasta el 22 de noviembre (meta de S1). Sustituye los dos cortes de QA-1: lo que era del corte 2 (publicación automática, RF-047 y CE-012) salió con D-4. El orden va de lo que más desbloquea a lo que menos (P-1, E-5):
 
-**Corte 1 (hasta el 22 de noviembre, meta de S1):** todo lo que no está en el corte 2. Dentro del corte, el orden acordado (P-1, E-5) va de lo que más desbloquea a lo que menos:
-
-1. **CI** (historia 5): desbloquea la revisión del PR #72, que Juan condiciona a ver las pruebas en GitHub.
+1. **CI** (historia 5): desbloquea la revisión de los pull requests, que Juan condiciona a ver las pruebas en GitHub.
 2. **Guardar cobros, pagos y avisos** (historias 1 y 6).
-3. **Presupuesto y publicación a mano por Hugo** (historias 4 y 2). El presupuesto se configura antes de publicar por primera vez.
+3. **Demo pública por el túnel y guía para encenderla** (historias 2 y 4).
 4. **Pago real desde la demo pública** (historia 3), que cierra #27 y #64.
-
-**Corte 2 (hasta el 29 de noviembre, S2):**
-
-- publicación automática al unir a `main`, sin credenciales guardadas (RF-042 a RF-045 y CE-013);
-- aviso en la salud del servidor de un cambio de estructura sin aplicar (RF-047);
-- comprobación de 8 días de la base de datos sin pausa (CE-012), que no bloquea el cierre de la spec.
-
-Mientras no esté el corte 2, Hugo publica a mano desde `main` siguiendo su guía.
 
 ---
 
@@ -72,11 +65,11 @@ Mientras no esté el corte 2, Hugo publica a mano desde `main` siguiendo su guí
 
 ### Sesión 2026-11-17
 
-- P: ¿Cómo evitamos que la base de datos de Supabase se pause antes del 31 de enero? → R: Plan gratuito, y el servidor publicado consulta la base de datos al menos una vez al día para que nunca pase una semana sin uso (RF-039, CE-012).
-- P: Si el presupuesto apaga el servidor al llegar a 200 dólares, ¿quién lo vuelve a encender y con qué criterio? → R: Solo Hugo, después de revisar qué consumió el crédito y corregir la causa (RF-040, RF-041).
-- P: ¿Con qué dirección se publica la demo? → R: La que asigna AWS, con su HTTPS, sin dominio propio (RF-024). *Sustituida por C-9 (QA del plan, QP-7): dominio propio comprado por Hugo.*
-- P: ¿Cómo se publica una versión nueva del servidor y la web en la demo? → R: Automáticamente cada vez que se une un pull request a `main` (RF-042 a RF-045).
-- P: ¿Se aplican también solos los cambios de estructura de la base de datos al publicar? → R: No. La publicación solo sube código; Hugo aplica las migraciones a mano con el comando, después de revisarlas (RF-046, RF-047).
+- P: ¿Cómo evitamos que la base de datos de Supabase se pause antes del 31 de enero? → R: Plan gratuito, y el servidor publicado consulta la base de datos al menos una vez al día para que nunca pase una semana sin uso (RF-039, CE-012). *Ajustada por D-4: sin un servidor siempre encendido, la consulta solo pasa mientras hay un servidor encendido; si se pausa, Hugo lo reactiva con su guía (RF-039 y RF-050). CE-012 se retiró.*
+- P: Si el presupuesto apaga el servidor al llegar a 200 dólares, ¿quién lo vuelve a encender y con qué criterio? → R: Solo Hugo, después de revisar qué consumió el crédito y corregir la causa (RF-040, RF-041). *Sustituida por D-4: no hay presupuesto.*
+- P: ¿Con qué dirección se publica la demo? → R: La que asigna AWS, con su HTTPS, sin dominio propio (RF-024). *Sustituida por C-9 y después por D-4: la dirección es la del túnel (RF-024 y RF-030).*
+- P: ¿Cómo se publica una versión nueva del servidor y la web en la demo? → R: Automáticamente cada vez que se une un pull request a `main` (RF-042 a RF-045). *Sustituida por D-4: Hugo actualiza la computadora de la demo con su guía (RF-058).*
+- P: ¿Se aplican también solos los cambios de estructura de la base de datos al publicar? → R: No. La publicación solo sube código; Hugo aplica las migraciones a mano con el comando, después de revisarlas (RF-046, RF-047). *Sustituida por D-4: no hay publicación; Hugo aplica el comando al encender la demo (RF-058).*
 
 ---
 
@@ -86,7 +79,7 @@ Mientras no esté el corte 2, Hugo publica a mano desde `main` siguiendo su guí
 
 **Como** dueño de la tiendita, **quiero** que mi cobro y sus pagos sigan ahí aunque el servidor se reinicie, **para** que el cliente que ya escaneó el QR no pague a un cobro que nadie escucha.
 
-**Por qué esta prioridad:** en un hosting real los reinicios pasan solos (publicaciones nuevas, fallas, mantenimiento). Sin esto, la demo pública perdería pagos, y la constitución dice que el sistema nunca pierde un pago (principio VIII).
+**Por qué esta prioridad:** los reinicios pasan solos: una versión nueva, una falla o la computadora de la demo que se apaga o se suspende. Sin esto, la demo perdería pagos, y la constitución dice que el sistema nunca pierde un pago (principio VIII).
 
 **Prueba independiente:** crear un cobro, reiniciar el servidor, recargar la pantalla y pagar ese QR con $0.01: la pantalla vuelve a mostrar el QR y suena "Pago recibido".
 
@@ -106,18 +99,20 @@ Mientras no esté el corte 2, Hugo publica a mano desde `main` siguiendo su guí
 
 **Como** juez del hackathon o dueño de un negocio piloto, **quiero** abrir un enlace con HTTPS desde mi celular y cobrar, **para** probar PAGO FÁCIL sin instalar nada ni pedir acceso.
 
-**Por qué esta prioridad:** es el "enlace a la app en vivo" que evalúan los jueces y la dirección a la que pey entrega sus avisos. Sin ella no se puede medir la promesa de los 2 segundos.
+**Por qué esta prioridad:** es la "demo pública por enlace" de los entregables del hackathon y la dirección a la que pey entrega sus avisos. Sin ella no se puede medir la promesa de los 2 segundos.
 
-**Prueba independiente:** abrir el enlace con datos móviles (no el wifi de casa) en un Android y en un iPhone, crear un cobro y ver el QR.
+**Prueba independiente:** con la demo encendida, abrir el enlace con datos móviles (no el wifi de la computadora de la demo) en un Android y en un iPhone, crear un cobro y ver el QR.
 
 **Escenarios de aceptación:**
 
-1. **Dado** un celular con datos móviles, **cuando** abre la dirección pública, **entonces** carga la pantalla de cobro con HTTPS, sin advertencias del navegador ni inicio de sesión.
+1. **Dado** la demo encendida y un celular con datos móviles, **cuando** abre la dirección pública, **entonces** carga la pantalla de cobro con HTTPS, sin advertencias del navegador ni inicio de sesión.
 2. **Dado** la demo pública, **cuando** el dueño crea un cobro, **entonces** ve el QR en menos de 3 segundos, en 9 de cada 10 intentos.
-3. **Dado** un cobro en pantalla, **cuando** el cliente lo paga, **entonces** el aviso de pey llega al servidor publicado con su firma válida.
-4. **Dado** un canal de avisos abierto, **cuando** pasan 20 minutos (vigencia más ventana de escucha), **entonces** el canal sigue abierto hasta que el servidor lo cierra por fin de ventana, sin cortes de la infraestructura.
-5. **Dado** una página de otro dominio, **cuando** intenta usar el servidor publicado desde el navegador, **entonces** el navegador lo bloquea.
-6. **Dado** una publicación nueva del servidor, **cuando** termina, **entonces** la dirección pública y la del aviso de pey siguen siendo las mismas.
+3. **Dado** un cobro en pantalla, **cuando** el cliente lo paga, **entonces** el aviso de pey llega al servidor a través del túnel, con su firma válida.
+4. **Dado** un canal de avisos abierto por la dirección pública, **cuando** pasan 20 minutos (vigencia más ventana de escucha), **entonces** el canal sigue abierto hasta que el servidor lo cierra por fin de ventana, sin cortes del túnel.
+5. **Dado** un canal de avisos abierto por la dirección pública, **cuando** el servidor emite un evento, **entonces** la pantalla lo recibe en ese momento, sin que el túnel lo retenga hasta cerrar el canal.
+6. **Dado** una página de otro dominio, **cuando** intenta usar el servidor desde el navegador, **entonces** el navegador lo bloquea.
+7. **Dado** otro equipo conectado a la misma red que la computadora de la demo, **cuando** intenta conectarse directo al servidor sin pasar por el túnel, **entonces** no recibe respuesta.
+8. **Dado** que el servidor o el túnel se reinician, **cuando** vuelven, **entonces** la dirección pública y la del aviso de pey se comportan como dice RF-030.
 
 ---
 
@@ -137,29 +132,28 @@ Mientras no esté el corte 2, Hugo publica a mano desde `main` siguiendo su guí
 
 ---
 
-### Historia 4 — Que el gasto de AWS no pase de 200 dólares (Prioridad: P2)
+### Historia 4 — Encender la demo cuando hace falta (Prioridad: P2)
 
-**Como** Hugo, responsable del proyecto, **quiero** que el equipo reciba avisos del gasto y que el servidor se apague solo al llegar al tope, **para** que el crédito alcance hasta el 31 de enero y nadie pague de su bolsillo.
+**Como** Hugo, responsable del proyecto, **quiero** encender la demo siguiendo una sola guía y comprobar desde fuera que todo responde, **para** enseñarla a los jueces o a un negocio piloto sin improvisar.
 
-**Por qué esta prioridad:** AWS no tiene un tope de gasto que corte solo. Un error de configuración puede consumir el crédito en días. Va después de las historias 1 a 3 porque solo importa cuando ya hay algo publicado, pero se configura antes de publicar.
+**Por qué esta prioridad:** sin nube, la demo no está siempre encendida. Cada vez que se enciende hay que arrancar el servidor y el túnel, comprobar la base de datos y, si la dirección cambió, el aviso de pey. Va después de las historias 1 a 3 porque solo importa cuando ya funcionan.
 
-**Prueba independiente:** revisar que el presupuesto existe con sus avisos y su acción, y provocar un aviso de prueba bajando un momento un umbral por debajo del gasto actual (AWS no tiene un botón de aviso de prueba), para ver que llega a los tres correos del equipo.
+**Prueba independiente:** con la computadora de la demo recién encendida, seguir la guía y pedir la salud del servidor por la dirección pública desde un celular con datos móviles.
 
 **Escenarios de aceptación:**
 
-1. **Dado** el presupuesto configurado, **cuando** el gasto real llega al 50 %, al 80 % y al 100 % de 200 dólares, **entonces** los tres integrantes del equipo reciben un correo en cada umbral.
-2. **Dado** el presupuesto configurado, **cuando** el pronóstico de gasto del periodo pasa de 200 dólares, **entonces** el equipo recibe un correo.
-3. **Dado** que AWS reporta que el gasto real llegó al 90 %, **cuando** se dispara la acción, **entonces** el servidor de la demo se apaga solo (puede tardar hasta unas 12 horas desde el gasto, por el retraso de AWS).
-4. **Dado** que el crédito cubre el gasto, **cuando** se calcula el presupuesto, **entonces** se mide el gasto antes de descontar el crédito, para que los avisos lleguen aunque la factura sea de 0.
-5. **Dado** el servidor apagado por el presupuesto, **cuando** Hugo revisa qué consumió el crédito y corrige la causa, **entonces** solo él puede volver a encenderlo, siguiendo su guía.
+1. **Dado** la computadora de la demo encendida, **cuando** Hugo sigue la guía, **entonces** la salud del servidor pedida por la dirección pública indica que el servidor responde y que la base de datos y pey están configurados y responden.
+2. **Dado** que el proyecto de Supabase se pausó, **cuando** Hugo enciende la demo, **entonces** la salud lo indica y la guía le dice cómo reactivarlo.
+3. **Dado** un cobro en pantalla, **cuando** la computadora de la demo se suspende o pierde internet y después vuelve, **entonces** la pantalla se reconecta sola y los pagos de ese rato se registran por la consulta de respaldo o por un aviso reenviado, si llegan dentro de la ventana de escucha.
+4. **Dado** la demo apagada, **cuando** alguien abre el enlace, **entonces** ve el error del túnel o de su navegador; no hay página de "demo en pausa" (E-3).
 
 ---
 
 ### Historia 5 — Saber antes de unir un pull request si algo se rompió (Prioridad: P1)
 
-**Como** Juan, que revisa y une todos los pull requests, **quiero** ver en cada pull request si las pruebas y el lint pasan, **para** no tener que correrlos a mano ni unir algo roto.
+**Como** quien revisa y une los pull requests (Juan, o Hugo con los de Juan, constitución 2.0.0), **quiero** ver en cada pull request si las pruebas y el lint pasan, **para** no tener que correrlos a mano ni unir algo roto.
 
-**Por qué esta prioridad:** Juan condiciona la revisión del PR #72 a ver las pruebas en GitHub. Es lo más rápido de entregar y lo primero que desbloquea.
+**Por qué esta prioridad:** Juan condiciona sus revisiones a ver las pruebas en GitHub. Es lo más rápido de entregar y lo primero que desbloquea.
 
 **Prueba independiente:** abrir un pull request con un error a propósito y ver que el CI falla; corregirlo y ver que pasa.
 
@@ -173,11 +167,11 @@ Mientras no esté el corte 2, Hugo publica a mano desde `main` siguiendo su guí
 
 ### Historia 6 — Cambiar la estructura de la base de datos con un comando (Prioridad: P2)
 
-**Como** Hugo o Juan, **quiero** crear o actualizar las tablas con un solo comando, igual en local y en la demo, **para** no pegar SQL a mano en el editor de Supabase y no dejar la demo distinta de lo que dice el repositorio.
+**Como** Hugo o Juan, **quiero** crear o actualizar las tablas con un solo comando, igual en desarrollo y en la demo, **para** no pegar SQL a mano en el editor de Supabase y no dejar la base de la demo distinta de lo que dice el repositorio.
 
 **Por qué esta prioridad:** hoy el esquema de #97 se corre a mano. Esta spec agrega una columna (la imagen del QR) y las specs de inicio de sesión e historial van a agregar más. Sin un comando repetible, la base de datos de la demo y la del repositorio terminan siendo distintas.
 
-**Prueba independiente:** aplicar el comando en una base de datos vacía y después otra vez seguida: la primera crea todo y la segunda no cambia nada ni marca error. En la demo, el comando lo corre solo Hugo; la publicación automática no lo corre.
+**Prueba independiente:** aplicar el comando en una base de datos vacía y después otra vez seguida: la primera crea todo y la segunda no cambia nada ni marca error. En la base de la demo, el comando lo corre solo Hugo.
 
 **Escenarios de aceptación:**
 
@@ -190,6 +184,8 @@ Mientras no esté el corte 2, Hugo publica a mano desde `main` siguiendo su guí
 ## 3. Requisitos *(obligatorio)*
 
 ### 3.1 Requisitos funcionales (notación EARS)
+
+Los números retirados por D-4 no se reutilizan (§8.1).
 
 **Guardar cobros, pagos y avisos** (historia 1)
 
@@ -220,50 +216,37 @@ Mientras no esté el corte 2, Hugo publica a mano desde `main` siguiendo su guí
 
 **Cambios de estructura** (historia 6)
 
-- **RF-017** (Ubicuo): EL SISTEMA creará y actualizará la estructura de la base de datos con un solo comando, el mismo en local y en la demo pública.
+- **RF-017** (Ubicuo): EL SISTEMA creará y actualizará la estructura de la base de datos con un solo comando, el mismo en los servidores de desarrollo y en la demo.
 - **RF-018** (Ubicuo): EL SISTEMA incluirá en ese comando el esquema del PR #97 y la columna nueva de la imagen del QR.
 - **RF-019** (Dirigido por evento): CUANDO se aplica el comando a una base de datos que ya está al día, EL SISTEMA no cambiará nada ni borrará datos.
-- **RF-049** (Ubicuo): EL SISTEMA usará en el servidor local una base de datos distinta de la de la demo, para que las pruebas locales no queden en los datos de la demo (QA-4).
-- **RF-053** (Ubicuo): EL SISTEMA usará en el servidor local una llave de pey distinta de la de la demo, con su propio aviso: la del ambiente de pruebas de pey o, si ese ambiente no funciona, una segunda llave de producción (E-1).
-- **RF-054** (Ubicuo): EL SISTEMA cargará los datos de prueba ficticios solo en la base de datos local, nunca en la de la demo (E-2).
-- **RF-046** (Ubicuo): EL SISTEMA no aplicará cambios de estructura en la base de datos de la demo durante la publicación automática; solo Hugo los aplica, con el comando de RF-017, después de revisarlos.
+- **RF-049** (Ubicuo): EL SISTEMA usará en los servidores de desarrollo una base de datos distinta de la de la demo, para que las pruebas de desarrollo no queden en los datos de la demo (QA-4).
+- **RF-053** (Ubicuo): EL SISTEMA usará en los servidores de desarrollo una llave de pey distinta de la de la demo, con su propio aviso: la del ambiente de pruebas de pey o, si ese ambiente no funciona, una segunda llave de producción (E-1).
+- **RF-054** (Ubicuo): EL SISTEMA cargará los datos de prueba ficticios solo en la base de datos de desarrollo, nunca en la de la demo (E-2).
 - **RF-051** (Dirigido por evento): CUANDO Hugo va a aplicar un cambio de estructura en la base de datos de la demo, EL SISTEMA le indicará en su guía que primero exporte una copia de esa base de datos, porque el plan gratuito no incluye respaldos (QA-5).
-- **RF-047** (No deseado): SI la versión publicada necesita un cambio de estructura que todavía no se aplicó, ENTONCES EL SISTEMA lo indicará en la salud del servidor y rechazará los cobros nuevos con un mensaje para el dueño, en lugar de fallar a medias.
 
 **Credenciales y acceso** (historias 1 y 2)
 
-- **RF-020** (Ubicuo): EL SISTEMA solo leerá las credenciales de la base de datos de la configuración del servidor (en local) o de las variables del hosting, nunca del repositorio.
+- **RF-020** (Ubicuo): EL SISTEMA solo leerá las credenciales de la base de datos de la configuración del servidor en la computadora donde corre, nunca del repositorio.
 - **RF-021** (Ubicuo): EL SISTEMA nunca incluirá las credenciales de la base de datos en sus respuestas, mensajes de error o registros.
+- **RF-059** (Ubicuo): EL SISTEMA guardará las credenciales del túnel, si el servicio las pide, solo en la computadora de la demo; nunca en el repositorio, en las respuestas ni en los registros.
 - **RF-022** (Ubicuo): EL SISTEMA solo permitirá leer y escribir los datos guardados desde el servidor; la web, las apps y cualquiera con la dirección pública de la base de datos no podrán leerlos ni cambiarlos.
 - **RF-023** (Dirigido por evento): CUANDO se consulta la salud del servidor, EL SISTEMA indicará además si la base de datos está configurada y responde, sin mostrar sus valores (amplía RF-038 de la spec 001, cambio C-6).
-- **RF-039** (Estado): MIENTRAS la demo pública está publicada, EL SISTEMA consultará la base de datos al menos una vez al día, aunque nadie cree cobros, para que el plan gratuito no la pause por falta de uso.
-
-**Demo pública** (historias 2 y 3)
-
-- **RF-024** (Ubicuo): EL SISTEMA publicará la web y el servidor en un dominio propio del equipo con HTTPS, y cualquier celular la abrirá sin invitación ni inicio de sesión (C-9).
-- **RF-056** (Ubicuo): EL SISTEMA cifrará también el tramo entre el intermediario del hosting y el servidor, porque por ahí pasan los avisos de pey con los datos bancarios de quien paga (C-9).
-- **RF-025** (Ubicuo): EL SISTEMA recibirá los avisos de pey en la dirección pública del servidor, dada de alta en el portal de pey con su secreto.
-- **RF-026** (Estado): MIENTRAS un canal de avisos está dentro de la ventana de escucha de su cobro, EL SISTEMA lo mantendrá abierto, sin cortes de la infraestructura, hasta que el servidor lo cierre (hasta 20 minutos).
-- **RF-027** (Ubicuo): EL SISTEMA aceptará peticiones del navegador solo desde el dominio publicado de la web (aplica RF-035 de la spec 001 con la dirección real).
-- **RF-028** (Ubicuo): EL SISTEMA aplicará los límites por IP de la spec 001 (RF-034 y RF-041) con la IP real del celular, no con la del intermediario del hosting.
-- **RF-029** (Ubicuo): EL SISTEMA hará que la web publicada solo se conecte al servidor publicado de PAGO FÁCIL.
-- **RF-030** (Dirigido por evento): CUANDO se publica una versión nueva del servidor, EL SISTEMA conservará la misma dirección pública y la misma dirección del aviso de pey.
-- **RF-055** (Dirigido por evento): CUANDO se publica una versión nueva del servidor, EL SISTEMA volverá a responder en menos de 1 minuto, con un solo proceso como exige la spec 001 (E-4).
-- **RF-042** (Dirigido por evento): CUANDO se une un pull request a `main` y su CI pasó, EL SISTEMA publicará solo la versión nueva del servidor y de la web en la demo pública.
-- **RF-043** (Ubicuo): EL SISTEMA publicará sin guardar ninguna credencial de AWS en el repositorio ni en su configuración de GitHub, para respetar el principio III (las credenciales solo viven en `backend/.env` o en el hosting).
-- **RF-044** (No deseado): SI la publicación automática falla, ENTONCES EL SISTEMA dejará atendiendo la versión anterior y mostrará el fallo en GitHub.
-- **RF-045** (No deseado): SI el servidor está apagado por el presupuesto, ENTONCES EL SISTEMA no lo volverá a encender con una publicación automática (RF-040).
-
-**Presupuesto** (historia 4)
-
-- **RF-031** (Ubicuo): EL SISTEMA tendrá un presupuesto de 200 dólares en AWS que mide el gasto antes de descontar el crédito.
-- **RF-032** (Dirigido por evento): CUANDO el gasto real llega al 50 %, al 80 % o al 100 % del presupuesto, EL SISTEMA enviará un correo a los tres integrantes del equipo.
-- **RF-033** (Dirigido por evento): CUANDO el pronóstico de gasto pasa de 200 dólares, EL SISTEMA enviará un correo a los tres integrantes del equipo. AWS solo calcula el pronóstico después de unas 5 semanas de datos, así que este aviso no funcionará antes de fines de diciembre (QA-2).
-- **RF-034** (Dirigido por evento): CUANDO AWS reporta que el gasto real llegó al 90 % del presupuesto, EL SISTEMA apagará el servidor de la demo sin intervención de nadie. El 10 % restante absorbe el retraso de AWS, que actualiza el gasto hasta tres veces al día (QA-2).
-- **RF-035** (Ubicuo): EL SISTEMA usará una configuración cuyo costo estimado, desde su publicación hasta el 31 de enero de 2027, no pase del 75 % del presupuesto (150 dólares), para que el apagado automático no llegue antes de esa fecha.
-- **RF-040** (Ubicuo): EL SISTEMA solo permitirá a Hugo volver a encender el servidor apagado por el presupuesto.
-- **RF-041** (Ubicuo): EL SISTEMA tendrá una guía para Hugo con los pasos para revisar qué consumió el crédito, corregir la causa y volver a encender el servidor.
+- **RF-039** (Estado): MIENTRAS el servidor está encendido, EL SISTEMA consultará la base de datos al menos una vez al día, aunque nadie cree cobros, para que el plan gratuito no la pause por falta de uso.
 - **RF-050** (Ubicuo): EL SISTEMA tendrá en la guía de Hugo los pasos para reactivar el proyecto de Supabase de la demo si se pausa, y para comprobar después con la salud del servidor que la base de datos responde (QA-5).
+
+**Demo pública por el túnel** (historias 2, 3 y 4)
+
+- **RF-024** (Estado): MIENTRAS la demo está encendida, EL SISTEMA abrirá la web y el servidor por el túnel en una dirección pública con HTTPS, y cualquier celular la abrirá sin invitación ni inicio de sesión (E-7).
+- **RF-060** (Estado): MIENTRAS [NECESITA ACLARACIÓN: ¿cuándo debe estar encendida la demo? ¿Solo en las pruebas, la grabación del video y la demo en vivo de la evaluación (12 al 14 de diciembre), o también durante toda la evaluación y hasta el 31 de enero de 2027, que el hackathon sugiere para mantener la demo accesible (`docs/plan-hackathon.md`, fechas)? Una demo siempre encendida obliga a dejar la computadora de la demo prendida, sin suspenderse y con internet todos esos días], EL SISTEMA estará encendido y responderá en la dirección pública.
+- **RF-056** (Ubicuo): EL SISTEMA solo atenderá las peticiones que llegan de fuera de la computadora de la demo a través del túnel; otro equipo de la misma red que intente conectarse directo al servidor no recibirá respuesta, porque por ahí pasarían sin cifrar los avisos de pey con los datos bancarios de quien paga.
+- **RF-025** (Ubicuo): EL SISTEMA recibirá los avisos de pey en la dirección pública del túnel, dada de alta en el portal de pey con su secreto.
+- **RF-026** (Estado): MIENTRAS un canal de avisos está dentro de la ventana de escucha de su cobro, EL SISTEMA lo mantendrá abierto, sin cortes del túnel, hasta que el servidor lo cierre (hasta 20 minutos).
+- **RF-057** (Ubicuo): EL SISTEMA hará llegar cada evento del canal de avisos a la pantalla en el momento en que el servidor lo emite, sin que el túnel lo retenga. En las pruebas de la 002, el túnel rápido de Cloudflare retuvo los eventos hasta que se cerró el canal.
+- **RF-027** (Ubicuo): EL SISTEMA aceptará peticiones del navegador solo desde la dirección de la web de la demo (aplica RF-035 de la spec 001 con la dirección real).
+- **RF-028** (Ubicuo): EL SISTEMA aplicará los límites por IP de la spec 001 (RF-034 y RF-041) con la IP real del celular, no con la del túnel.
+- **RF-029** (Ubicuo): EL SISTEMA hará que la web de la demo solo se conecte a su propio servidor.
+- **RF-030** (Dirigido por evento): CUANDO el servidor o el túnel se reinician, EL SISTEMA [NECESITA ACLARACIÓN: ¿la dirección pública debe ser siempre la misma, aunque se apague la computadora de la demo, o puede cambiar cada vez que se enciende la demo, con Hugo dando de alta otra vez el aviso en el portal de pey y compartiendo el enlace nuevo? Una dirección fija puede pedir una cuenta en el servicio del túnel, o un dominio] conservará la dirección pública y la dirección del aviso de pey.
+- **RF-058** (Ubicuo): EL SISTEMA tendrá una guía para Hugo con los pasos para encender y apagar la demo: poner al día la computadora de la demo con `main`, aplicar los cambios de estructura pendientes (RF-017 y RF-051), arrancar el servidor y el túnel, comprobar la salud por la dirección pública y, si la dirección cambió, actualizar el aviso en el portal de pey.
 
 **CI** (historia 5)
 
@@ -277,7 +260,6 @@ Mientras no esté el corte 2, Hugo publica a mano desde `main` siguiendo su guí
 - **Pago**: lo mismo que en la spec 001, ahora guardado. Su identificador de transacción de pey es único en todo el sistema.
 - **Aviso de pey procesado**: el identificador de cada aviso ya atendido, para descartar reenvíos (primera barrera del principio II).
 - **Cambio de estructura**: cada modificación de las tablas, con un orden y un registro de cuáles ya se aplicaron en cada base de datos.
-- **Presupuesto**: el tope de 200 dólares en AWS, sus umbrales de aviso, a quién avisa y la acción de apagado.
 
 Los límites por IP y los canales abiertos **no** se guardan: siguen en la memoria del servidor y empiezan de cero tras un reinicio (§4).
 
@@ -300,17 +282,14 @@ Los límites por IP y los canales abiertos **no** se guardan: siguen en la memor
 | Aviso de pey de un QR que no está en la base de datos | Se le responde bien a pey y queda registro, como en la spec 001. Ya no se espera por reinicio: solo por un QR ajeno o por RF-013. | RF-016 |
 | Reinicio con canales de avisos abiertos | Los canales se cortan; la pantalla aplica su respaldo y su reconexión (spec 002, historia 4) y recibe el estado guardado. | RF-005 |
 | Límites por IP tras un reinicio | Empiezan de cero. Limitación aceptada: un reinicio no es algo que un atacante provoque. | — |
-| El proyecto de Supabase está pausado o sin servicio | La consulta diaria reduce el riesgo de pausa, pero Supabase no garantiza qué cuenta como uso (RF-039). Si no responde, la salud del servidor lo indica, los cobros nuevos se rechazan con un mensaje (RF-012) y Hugo lo reactiva con su guía (RF-050). | RF-012, RF-023, RF-039, RF-050 |
+| El proyecto de Supabase está pausado o sin servicio | Si en 7 días nadie enciende un servidor, Supabase puede pausar el proyecto, y no garantiza qué cuenta como uso (RF-039). Si no responde, la salud del servidor lo indica, los cobros nuevos se rechazan con un mensaje (RF-012) y Hugo lo reactiva con su guía (RF-050). | RF-012, RF-023, RF-039, RF-050 |
 | Una migración daña datos de la demo | El plan gratuito no tiene respaldos: Hugo restaura la copia que exportó antes de aplicarla. | RF-051 |
-| Se publica una versión nueva | La demo deja de responder menos de 1 minuto. La pantalla muestra "Reconectando…" y recupera sus cobros; los pagos de ese momento se registran por el aviso de pey o la consulta de respaldo, aunque sin la promesa de los 2 segundos. | RF-055 |
-| La demo está apagada por el presupuesto o caída | Quien abre el enlace ve el error de su navegador; no hay página de "demo en pausa". | RF-034 |
-| La publicación automática falla a medias | Sigue atendiendo la versión anterior y el fallo se ve en GitHub. | RF-044 |
-| Se publica código que necesita una migración que Hugo todavía no aplicó | La salud del servidor lo indica y los cobros nuevos se rechazan con un mensaje hasta que Hugo la aplique. Conviene aplicar la migración antes de unir el pull request que la usa. | RF-046, RF-047 |
-| Se une un pull request con un error que las pruebas no detectan | Se publica solo y lo ven los jueces. Se corrige con otro pull request; el CI (RF-037) es la única barrera. | RF-042 |
-| El gasto llega al 90 % del presupuesto | El servidor se apaga solo y la demo deja de responder. Como AWS actualiza el gasto hasta tres veces al día (8 a 12 horas entre una y otra), el apagado puede llegar horas después; el 10 % restante es el margen para ese retraso. Solo Hugo lo vuelve a encender, después de revisar qué consumió el crédito y corregir la causa. | RF-034, RF-040, RF-041 |
-| El servidor lleva días apagado por el presupuesto | Nadie hace la consulta diaria (RF-039) y Supabase puede pausar el proyecto. Al volver a encender, Hugo comprueba la salud del servidor y, si hace falta, reactiva el proyecto con su guía. | RF-039, RF-050 |
-| Aviso por pronóstico en las primeras semanas | AWS no calcula el pronóstico hasta tener unas 5 semanas de datos: antes de eso solo llegan los avisos por gasto real. | RF-033 |
-| El dominio propio vence o deja de apuntar a la demo | La demo deja de abrir en su dirección. El dominio se compra por un año, más allá del 31 de enero; su renovación es decisión de Hugo. | RF-024 |
+| La computadora de la demo se suspende, se apaga o pierde internet | La demo deja de responder y la pantalla muestra "Reconectando…". Al volver, los pagos de ese rato se registran por la consulta de respaldo o por un aviso reenviado, si llegan dentro de la ventana de escucha. Si la ventana termina con la demo apagada, el pago queda en pey y en la cuenta del negocio, pero la pantalla no lo avisa. Limitación de correr en una computadora, que la QA revisa contra el principio VIII. | RF-005, RF-060 |
+| El túnel se cae con la demo encendida | Igual que la fila anterior. La guía de Hugo dice cómo volver a arrancarlo; la dirección puede cambiar (RF-030). | RF-030, RF-058 |
+| La dirección pública cambió y el aviso de pey sigue apuntando a la anterior | Los avisos no llegan; la consulta de respaldo registra los pagos, sin la promesa de los 2 segundos. La guía pide actualizar el aviso cada vez que se enciende la demo. | RF-030, RF-058 |
+| El túnel retiene los eventos del canal o lo corta antes de 20 minutos | Incumple RF-026 y RF-057. El plan elige un túnel que no lo haga y lo prueba antes que todo lo demás de la demo pública. | RF-026, RF-057 |
+| Otro equipo de la misma red intenta conectarse directo al servidor | No recibe respuesta: el servidor solo atiende lo que llega por el túnel. | RF-056 |
+| La demo está apagada | Quien abre el enlace ve el error del túnel o de su navegador; no hay página de "demo en pausa". | RF-060, E-3 |
 | **Devolución** | Fuera de alcance, como en la spec 001: pey no ofrece devoluciones por API. | — |
 
 ---
@@ -319,36 +298,34 @@ Los límites por IP y los canales abiertos **no** se guardan: siguen en la memor
 
 | Fuera de alcance | Dónde se resuelve |
 |---|---|
+| Publicar en la nube (AWS u otro hosting), dominio propio, presupuesto de AWS y publicación automática al unir a `main` | Decisión del equipo del 2026-11-17 (D-4). Se puede retomar con otra spec; la versión con AWS está en el commit `fe837cc`. #34 sigue abierto |
+| Avisar en la salud de un cambio de estructura sin aplicar (antes RF-047) | Sin publicación automática, Hugo aplica el comando al encender la demo (RF-058) |
 | Registro e inicio de sesión del negocio; ligar cada cobro a su negocio | #24 (spec propia) |
 | Historial de cobros y corte del día | #38 (spec propia) |
 | Cuenta bancaria propia por negocio | Espera la respuesta de pey (flujo-de-trabajo §7, "Punto abierto") |
 | Logs centralizados, monitor de disponibilidad y alertas si la demo se cae | #45 |
-| Dibujar el QR en el servidor | Decidido en #94: se usa la imagen de pey |
+| Dibujar el QR en el servidor | Decidido en #94: se usa la imagen de pey (D-2) |
 | Guardar los límites por IP y los canales abiertos | No hace falta mientras corra un solo servidor |
-| Varios servidores a la vez, escalado automático o publicar sin dejar de responder | No hace falta para la demo; la spec 001 exige un solo proceso y se acepta el corte de RF-055 (E-4) |
-| Página de "demo en pausa" cuando el servidor está apagado o caído | No se construye: se ve el error del navegador (E-3) |
+| Varios servidores a la vez o escalado automático | La spec 001 exige un solo proceso (E-4) |
+| Página de "demo en pausa" cuando la demo está apagada | No se construye: se ve el error del túnel o del navegador (E-3) |
 | Cupones | #37 |
-| Congelar la demo después de la entrega | #57 |
+| Congelar la demo después de la entrega y mantenerla hasta el 31 de enero | #57, según lo que se decida en RF-060 |
 
 ---
 
 ## 6. Criterios de éxito *(obligatorio)*
 
-- **CE-001**: un cobro creado antes de un reinicio del servidor de la demo pública se paga con $0.01 después del reinicio, y la pantalla recargada vuelve a mostrar su QR y suena "Pago recibido".
+- **CE-001**: un cobro creado antes de un reinicio del servidor de la demo se paga con $0.01 después del reinicio, y la pantalla recargada vuelve a mostrar su QR y suena "Pago recibido".
 - **CE-002**: desde la demo pública, con datos móviles, un pago real de $0.01 suena y muestra "Pago recibido" en menos de 2 segundos después de que pey entrega el aviso, en un Android y en un iPhone. Cierra #27 y #64 (spec 002, CE-001 y CE-002). #29 queda abierto hasta el inicio de sesión (#24), con una nota (QA-6).
 - **CE-003**: desde la demo pública, el dueño ve el QR en menos de 3 segundos después de tocar Cobrar, en 9 de cada 10 intentos.
-- **CE-004**: un canal de avisos abierto en la demo pública dura los 20 minutos de vigencia y ventana sin cortarse antes de que el servidor lo cierre.
+- **CE-004**: un canal de avisos abierto por la dirección pública dura los 20 minutos de vigencia y ventana sin cortarse antes de que el servidor lo cierre, y un pago avisado después del minuto 15 de ese canal suena en menos de 2 segundos.
 - **CE-005**: ninguna transacción se registra dos veces, comprobado con pruebas automáticas de aviso reenviado, de aviso y consulta simultáneos y de llegada antes y después de un reinicio.
 - **CE-006**: todo pull request hacia `main` muestra el resultado del CI, y uno con un error a propósito queda marcado como fallido y no se puede unir.
 - **CE-007**: el comando de cambios de estructura se aplica dos veces seguidas sobre una base de datos vacía sin error, y la segunda vez no cambia nada.
-- **CE-008**: los avisos del presupuesto están configurados y un aviso de prueba llega a los tres correos del equipo.
-- **CE-009**: el costo estimado de la demo hasta el 31 de enero de 2027 no pasa de 150 dólares, con el cálculo anotado en el plan.
-- **CE-010**: ninguna credencial de pey ni de la base de datos aparece en el repositorio, en las respuestas del servidor ni en sus registros, comprobado con búsquedas en el repositorio y con pruebas automáticas.
+- **CE-010**: ninguna credencial de pey, de la base de datos ni del túnel aparece en el repositorio, en las respuestas del servidor ni en sus registros, comprobado con búsquedas en el repositorio y con pruebas automáticas.
 - **CE-011**: todas las pruebas automáticas pasan sin conexión a pey ni a la base de datos real.
-- **CE-012**: durante 8 días seguidos sin cobros, los registros del servidor publicado muestran al menos una consulta diaria a la base de datos, y el proyecto de Supabase sigue activo al final. Es del corte 2 y se comprueba después de cerrar la spec, sin bloquearla (QA-5).
-- **CE-013**: un pull request unido a `main` queda publicado en la demo sin que nadie haga nada, y una búsqueda en el repositorio y en su configuración de GitHub no encuentra credenciales de AWS.
-- **CE-014**: en tres publicaciones seguidas de la demo, cada una deja de responder menos de 1 minuto y una pantalla con un cobro abierto se reconecta sola sin perder sus pagos (E-4).
-- **CE-015**: la demo abre en el dominio propio con HTTPS, y una conexión sin cifrar al servidor desde fuera de la instancia no recibe respuesta (C-9).
+- **CE-015**: con la demo encendida, la dirección pública abre con HTTPS, y una conexión directa al servidor desde otro equipo de la misma red no recibe respuesta.
+- **CE-016**: Hugo enciende la demo con la computadora recién prendida siguiendo solo su guía, y la salud pedida por la dirección pública, desde un celular con datos móviles, indica que el servidor responde y que la base de datos y pey están configurados y responden.
 
 ---
 
@@ -356,37 +333,32 @@ Los límites por IP y los canales abiertos **no** se guardan: siguen en la memor
 
 **Supuestos**
 
-- Los 200 dólares son crédito de AWS y no cubren Supabase ni otros servicios (lo confirma Hugo).
-- El dominio propio (C-9) lo compra y lo paga Hugo: un `.xyz` cuesta cerca de 1 dólar el primer año, y basta con un año porque la demo vive hasta el 31 de enero. Los créditos de AWS no pagan registros de dominios; sí la zona DNS de Route 53.
-- Supabase se queda en el plan gratuito. Su documentación dice que "may pause" los proyectos gratuitos con poca actividad en 7 días, sin definir qué cuenta como actividad, y que el plan gratuito no incluye respaldos (QA-5). Se supone que una consulta diaria basta; si aun así se pausa, Hugo lo reactiva (RF-050). Pasar al plan de pago es una decisión nueva de Hugo.
-- AWS actualiza el gasto del presupuesto hasta tres veces al día y solo calcula el pronóstico tras unas 5 semanas de datos. Sus acciones automáticas solo detienen instancias EC2 o RDS, o aplican políticas de permisos: el plan elige un servicio que el presupuesto pueda detener o conecta el aviso a una función que lo detenga (QA-2).
-- Solo Hugo tiene acceso a la cuenta de AWS; Juan y Miguel no lo necesitan para esta spec.
-- Los correos del presupuesto son los tres del equipo que ya están en el formulario del kickoff (#68). Ningún correo se escribe en el repositorio.
-- pey admite un solo webhook por llave, así que la demo y el servidor local usan llaves distintas (RF-053). Se supone que el ambiente de pruebas de pey (`https://api.dev.pey.mx`, que menciona `docs.pey.mx/llms.txt`) da una llave propia con su aviso; el aviso local llega por un túnel hasta la computadora de quien prueba (E-1).
-- El servidor no usa el estado que calcula la vista `cobros_con_estado` del PR #97 (con la hora de la base de datos): lo calcula él con su reloj (RF-006). Se le avisa a Juan en la revisión del PR #97 y el plan lo registra como decisión (QA-11).
+- La computadora de la demo es la de Hugo. Mientras la demo está encendida, esa computadora sigue prendida, sin suspenderse y con internet.
+- Existe un servicio de túnel gratuito que da HTTPS, entrega el canal de avisos sin retenerlo y no lo corta antes de 20 minutos. El plan lo elige con su comparativa (principio IX). Los dos que se probaron en la 002 no cumplían: el túnel rápido de Cloudflare retuvo el canal y el de `localhost.run` se cortó cada ~16 minutos (`specs/002-web-mvp/verification-guide.md`). Si el que cumple pide un pago, por ejemplo para una dirección fija, es una decisión nueva de Hugo.
+- Supabase se queda en el plan gratuito. Su documentación dice que "may pause" los proyectos gratuitos con poca actividad en 7 días, sin definir qué cuenta como actividad, y que el plan gratuito no incluye respaldos (QA-5). Sin un servidor siempre encendido, la consulta diaria (RF-039) solo pasa mientras hay uno encendido; si el proyecto se pausa, Hugo lo reactiva (RF-050). Pasar al plan de pago es una decisión nueva de Hugo.
+- pey admite un solo webhook por llave, así que la demo y los servidores de desarrollo usan llaves distintas (RF-053). Se supone que el ambiente de pruebas de pey (`https://api.dev.pey.mx`, que menciona `docs.pey.mx/llms.txt`) da una llave propia con su aviso. El aviso de desarrollo también llega por un túnel a la computadora de quien prueba (E-1).
+- El servidor no usa el estado que calcula la vista `cobros_con_estado` del PR #97 (con la hora de la base de datos): lo calcula él con su reloj (RF-006). Se le avisó a Juan en la revisión del PR #97, y el plan lo registra como decisión (QA-11).
 - El servidor sigue corriendo como un solo proceso, como exige la spec 001 (plan, QP-5): los canales de avisos y los límites por IP viven en su memoria.
 - La base de datos no guarda la CLABE ni datos bancarios del negocio (comentario de la tabla de negocios del PR #97).
-- La imagen del QR de pey pesa unos pocos KB por cobro, así que guardarla no compromete el espacio de la base de datos durante el hackathon.
+- La imagen del QR de pey pesa unos pocos KB por cobro, así que guardarla no compromete el espacio de la base de datos durante el hackathon. Pedirla a pey puede ser lento (plan de la 001, TK-5): se mide con CE-003.
+- No hay costo: Supabase gratuito, CI gratuito en un repositorio público y túnel gratuito.
 
 **Dependencias**
 
 | Dependencia | Para qué | Dueño | Estado |
 |---|---|---|---|
-| PR #97 unido (esquema inicial) | RF-018 y todo el guardado | Hugo revisa y une (constitución 2.0.0: nadie une su propio PR) | Aprobado por Hugo el 2026-11-17; falta unirlo (QP-9) |
-| Dominio propio comprado, con su zona en Route 53 | RF-024, RF-056 (C-9) | Hugo (lo paga él; el crédito de AWS no cubre dominios) | Pendiente; antes de F4 |
-| Región del proyecto de Supabase de la demo | Elegir la región de la instancia (plan, DP-24) | Hugo, en el panel de Supabase | Pendiente (QP-9) |
-| AWS CLI y el complemento de Session Manager en la computadora de Hugo | Publicar a mano (plan, contrato de publicación) | Hugo | Pendiente (QP-9) |
-| Proyecto de Supabase creado | Base de datos de la demo | Juan (#19) | Creado, según Hugo y el PR #97 |
-| Credenciales de Supabase en `backend/.env` y en el hosting | RF-020 | Hugo | Pendiente |
-| Cuenta de AWS con los 200 dólares de crédito | Historias 2 y 4 | Hugo | Pendiente de confirmar |
-| Aviso dado de alta en el portal de pey con la dirección pública | RF-025 | Hugo (#15) | Pendiente; depende de la publicación |
+| PR #97 unido (esquema inicial) | RF-018 y todo el guardado | Hugo revisa y une (constitución 2.0.0: nadie une su propio PR) | Unido por Hugo el 2026-11-17 (`f773939`); cerró #23 |
+| Proyecto de Supabase de la demo | Base de datos de la demo | Juan (#19) | Creado, según Hugo y el PR #97 |
+| Segundo proyecto gratuito de Supabase para desarrollo | RF-049 (QA-4) | Juan (dueño de la organización de Supabase) | Pendiente |
+| Credenciales de Supabase en la configuración del servidor de cada computadora | RF-020 | Hugo y cada integrante | Pendiente |
+| Servicio de túnel elegido, y su cuenta si la pide | RF-024, RF-026, RF-057 | Hugo | Se elige en el plan |
+| Aviso dado de alta en el portal de pey con la dirección del túnel | RF-025 | Hugo (#15) | Pendiente; depende del túnel |
+| Llave de pey para desarrollo, del ambiente de pruebas o una segunda de producción | RF-053 (E-1) | Hugo, con pey | Pendiente |
 | Protección de la rama `main` para exigir el CI | RF-037 | Juan (dueño del repositorio) | Pendiente |
-| Permiso para que GitHub publique en la cuenta de AWS sin credenciales guardadas | RF-042 y RF-043 | Hugo (AWS) y Juan (configuración del repositorio) | Pendiente; si no es posible, hace falta enmendar el principio III |
-| PR #72 unido (web de cobro en `main`), **antes de aprobar el plan** | Publicar la web desde `main`; esta rama sale de la suya (QA-9, C-8) | Juan | Abierto; el 2026-11-17 faltaban 6 pruebas de WebKit que fallan fuera de Mac |
-| PR #96 unido (constitución 2.0.0), **antes de aprobar el plan** | La verificación de la constitución del plan se hace contra la 2.0.0, que agrega la base de datos y el hosting a la tabla de restricciones (QA-9, C-8) | Juan revisa, Hugo propone | Abierto; Juan aprobó el contenido y la rama se rehízo sobre `main` el 2026-11-17 con solo el commit de documentos |
-| Segundo proyecto gratuito de Supabase para el servidor local | RF-049 (QA-4) | Juan (dueño de la organización de Supabase) | Pendiente |
-| Llave de pey para el servidor local, del ambiente de pruebas o una segunda de producción | RF-053 (E-1) | Hugo, con pey | Pendiente |
-| Un Android, un iPhone y la autorización de Hugo para pagos de $0.01 | CE-001 y CE-002 | Hugo | Disponibles el 16 nov |
+| PR #72 unido (web de cobro en `main`), **antes de aprobar el plan** | La demo sirve la web desde `main`; esta rama sale de la suya (QA-9, C-8) | Juan | Abierto; el arreglo de las 6 pruebas de WebKit se subió el 2026-11-17 y espera su revisión |
+| PR #96 unido (constitución 2.0.0), **antes de aprobar el plan** | La verificación de la constitución del plan se hace contra la 2.0.0 (QA-9, C-8) | Juan revisa, Hugo propone | Abierto; la rama se rehízo sobre `main` el 2026-11-17 y espera la revisión de Juan |
+| Computadora de la demo con internet estable | RF-024, RF-060 | Hugo | Disponible |
+| Un Android, un iPhone y la autorización de Hugo para pagos de $0.01 | CE-001, CE-002 y CE-004 | Hugo | Disponibles el 16 nov |
 
 ---
 
@@ -394,40 +366,57 @@ Los límites por IP y los canales abiertos **no** se guardan: siguen en la memor
 
 ### 8.1 Entrevista con Hugo (2026-11-17)
 
-La entrevista se hizo después de la QA y de la aprobación, a pedido de Hugo.
+**Entrevista del cambio de rumbo** (2026-11-17, después de D-4):
 
 | # | Duda | Decisión | Requisitos |
 |---|---|---|---|
-| E-1 | ¿Con qué llave de pey trabaja el servidor local? | Con el ambiente de pruebas de pey, con su propia llave y su propio aviso. Si no funciona, con una segunda llave de producción solo para local, también con su propio aviso. Sustituye la decisión de QA-4 de trabajar en local solo con la consulta de respaldo. | RF-053 |
-| E-2 | ¿Se cargan en la demo los datos de prueba ficticios del PR #97? | No: solo en la base de datos local. | RF-054 |
-| E-3 | ¿Qué ve quien abre el enlace con la demo apagada o caída? | El error del navegador; no se construye una página de "demo en pausa". | §4, §5 |
-| E-4 | ¿Se acepta que la demo deje de responder en cada publicación? | Sí: se mantiene un solo proceso (spec 001) y la demo vuelve a responder en menos de 1 minuto. Varios procesos sin corte quedan fuera de alcance. | RF-055, §4, §5 |
-| E-5 | ¿Se entrega primero el CI dentro del corte 1 (P-1)? | Sí. | §1.2, P-1 |
+| E-6 | Si todo será local, ¿la base de datos sigue siendo Supabase o pasa a un PostgreSQL en la computadora? | Supabase sigue: solo sale AWS. Se reusan el esquema del PR #97 y el diseño del guardado. | Historias 1 y 6, RF-001 a RF-023 |
+| E-7 | Sin dirección pública, ¿cómo se cumple la regla de reaccionar al aviso de pey? | Con un túnel para todo: la web, el servidor, el canal de avisos y el aviso de pey salen por la dirección del túnel. | RF-024 a RF-030, RF-056 a RF-060 |
+| E-8 | ¿El CI en cada pull request se queda? | Sí. Solo sale la publicación automática, que dependía de AWS. | Historia 5, RF-036 a RF-038 |
 
-Decisiones tomadas antes de redactar, el 2026-11-17:
+**Entrevista de la versión con AWS** (2026-11-17, después de la QA y de la aprobación, a pedido de Hugo):
 
 | # | Duda | Decisión | Requisitos |
 |---|---|---|---|
-| D-1 | ¿Qué abarca la spec 003? | Supabase + AWS + CI en una sola spec. | Toda la spec |
+| E-1 | ¿Con qué llave de pey trabaja el servidor local? | Con el ambiente de pruebas de pey, con su propia llave y su propio aviso. Si no funciona, con una segunda llave de producción solo para local, también con su propio aviso. Sustituye la decisión de QA-4 de trabajar en local solo con la consulta de respaldo. *Con D-4, "local" se llama "servidor de desarrollo".* | RF-053 |
+| E-2 | ¿Se cargan en la demo los datos de prueba ficticios del PR #97? | No: solo en la base de datos local (ahora, de desarrollo). | RF-054 |
+| E-3 | ¿Qué ve quien abre el enlace con la demo apagada o caída? | El error del navegador; no se construye una página de "demo en pausa". *Con D-4, también el error del túnel.* | §4, §5 |
+| E-4 | ¿Se acepta que la demo deje de responder en cada publicación? | Sí: se mantiene un solo proceso (spec 001) y la demo vuelve a responder en menos de 1 minuto. Varios procesos sin corte quedan fuera de alcance. *Con D-4 ya no hay publicaciones (RF-055 retirado); sigue el solo proceso.* | §5 |
+| E-5 | ¿Se entrega primero el CI dentro del corte 1 (P-1)? | Sí. *Con D-4 hay una sola entrega, y el CI sigue primero.* | §1.2, P-1 |
+
+**Decisiones tomadas antes de redactar:**
+
+| # | Duda | Decisión | Requisitos |
+|---|---|---|---|
+| D-1 | ¿Qué abarca la spec 003? | Supabase + AWS + CI en una sola spec. *Sustituida por D-4.* | Toda la spec |
 | D-2 | ¿De dónde sale la imagen del QR (#94)? | La que manda pey, guardada con el cobro en una columna nueva. Hugo agrega la columna con una migración. | RF-010, RF-011, RF-018 |
-| D-3 | ¿Qué pasa al llegar a los 200 dólares? | Correos al 50 %, 80 % y 100 % y por pronóstico, y apagado automático. La QA (QA-2) bajó el apagado al 90 % por el retraso de AWS. | RF-031 a RF-035 |
+| D-3 | ¿Qué pasa al llegar a los 200 dólares? | Correos al 50 %, 80 % y 100 % y por pronóstico, y apagado automático. La QA (QA-2) bajó el apagado al 90 % por el retraso de AWS. *Sustituida por D-4: no hay presupuesto.* | — |
+| D-4 | ¿Se monta la demo en la nube? | No, por ahora: decisión del equipo del 2026-11-17. Todo corre local, con Supabase como base de datos (E-6), un túnel para la demo (E-7) y el CI (E-8). Se puede retomar después. | Toda la spec, §5 |
+
+**Requisitos retirados y reescritos por D-4.** Los números retirados no se reutilizan:
+
+- Retirados: RF-031 a RF-035 y RF-040 a RF-041 (presupuesto), RF-042 a RF-045 (publicación automática), RF-046 y RF-047 (cambios de estructura durante la publicación), RF-055 (corte al publicar); CE-008 y CE-009 (presupuesto), CE-012 (8 días sin pausa), CE-013 (publicación automática) y CE-014 (tres publicaciones).
+- Reescritos para el túnel: RF-017, RF-020, RF-024, RF-025 a RF-030, RF-039, RF-049, RF-053, RF-054, RF-056, CE-004, CE-010 y CE-015.
+- Nuevos: RF-057 (eventos sin retención), RF-058 (guía para encender la demo), RF-059 (credenciales del túnel), RF-060 (cuándo está encendida la demo) y CE-016 (encender la demo con la guía).
 
 ### 8.2 Cambios a specs aprobadas
 
 | # | Spec | Cambio propuesto | Origen | Estado |
 |---|---|---|---|---|
 | C-6 | 001 | (a) §4, fila "Reinicio del servidor": los cobros, pagos y avisos se conservan (spec 003), ya no se pierden. (b) §4, fila "Aviso de pago de un cobro desconocido": quitar "por ejemplo, tras reiniciar el servidor". (c) RF-038 y `contracts/salud.md`: la salud también indica si la base de datos está configurada y responde (RF-023 de esta spec). (d) §5, fila "Base de datos: los cobros se pierden al reiniciar": resuelto por la spec 003. (e) `data-model.md` (línea 5 y §5 y §6), `quickstart.md:80`, `contracts/ver-cobro.md:22` ("o se perdió al reiniciar") y `backend/README.md:118`: los cobros, pagos y avisos se guardan en la base de datos; los límites por IP y los canales siguen en memoria. (f) `contracts/aviso-pey.md:42`: el manejador ya hace una llamada de red (guardar en la base de datos); la meta de responder en menos de 1 s (CE-010 de la 001) se mantiene. (g) `contracts/aviso-pey.md`, respuesta 400: un `amount` de 0 o negativo se rechaza igual que uno ilegible, sin marcar el `webhook-id`, porque la base de datos no acepta pagos de 0 o menos (QP-3 del plan de la 003). | Esta spec, QA-7 y QP-3 | Propuesto |
-| C-7 | 002 | (a) RF-057: quitar el ejemplo "(por ejemplo, porque se reinició)", porque con la spec 003 un reinicio ya no hace que el servidor olvide un cobro. El comportamiento no cambia. (b) El flujo local abre la web desde el servidor en `http://localhost:8000` (el servidor la entrega, plan de la 003, DP-21) en lugar del puerto 5173 con `config.js` en `http://localhost:8000`: `quickstart.md:32-40`, `verification-guide.md:79-82` y `web/README.md:34-45`. (c) La política de seguridad de contenido queda en `connect-src 'self'`: `research.md:128-130` y `plan.md:379`, como ya anticipaba `quickstart.md:55`. | QA-7 y QP-8 | Propuesto |
-| C-9 | 003 | RF-024: la demo se publica en un dominio propio del equipo con HTTPS, en lugar de la dirección de AWS. Nuevo RF-056: el tramo entre el intermediario del hosting y el servidor también va cifrado. Nuevo CE-015. Se quita de §5 la fila "Dominio propio". §7: el dominio como dependencia de Hugo y como supuesto de costo. La aclaración del 2026-11-17 sobre la dirección queda sustituida. | QA del plan, QP-7 (Hugo, 2026-11-17) | Aprobado por Hugo y aplicado el 2026-11-17 |
-| C-8 | 003 | §7 y QA-9: los PR #72 y #96 unidos pasan de "antes del plan" a "antes de aprobar el plan". El plan se redacta ya, contra la constitución 2.0.0 del PR #96 (Juan ya aprobó su contenido) y el código de la rama del PR #72; su QA (`/qa-spec 003 plan`) no lo aprueba hasta que los dos estén en `main`. Si al unirse cambian algo que el plan usa, se ajusta en esa QA. | Hugo, por el corte 1 (≤ 22 nov) | Aprobado por Hugo y aplicado el 2026-11-17 |
+| C-7 | 002 | (a) RF-057: quitar el ejemplo "(por ejemplo, porque se reinició)", porque con la spec 003 un reinicio ya no hace que el servidor olvide un cobro. El comportamiento no cambia. (b) El flujo local abre la web desde el servidor en `http://localhost:8000` (el servidor la entrega, plan de la 003, DP-21) en lugar del puerto 5173 con `config.js` en `http://localhost:8000`: `quickstart.md:32-40`, `verification-guide.md:79-82` y `web/README.md:34-45`. (c) La política de seguridad de contenido queda en `connect-src 'self'`: `research.md:128-130` y `plan.md:379`, como ya anticipaba `quickstart.md:55`. *(b) y (c) salieron del plan de la versión con AWS (DP-21, QP-8): se confirman en el plan nuevo antes de aprobar este cambio.* | QA-7 y QP-8 | Propuesto |
+| C-9 | 003 | RF-024: la demo se publica en un dominio propio del equipo con HTTPS, en lugar de la dirección de AWS. Nuevo RF-056: el tramo entre el intermediario del hosting y el servidor también va cifrado. Nuevo CE-015. Se quita de §5 la fila "Dominio propio". §7: el dominio como dependencia de Hugo y como supuesto de costo. La aclaración del 2026-11-17 sobre la dirección queda sustituida. | QA del plan, QP-7 (Hugo, 2026-11-17) | Aprobado y aplicado el 2026-11-17. **Retirado** el mismo día por D-4: no hay dominio; RF-056 y CE-015 se reescribieron para el túnel |
+| C-8 | 003 | §7 y QA-9: los PR #72 y #96 unidos pasan de "antes del plan" a "antes de aprobar el plan". El plan se redacta ya, contra la constitución 2.0.0 del PR #96 (Juan ya aprobó su contenido) y el código de la rama del PR #72; su QA (`/qa-spec 003 plan`) no lo aprueba hasta que los dos estén en `main`. Si al unirse cambian algo que el plan usa, se ajusta en esa QA. | Hugo, por el corte 1 (≤ 22 nov) | Aprobado por Hugo y aplicado el 2026-11-17. Sigue vigente para el plan nuevo |
 
 ### 8.3 Propuestas
 
 | # | Propuesta | Por qué | Decisión |
 |---|---|---|---|
-| P-1 | Entregar primero el CI (§1.2) | Desbloquea la revisión del PR #72 y protege todo lo demás de esta spec | Aceptada por Hugo el 2026-11-17 (E-5) |
+| P-1 | Entregar primero el CI (§1.2) | Desbloquea la revisión de los pull requests y protege todo lo demás de esta spec | Aceptada por Hugo el 2026-11-17 (E-5) |
 
-### 8.4 Revisión QA (2026-11-17, una sola pasada)
+### 8.4 Revisión QA de la versión con AWS (2026-11-17, una sola pasada)
+
+> Esta tabla revisó la versión con AWS, antes de D-4. QA-1 (dos cortes) y QA-2 (presupuesto) quedan sin efecto; las demás siguen aplicadas en el texto, con "local" leído como "desarrollo". Esta versión lleva su propia QA de una sola pasada (`/qa-spec 003`), con numeración desde QA-12.
 
 | # | Tipo | Hallazgo | Requisitos | Recomendación | Decisión |
 |---|---|---|---|---|---|
@@ -463,10 +452,12 @@ Decisiones tomadas antes de redactar, el 2026-11-17:
 
 ### 8.5 Pendientes
 
-- Ninguna marca abierta. Las dos dudas del borrador se resolvieron en las aclaraciones del 2026-11-17.
-- Tarea de Hugo fuera de la spec (E-1): confirmar con pey que su ambiente de pruebas da una llave propia con su aviso; si no, pedir una segunda llave de producción para local.
+- Dos marcas abiertas: cuándo está encendida la demo (RF-060) y si la dirección pública es fija (RF-030). Se resuelven antes de la QA de esta versión.
+- Falta la QA de una sola pasada de esta versión (`/qa-spec 003`), con numeración desde QA-12.
+- Tarea de Hugo fuera de la spec (E-1): confirmar con pey que su ambiente de pruebas da una llave propia con su aviso; si no, pedir una segunda llave de producción para desarrollo.
 - Tarea de Hugo fuera de la spec (E-1): proponer el pull request que corrige la fila de la constitución que dice "No hay ambiente de pruebas: se prueba en producción con $0.01". La demo sigue en producción (principio VI), así que no cambia ningún principio.
 - Tarea de Hugo fuera de la spec (QA-11): avisar a Juan en la revisión del PR #97 que el servidor no usa la columna `estado` de la vista. Hecha el 2026-11-17, en la aprobación del PR #97.
+- Con D-4 ya no hacen falta el dominio, la cuenta de AWS de la demo, la AWS CLI ni el complemento de Session Manager.
 
 ---
 
@@ -475,7 +466,7 @@ Decisiones tomadas antes de redactar, el 2026-11-17:
 - [ ] Cada RF tiene al menos una prueba automática o un paso de verificación manual.
 - [ ] Todos los criterios de éxito (CE) están comprobados.
 - [ ] No quedan marcas `[NECESITA ACLARACIÓN]` abiertas.
-- [ ] Hay una revisión de seguridad hecha: secretos, firma de webhooks y validación de entradas, más las credenciales de la base de datos y el acceso a ella solo desde el servidor.
+- [ ] Hay una revisión de seguridad hecha: secretos, firma de webhooks y validación de entradas, más las credenciales de la base de datos y del túnel, el acceso a la base de datos solo desde el servidor y el servidor solo por el túnel.
 - [ ] El cambio C-6 a la spec 001 está aprobado y aplicado.
-- [ ] #27, #64, #90, #34, #65, #35 y #94 tienen su cierre o su nota de implementación, y #29 tiene una nota de que queda abierto hasta #24.
 - [ ] El cambio C-7 a la spec 002 está aprobado y aplicado.
+- [ ] #27, #64, #90, #19, #35 y #94 tienen su cierre o su nota de implementación; #65 tiene su nota (HTTPS y aviso de pey por el túnel, despliegue en la nube pendiente), y #29 tiene una nota de que queda abierto hasta #24.
