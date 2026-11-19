@@ -13,7 +13,7 @@
 
 ## Requirement Completeness
 
-- [ ] No [NEEDS CLARIFICATION] markers remain
+- [x] No [NEEDS CLARIFICATION] markers remain
 - [x] Requirements are testable and unambiguous
 - [x] Success criteria are measurable
 - [x] Success criteria are technology-agnostic (no implementation details)
@@ -31,7 +31,7 @@
 
 ## Notes
 
-- **Cambio de rumbo (2026-11-17, D-4):** la spec se reescribió sin nube. Quedan 2 marcas `[NECESITA ACLARACIÓN]`: cuándo está encendida la demo (RF-060) y si la dirección del túnel es fija (RF-030). La spec nombra Supabase porque es decisión del equipo; el servicio de túnel lo elige el plan con su comparativa. Las notas de abajo son de la versión con AWS.
+- **Cambio de rumbo (2026-11-17, D-4):** la spec se reescribió sin nube. Sus 2 marcas se resolvieron el mismo día: la demo se enciende en momentos acordados (E-9, RF-060) y la dirección del túnel es fija (E-10, RF-030). La spec nombra Supabase porque es decisión del equipo; el servicio de túnel lo elige el plan con su comparativa. Las notas de abajo son de la versión con AWS.
 
 - Quedan 2 marcas `[NECESITA ACLARACIÓN]` en §8.5: el plan de Supabase para que la demo no se pause hasta el 31 de enero, y quién vuelve a encender el servidor si lo apaga el presupuesto. Se resuelven en `/entrevista-spec 003`.
 - **Detalles de implementación**: la spec nombra Supabase, AWS, GitHub y la rama `main` porque son decisiones ya tomadas por el equipo (constitución 2.0.0) y forman parte del alcance que pidió Hugo. Los requisitos no dependen de cómo se usen: no hay librerías, servicios concretos de AWS, tablas ni comandos. El servicio de AWS, la librería de conexión y la herramienta de cambios de estructura se eligen en el plan, con su comparativa (principio IX).

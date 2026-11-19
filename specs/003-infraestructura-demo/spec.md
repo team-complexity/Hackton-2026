@@ -2,7 +2,7 @@
 
 - **ID**: `003-infraestructura-demo`
 - **Fecha**: `2026-11-17`
-- **Estado**: `Borrador` (cambio de rumbo). El 2026-11-17 el equipo decidió no montar nada en la nube por ahora (D-4): esta spec, que ese mismo día estaba `Aprobada` con Supabase + AWS + CI, se reescribió para que todo corra en local. En la entrevista del cambio de rumbo (E-6 a E-8), Hugo decidió que Supabase se queda, que la demo sale entera por un túnel y que el CI se queda. La versión con AWS (spec, plan, QA del plan y C-9) queda en el historial de git, en el commit `fe837cc`, por si se retoma. Lo redactó Claude el 2026-11-17. Quedan dos marcas abiertas (§8.5). Falta la QA de una sola pasada de esta versión: §8.4 conserva la QA de la versión anterior. Propone el cambio C-6 a la spec 001 y el C-7 a la spec 002 (§8.2). Sigue vigente el C-8: el plan se aprueba cuando se unan los PR #72 y #96.
+- **Estado**: `Borrador` (cambio de rumbo). El 2026-11-17 el equipo decidió no montar nada en la nube por ahora (D-4): esta spec, que ese mismo día estaba `Aprobada` con Supabase + AWS + CI, se reescribió para que todo corra en local. En la entrevista del cambio de rumbo (E-6 a E-10), Hugo decidió que Supabase se queda, que la demo sale entera por un túnel con una dirección fija, que el CI se queda y que la demo se enciende solo en momentos acordados. La versión con AWS (spec, plan, QA del plan y C-9) queda en el historial de git, en el commit `fe837cc`, por si se retoma. Lo redactó Claude el 2026-11-17. Sin marcas abiertas. Falta la QA de una sola pasada de esta versión: §8.4 conserva la QA de la versión anterior. Propone el cambio C-6 a la spec 001 y el C-7 a la spec 002 (§8.2). Sigue vigente el C-8: el plan se aprueba cuando se unan los PR #72 y #96.
 - **Rama**: `feature/90-infraestructura-demo`
 - **Issues**: #90 (guardar cobros y pagos), #19 (conexión y cambios de estructura con un comando), #35 (CI), #94 (de dónde sale la imagen del QR) y #65 (HTTPS y aviso de pey, ahora por el túnel; su nota deja pendiente el despliegue en la nube). #34 (AWS) y #57 (mantener la demo hasta el 31 de enero) quedan fuera y siguen abiertos. Con el pago real de esta spec se cierran #27 y #64; #29 queda abierto hasta el inicio de sesión (#24), porque también pide que un negocio no reciba avisos de otro (QA-6).
 - **Entrada**: "Cambio de rumbo de la spec 003 (Hugo, 2026-11-17): por decisiones del equipo, por ahora no se monta nada en la nube; todo se hace local, y puede que se retome en el futuro. La base de datos sigue siendo Supabase (E-6). La web, el servidor y el aviso de pey salen por un túnel con HTTPS desde la computadora que corre la demo (E-7). El CI en cada pull request se queda (E-8). Salen AWS, el dominio propio, el presupuesto y la publicación." La entrada de la versión con AWS está en `fe837cc`.
@@ -112,7 +112,7 @@ Una sola entrega, hasta el 22 de noviembre (meta de S1). Sustituye los dos corte
 5. **Dado** un canal de avisos abierto por la dirección pública, **cuando** el servidor emite un evento, **entonces** la pantalla lo recibe en ese momento, sin que el túnel lo retenga hasta cerrar el canal.
 6. **Dado** una página de otro dominio, **cuando** intenta usar el servidor desde el navegador, **entonces** el navegador lo bloquea.
 7. **Dado** otro equipo conectado a la misma red que la computadora de la demo, **cuando** intenta conectarse directo al servidor sin pasar por el túnel, **entonces** no recibe respuesta.
-8. **Dado** que el servidor o el túnel se reinician, **cuando** vuelven, **entonces** la dirección pública y la del aviso de pey se comportan como dice RF-030.
+8. **Dado** que el servidor, el túnel o la computadora de la demo se reinician, **cuando** vuelven, **entonces** la dirección pública y la del aviso de pey son las mismas que antes.
 
 ---
 
@@ -136,7 +136,7 @@ Una sola entrega, hasta el 22 de noviembre (meta de S1). Sustituye los dos corte
 
 **Como** Hugo, responsable del proyecto, **quiero** encender la demo siguiendo una sola guía y comprobar desde fuera que todo responde, **para** enseñarla a los jueces o a un negocio piloto sin improvisar.
 
-**Por qué esta prioridad:** sin nube, la demo no está siempre encendida. Cada vez que se enciende hay que arrancar el servidor y el túnel, comprobar la base de datos y, si la dirección cambió, el aviso de pey. Va después de las historias 1 a 3 porque solo importa cuando ya funcionan.
+**Por qué esta prioridad:** sin nube, la demo no está siempre encendida. Cada vez que se enciende hay que poner al día el código, arrancar el servidor y el túnel y comprobar la base de datos. Va después de las historias 1 a 3 porque solo importa cuando ya funcionan.
 
 **Prueba independiente:** con la computadora de la demo recién encendida, seguir la guía y pedir la salud del servidor por la dirección pública desde un celular con datos móviles.
 
@@ -237,7 +237,7 @@ Los números retirados por D-4 no se reutilizan (§8.1).
 **Demo pública por el túnel** (historias 2, 3 y 4)
 
 - **RF-024** (Estado): MIENTRAS la demo está encendida, EL SISTEMA abrirá la web y el servidor por el túnel en una dirección pública con HTTPS, y cualquier celular la abrirá sin invitación ni inicio de sesión (E-7).
-- **RF-060** (Estado): MIENTRAS [NECESITA ACLARACIÓN: ¿cuándo debe estar encendida la demo? ¿Solo en las pruebas, la grabación del video y la demo en vivo de la evaluación (12 al 14 de diciembre), o también durante toda la evaluación y hasta el 31 de enero de 2027, que el hackathon sugiere para mantener la demo accesible (`docs/plan-hackathon.md`, fechas)? Una demo siempre encendida obliga a dejar la computadora de la demo prendida, sin suspenderse y con internet todos esos días], EL SISTEMA estará encendido y responderá en la dirección pública.
+- **RF-060** (Estado): MIENTRAS dura un momento acordado por el equipo (pruebas, grabación del video, demos con negocios piloto y la demo en vivo de la evaluación, del 12 al 14 de diciembre), EL SISTEMA estará encendido y responderá en la dirección pública; fuera de esos momentos la demo puede estar apagada (E-9).
 - **RF-056** (Ubicuo): EL SISTEMA solo atenderá las peticiones que llegan de fuera de la computadora de la demo a través del túnel; otro equipo de la misma red que intente conectarse directo al servidor no recibirá respuesta, porque por ahí pasarían sin cifrar los avisos de pey con los datos bancarios de quien paga.
 - **RF-025** (Ubicuo): EL SISTEMA recibirá los avisos de pey en la dirección pública del túnel, dada de alta en el portal de pey con su secreto.
 - **RF-026** (Estado): MIENTRAS un canal de avisos está dentro de la ventana de escucha de su cobro, EL SISTEMA lo mantendrá abierto, sin cortes del túnel, hasta que el servidor lo cierre (hasta 20 minutos).
@@ -245,8 +245,8 @@ Los números retirados por D-4 no se reutilizan (§8.1).
 - **RF-027** (Ubicuo): EL SISTEMA aceptará peticiones del navegador solo desde la dirección de la web de la demo (aplica RF-035 de la spec 001 con la dirección real).
 - **RF-028** (Ubicuo): EL SISTEMA aplicará los límites por IP de la spec 001 (RF-034 y RF-041) con la IP real del celular, no con la del túnel.
 - **RF-029** (Ubicuo): EL SISTEMA hará que la web de la demo solo se conecte a su propio servidor.
-- **RF-030** (Dirigido por evento): CUANDO el servidor o el túnel se reinician, EL SISTEMA [NECESITA ACLARACIÓN: ¿la dirección pública debe ser siempre la misma, aunque se apague la computadora de la demo, o puede cambiar cada vez que se enciende la demo, con Hugo dando de alta otra vez el aviso en el portal de pey y compartiendo el enlace nuevo? Una dirección fija puede pedir una cuenta en el servicio del túnel, o un dominio] conservará la dirección pública y la dirección del aviso de pey.
-- **RF-058** (Ubicuo): EL SISTEMA tendrá una guía para Hugo con los pasos para encender y apagar la demo: poner al día la computadora de la demo con `main`, aplicar los cambios de estructura pendientes (RF-017 y RF-051), arrancar el servidor y el túnel, comprobar la salud por la dirección pública y, si la dirección cambió, actualizar el aviso en el portal de pey.
+- **RF-030** (Dirigido por evento): CUANDO el servidor, el túnel o la computadora de la demo se reinician, EL SISTEMA conservará la misma dirección pública y la misma dirección del aviso de pey, para que el enlace de la entrega del hackathon y el aviso dado de alta en pey sigan sirviendo (E-10).
+- **RF-058** (Ubicuo): EL SISTEMA tendrá una guía para Hugo con los pasos para encender y apagar la demo: poner al día la computadora de la demo con `main`, aplicar los cambios de estructura pendientes (RF-017 y RF-051), arrancar el servidor y el túnel, y comprobar la salud por la dirección pública.
 
 **CI** (historia 5)
 
@@ -285,8 +285,8 @@ Los límites por IP y los canales abiertos **no** se guardan: siguen en la memor
 | El proyecto de Supabase está pausado o sin servicio | Si en 7 días nadie enciende un servidor, Supabase puede pausar el proyecto, y no garantiza qué cuenta como uso (RF-039). Si no responde, la salud del servidor lo indica, los cobros nuevos se rechazan con un mensaje (RF-012) y Hugo lo reactiva con su guía (RF-050). | RF-012, RF-023, RF-039, RF-050 |
 | Una migración daña datos de la demo | El plan gratuito no tiene respaldos: Hugo restaura la copia que exportó antes de aplicarla. | RF-051 |
 | La computadora de la demo se suspende, se apaga o pierde internet | La demo deja de responder y la pantalla muestra "Reconectando…". Al volver, los pagos de ese rato se registran por la consulta de respaldo o por un aviso reenviado, si llegan dentro de la ventana de escucha. Si la ventana termina con la demo apagada, el pago queda en pey y en la cuenta del negocio, pero la pantalla no lo avisa. Limitación de correr en una computadora, que la QA revisa contra el principio VIII. | RF-005, RF-060 |
-| El túnel se cae con la demo encendida | Igual que la fila anterior. La guía de Hugo dice cómo volver a arrancarlo; la dirección puede cambiar (RF-030). | RF-030, RF-058 |
-| La dirección pública cambió y el aviso de pey sigue apuntando a la anterior | Los avisos no llegan; la consulta de respaldo registra los pagos, sin la promesa de los 2 segundos. La guía pide actualizar el aviso cada vez que se enciende la demo. | RF-030, RF-058 |
+| El túnel se cae con la demo encendida | Igual que la fila anterior. La guía de Hugo dice cómo volver a arrancarlo; la dirección sigue siendo la misma (RF-030). | RF-030, RF-058 |
+| Un juez abre el enlace fuera de un momento acordado | Ve el error del túnel o de su navegador. El video y las instrucciones de prueba de la entrega muestran el flujo completo y dicen cuándo está encendida la demo. | RF-060 |
 | El túnel retiene los eventos del canal o lo corta antes de 20 minutos | Incumple RF-026 y RF-057. El plan elige un túnel que no lo haga y lo prueba antes que todo lo demás de la demo pública. | RF-026, RF-057 |
 | Otro equipo de la misma red intenta conectarse directo al servidor | No recibe respuesta: el servidor solo atiende lo que llega por el túnel. | RF-056 |
 | La demo está apagada | Quien abre el enlace ve el error del túnel o de su navegador; no hay página de "demo en pausa". | RF-060, E-3 |
@@ -309,7 +309,7 @@ Los límites por IP y los canales abiertos **no** se guardan: siguen en la memor
 | Varios servidores a la vez o escalado automático | La spec 001 exige un solo proceso (E-4) |
 | Página de "demo en pausa" cuando la demo está apagada | No se construye: se ve el error del túnel o del navegador (E-3) |
 | Cupones | #37 |
-| Congelar la demo después de la entrega y mantenerla hasta el 31 de enero | #57, según lo que se decida en RF-060 |
+| Demo encendida sin parar (toda la evaluación o hasta el 31 de enero) | Solo en momentos acordados (E-9, RF-060). #57 sigue abierto por si se retoma la nube |
 
 ---
 
@@ -334,7 +334,7 @@ Los límites por IP y los canales abiertos **no** se guardan: siguen en la memor
 **Supuestos**
 
 - La computadora de la demo es la de Hugo. Mientras la demo está encendida, esa computadora sigue prendida, sin suspenderse y con internet.
-- Existe un servicio de túnel gratuito que da HTTPS, entrega el canal de avisos sin retenerlo y no lo corta antes de 20 minutos. El plan lo elige con su comparativa (principio IX). Los dos que se probaron en la 002 no cumplían: el túnel rápido de Cloudflare retuvo el canal y el de `localhost.run` se cortó cada ~16 minutos (`specs/002-web-mvp/verification-guide.md`). Si el que cumple pide un pago, por ejemplo para una dirección fija, es una decisión nueva de Hugo.
+- Existe un servicio de túnel gratuito que da HTTPS, entrega el canal de avisos sin retenerlo y no lo corta antes de 20 minutos. El plan lo elige con su comparativa (principio IX). Los dos que se probaron en la 002 no cumplían: el túnel rápido de Cloudflare retuvo el canal y el de `localhost.run` se cortó cada ~16 minutos (`specs/002-web-mvp/verification-guide.md`). Además debe dar una dirección fija (RF-030), aunque para eso pida una cuenta gratuita. Si solo hay opción de pago, es una decisión nueva de Hugo.
 - Supabase se queda en el plan gratuito. Su documentación dice que "may pause" los proyectos gratuitos con poca actividad en 7 días, sin definir qué cuenta como actividad, y que el plan gratuito no incluye respaldos (QA-5). Sin un servidor siempre encendido, la consulta diaria (RF-039) solo pasa mientras hay uno encendido; si el proyecto se pausa, Hugo lo reactiva (RF-050). Pasar al plan de pago es una decisión nueva de Hugo.
 - pey admite un solo webhook por llave, así que la demo y los servidores de desarrollo usan llaves distintas (RF-053). Se supone que el ambiente de pruebas de pey (`https://api.dev.pey.mx`, que menciona `docs.pey.mx/llms.txt`) da una llave propia con su aviso. El aviso de desarrollo también llega por un túnel a la computadora de quien prueba (E-1).
 - El servidor no usa el estado que calcula la vista `cobros_con_estado` del PR #97 (con la hora de la base de datos): lo calcula él con su reloj (RF-006). Se le avisó a Juan en la revisión del PR #97, y el plan lo registra como decisión (QA-11).
@@ -351,7 +351,7 @@ Los límites por IP y los canales abiertos **no** se guardan: siguen en la memor
 | Proyecto de Supabase de la demo | Base de datos de la demo | Juan (#19) | Creado, según Hugo y el PR #97 |
 | Segundo proyecto gratuito de Supabase para desarrollo | RF-049 (QA-4) | Juan (dueño de la organización de Supabase) | Pendiente |
 | Credenciales de Supabase en la configuración del servidor de cada computadora | RF-020 | Hugo y cada integrante | Pendiente |
-| Servicio de túnel elegido, y su cuenta si la pide | RF-024, RF-026, RF-057 | Hugo | Se elige en el plan |
+| Servicio de túnel elegido, con su dirección fija y su cuenta si la pide | RF-024, RF-026, RF-030, RF-057 | Hugo | Se elige en el plan |
 | Aviso dado de alta en el portal de pey con la dirección del túnel | RF-025 | Hugo (#15) | Pendiente; depende del túnel |
 | Llave de pey para desarrollo, del ambiente de pruebas o una segunda de producción | RF-053 (E-1) | Hugo, con pey | Pendiente |
 | Protección de la rama `main` para exigir el CI | RF-037 | Juan (dueño del repositorio) | Pendiente |
@@ -373,6 +373,8 @@ Los límites por IP y los canales abiertos **no** se guardan: siguen en la memor
 | E-6 | Si todo será local, ¿la base de datos sigue siendo Supabase o pasa a un PostgreSQL en la computadora? | Supabase sigue: solo sale AWS. Se reusan el esquema del PR #97 y el diseño del guardado. | Historias 1 y 6, RF-001 a RF-023 |
 | E-7 | Sin dirección pública, ¿cómo se cumple la regla de reaccionar al aviso de pey? | Con un túnel para todo: la web, el servidor, el canal de avisos y el aviso de pey salen por la dirección del túnel. | RF-024 a RF-030, RF-056 a RF-060 |
 | E-8 | ¿El CI en cada pull request se queda? | Sí. Solo sale la publicación automática, que dependía de AWS. | Historia 5, RF-036 a RF-038 |
+| E-9 | ¿Cuándo debe estar encendida la demo? | Solo en momentos acordados: pruebas, grabación del video, demos con negocios piloto y la demo en vivo de la evaluación (12 al 14 de diciembre). No sin parar durante la evaluación ni hasta el 31 de enero. | RF-060, §4, §5 |
+| E-10 | ¿La dirección pública es siempre la misma o puede cambiar cada vez que se enciende la demo? | Siempre la misma, aunque se apague la computadora, para que sirvan el enlace de la entrega y el aviso dado de alta en pey. Puede pedir una cuenta gratuita en el servicio del túnel. | RF-030, RF-058, §7 |
 
 **Entrevista de la versión con AWS** (2026-11-17, después de la QA y de la aprobación, a pedido de Hugo):
 
@@ -452,7 +454,7 @@ Los límites por IP y los canales abiertos **no** se guardan: siguen en la memor
 
 ### 8.5 Pendientes
 
-- Dos marcas abiertas: cuándo está encendida la demo (RF-060) y si la dirección pública es fija (RF-030). Se resuelven antes de la QA de esta versión.
+- Ninguna marca abierta: las dos del cambio de rumbo se resolvieron el 2026-11-17 (E-9 y E-10).
 - Falta la QA de una sola pasada de esta versión (`/qa-spec 003`), con numeración desde QA-12.
 - Tarea de Hugo fuera de la spec (E-1): confirmar con pey que su ambiente de pruebas da una llave propia con su aviso; si no, pedir una segunda llave de producción para desarrollo.
 - Tarea de Hugo fuera de la spec (E-1): proponer el pull request que corrige la fila de la constitución que dice "No hay ambiente de pruebas: se prueba en producción con $0.01". La demo sigue en producción (principio VI), así que no cambia ningún principio.
