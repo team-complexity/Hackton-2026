@@ -326,3 +326,14 @@ async def test_una_consulta_lenta_no_deja_mudo_el_canal() -> None:
         assert time.perf_counter() - arranque < 2
     finally:
         await cliente_pey.cerrar()
+
+
+def test_los_eventos_del_canal_traen_la_hora_del_servidor(cliente, reloj) -> None:
+    """El estado y el fin traen la hora del servidor al emitirse (RF-008, C-2)."""
+    cobro = cliente.post("/api/cobros", json={"monto": 1, "concepto": "Tacos"}).json()
+    reloj.avanzar(cobro["fin_ventana"] + 5 - reloj.ahora())
+    texto = cliente.get(f"/api/cobros/{cobro['id']}/eventos").text
+    eventos = [trozo for trozo in texto.split("\n\n") if trozo.startswith("event:")]
+    assert [trozo.splitlines()[0] for trozo in eventos] == ["event: estado", "event: fin"]
+    for trozo in eventos:
+        assert _datos(trozo)["hora_servidor"] == cobro["fin_ventana"] + 5

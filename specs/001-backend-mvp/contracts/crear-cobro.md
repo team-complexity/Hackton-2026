@@ -54,6 +54,7 @@ Es el mismo en todas las respuestas que devuelven un cobro y en los eventos del 
 | `total_recibido` | número | RF-008 |
 | `pagado_en` | entero (Unix) o `null`: hora del último pago | RF-008 |
 | `pagos` | lista de [objeto pago](#objeto-pago) | RF-018, RF-019 |
+| `hora_servidor` | entero (Unix): la hora actual del servidor al armar este objeto, para que la pantalla calcule su desfase (C-2) | RF-008 |
 
 <a id="objeto-pago"></a>
 ### Objeto pago

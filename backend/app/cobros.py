@@ -107,7 +107,10 @@ class Cobro:
         return ahora < self.fin_ventana
 
     def publico(self) -> dict:
-        """Objeto cobro del contrato, sin datos de quien cobra (spec 001, RF-008)."""
+        """Objeto cobro del contrato, sin datos de quien cobra (spec 001, RF-008).
+
+        `hora_servidor` deja a la pantalla calcular su desfase con el servidor (C-2).
+        """
         return {
             "id": self.id,
             "codi_qr_id": self.codi_qr_id,
@@ -124,6 +127,7 @@ class Cobro:
             "total_recibido": _numero(self.total_recibido),
             "pagado_en": self.pagado_en,
             "pagos": [pago.publico() for pago in self.pagos],
+            "hora_servidor": int(self.reloj.ahora()),
         }
 
 

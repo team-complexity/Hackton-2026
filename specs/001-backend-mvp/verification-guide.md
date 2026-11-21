@@ -560,3 +560,40 @@ Commit sugerido:
 ```text
 docs(001): pulido del corte 2 y quickstart validado (FN)
 ```
+
+## F9 Cambio C-2: hora actual del servidor en cada cobro
+
+Fecha: 2026-11-15. Cada objeto cobro trae `hora_servidor` (entero Unix): la hora del servidor al armar la respuesta o el evento. Lo pidió la spec 002 para que la cuenta regresiva no dependa del reloj del celular (RF-019, CE-016). El cambio vive en `Cobro.publico()` (`backend/app/cobros.py`), así que sale en crear, ver, cancelar y en todos los eventos del canal sin tocar las rutas (TK-6 del plan).
+
+### Por qué un campo y no `creado_en`
+
+`creado_en` se fija **antes** de pedirle el QR a pey. Si pey tarda 9 s, un cobro recién creado ya lleva 9 s de vida. Con `hora_servidor`, la pantalla calcula `expira_en − hora_servidor` y arranca en 9:51, no en 10:00.
+
+### Pruebas automáticas
+
+```bash
+uv run --directory backend pytest -q -k "del_servidor or campos"
+```
+
+Esperado: `7 passed`:
+
+| Prueba | Qué comprueba |
+|---|---|
+| `test_el_objeto_publico_del_cobro_tiene_los_campos_del_contrato` y `test_el_cobro_devuelve_todos_sus_campos` | El objeto cobro tiene 16 campos, con `hora_servidor` |
+| `test_el_objeto_publico_trae_la_hora_actual_del_servidor_como_entero` | Es la hora del reloj, en segundos enteros (5.7 s de más se truncan) |
+| `test_crear_cobro_descuenta_lo_que_tardo_pey_en_la_hora_del_servidor` | Si pey tarda 9 s: `creado_en = T` y `hora_servidor = T + 9` |
+| `test_ver_cobro_trae_la_hora_actual_del_servidor` | Al ver el cobro 30 s después, `hora_servidor = creado_en + 30` |
+| `test_cancelar_devuelve_la_hora_del_servidor` | La respuesta de cancelar también la trae |
+| `test_los_eventos_del_canal_traen_la_hora_del_servidor` | `estado` y `fin` la traen, con la hora en que se emitieron |
+
+Resultado del 2026-11-15: suite completa `109 passed`; `ruff check` y `ruff format --check` limpios.
+
+### Comprobación a mano (opcional, con tu autorización)
+
+Crear un QR llama a pey, aunque no mueve dinero. Si lo autorizas, con el servidor del quickstart (paso 2):
+
+1. `curl -s -X POST http://localhost:8000/api/cobros -H 'Content-Type: application/json' -d '{"monto": 0.01, "concepto": "Prueba"}'` y, en otra terminal, `date +%s`.
+2. **Esperado**: `hora_servidor` es igual o 1 s menor que `date +%s`, y mayor o igual que `creado_en` (la diferencia es lo que tardó pey).
+3. `curl -N http://localhost:8000/api/cobros/<id>/eventos`: el `event: estado` trae `hora_servidor` con la hora de apertura.
+
+No hace falta pagar el QR.

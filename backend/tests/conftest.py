@@ -6,6 +6,7 @@ lleva un transporte simulado y una base que no es la de pey.
 
 import base64
 import json
+from collections.abc import Callable
 from datetime import UTC, datetime
 
 import httpx
@@ -41,6 +42,8 @@ class PeySimulado:
         self.request_id = "r1"
         self.sin_conexion = False
         self.tiempo_agotado = False
+        # Se llama al responder POST /codi/qr; sirve para simular que pey tarda (C-2).
+        self.al_crear: Callable[[], None] | None = None
 
     def __call__(self, solicitud: httpx.Request) -> httpx.Response:
         self.solicitudes.append(solicitud)
@@ -55,6 +58,8 @@ class PeySimulado:
         return self._error(404)
 
     def _respuesta_crear(self) -> httpx.Response:
+        if self.al_crear is not None:
+            self.al_crear()
         if self.estado_crear != 201:
             return self._error(self.estado_crear)
         return httpx.Response(
