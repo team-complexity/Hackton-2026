@@ -22,7 +22,7 @@ Las reglas comunes del proyecto están en la [constitución](.specify/memory/con
 
 | Persona | Cuenta de GitHub | Responsabilidades | Respaldo |
 |---|---|---|---|
-| **Hugo** | `HugoAI23` | Producto (requisitos e historias de usuario), backend, integraciones (pey, WhatsApp, chatbot), AWS, CI, coordinación de la seguridad y la web de cobro hasta cerrar la spec 002 | Leonel, en el backend y la web |
+| **Hugo** | `HugoAI23` | Producto (requisitos e historias de usuario), backend, integraciones (pey, WhatsApp, chatbot), la demo por túnel, CI, coordinación de la seguridad y la web de cobro hasta cerrar la spec 002 | Leonel, en el backend y la web |
 | **Leonel** | `mendiolaleonel2002-debug` | Arquitectura (observaciones de cambios sobre lo implementado), revisión de lo que se une a `main`, front de la web (base PWA, notificaciones y pantallas) y pruebas de la demo por túnel para los jueces | Miguel en el front, Hugo en la revisión |
 | **Juan** | `Altairtm` | Pruebas QA y revisión de lo que se une a `main`, bases de datos (Supabase y MongoDB) y la **app iOS** | Leonel en la revisión, Miguel en QA |
 | **Miguel** | `Beer17` | Pantallas de la web y UI/UX, landing page, guías QA y la **app Android** | Leonel en las pantallas, Juan en las guías QA |
@@ -61,12 +61,12 @@ Las reglas comunes del proyecto están en la [constitución](.specify/memory/con
 | Cobros | API de pey (CoDi) | Decidido y en uso |
 | Web de cobro | HTML, CSS y JavaScript, sin framework | Decidido y en uso (spec 002) |
 | Base de datos relacional | Supabase (PostgreSQL) | Decidido; falta crear el proyecto (Juan) |
-| Nube | AWS | Decidido; falta desplegar (Hugo) |
+| Nube | Sin nube por ahora: la demo sale por un túnel HTTPS (Tailscale Funnel) desde la computadora de Hugo | Decidido en la spec 003 (D-4 y DP-38). AWS queda como plan B (#34) |
 | Landing page | React + Tailwind + Lovable (propuesta) | **Lo define Miguel** |
 | App Android | Por elegir | **Lo define Miguel** |
 | App iOS | Por elegir | **Lo define Juan** |
 | Base de datos no relacional | MongoDB | **Juan define para qué sirve.** Primer candidato: guardar la imagen del QR |
-| Librerías de QR | `qrcode` o `segno` | **Lo define Hugo.** Hoy el QR es la imagen que entrega pey |
+| Imagen del QR | La que entrega pey, guardada en Supabase | Decidido en la spec 003 (D-2, #94): no se usan `qrcode` ni `segno` |
 | Editor y agentes | Antigravity, Claude u otros | Libre. Todo agente lee la constitución antes de empezar |
 
 Cada decisión pendiente se cierra con una comparativa corta por escrito: opción A frente a B, ventajas, desventajas y por qué se eligió. Va en la descripción del pull request del issue correspondiente.
@@ -125,7 +125,7 @@ Ninguna pantalla lleva la llave de pey ni habla con pey directamente. Eso solo l
 
 | Persona | Entregables |
 |---|---|
-| Hugo | Web de cobro completa (#64). Backend y web en AWS con HTTPS y webhook de pey conectado (#34, #65). README con el enlace en vivo (#66). CI en cada pull request (#35). Trámites de pey (#11, #12, #14, #15). Guía de instalación (#17). Requisitos e historias de usuario de las apps (#76). Decisión sobre las librerías de QR (#94). Pago real de $0.01 desde la demo pública, para cerrar #27 y #29 |
+| Hugo | Web de cobro completa (#64). Demo por túnel con HTTPS y webhook de pey conectado (spec 003, #65). README con el enlace en vivo (#66). CI en cada pull request (#35). Trámites de pey (#11, #12, #14, #15). Guía de instalación (#17). Requisitos e historias de usuario de las apps (#76). Decisión sobre las librerías de QR (#94). Pago real de $0.01 desde la demo pública, para cerrar #27 y #29 |
 | Juan | Proyecto y esquema en Supabase (#19, #23). Propuesta de uso de MongoDB (#89). Revisión del pull request #72. Tecnología elegida y entorno de iOS funcionando (#81) |
 | Miguel | Decisión sobre React + Tailwind + Lovable (#85). Mockups de la web y de las apps (#20). Identidad visual (#21). Plantilla de guía QA y guía QA del cobro (#87). Tecnología elegida y entorno de Android funcionando (#77) |
 
@@ -211,7 +211,7 @@ Los jueces evalúan el enlace web, así que la web va primero. Si el **domingo 2
 | #27 | Recibir el webhook de pago | S1 | Código hecho en la spec 001. Falta el pago real desde la demo pública |
 | #28 | Verificar la firma de los webhooks | Cerrado | Hecho en la spec 001 |
 | #29 | Aviso en tiempo real a la web | S1 | Código hecho en la spec 001. Falta el pago real desde la demo pública |
-| #34 | Desplegar backend y web con HTTPS | S1 | Antes Juan. El hosting ya está decidido: AWS |
+| #34 | Desplegar backend y web con HTTPS | S1 | Antes Juan. Desde el 17 nov es el plan B: la demo sale por túnel (spec 003, D-4) |
 | #35 | CI: lint y pruebas en cada pull request | S1 | Antes Juan |
 | #36 | Enlaces de pago y push CoDi | S3 | Antes sin dueño. **Opcional** |
 | #37 | Cupones antes de generar el QR | S3 | Antes sin dueño. **Opcional** |
@@ -290,7 +290,7 @@ Son requisitos que no tenían issue. Se crearon en GitHub el 15 de noviembre, en
 | #91 | Investigar el pago con NFC | Hugo | S2 | Tiempo fijo. Si es posible, se construye en Android |
 | #92 | Chatbot en la web: backend | Hugo | S3 | Premium |
 | #93 | Chatbot en la web: pantalla | Miguel | S3 | Premium |
-| #94 | Decidir si el backend dibuja el QR o sigue la imagen de pey | Hugo | S1 | `qrcode` frente a `segno`. Va ligado a #89 |
+| #94 | Decidir si el backend dibuja el QR o sigue la imagen de pey | Hugo | S1 | Decidido: la imagen de pey, guardada en Supabase (spec 003, D-2) |
 | #95 | Coordinar la revisión de seguridad | Hugo | S3–S4 | Agente de IA y Leonel |
 
 ### Carga por persona

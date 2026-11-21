@@ -105,7 +105,7 @@ Flujo de specs (spec → plan → tareas, con spec-kit):
 
 | Persona | Cuenta de GitHub | Responsabilidades | Respaldo |
 |---|---|---|---|
-| Hugo | `HugoAI23` | Producto (requisitos e historias de usuario), backend, integraciones (pey, WhatsApp, chatbot), AWS, CI, coordinación de la seguridad y la web de cobro | Leonel, en el backend y la web |
+| Hugo | `HugoAI23` | Producto (requisitos e historias de usuario), backend, integraciones (pey, WhatsApp, chatbot), la demo por túnel, CI, coordinación de la seguridad y la web de cobro | Leonel, en el backend y la web |
 | Leonel | `mendiolaleonel2002-debug` | Arquitectura (observaciones de cambios sobre lo implementado), revisión de lo que se une a `main`, front de la web (base PWA, notificaciones y pantallas) y pruebas de la demo por túnel para los jueces | Miguel en el front, Hugo en la revisión |
 | Juan | `Altairtm` | Pruebas QA y revisión de lo que se une a `main`, bases de datos (Supabase y MongoDB) y la app iOS | Leonel en la revisión, Miguel en QA |
 | Miguel | `Beer17` | Pantallas de la web y UI/UX, landing page, guías QA y la app Android | Leonel en las pantallas, Juan en las guías QA |
@@ -133,9 +133,9 @@ Flujo de specs (spec → plan → tareas, con spec-kit):
 | Demo evaluada | El enlace web. Las apps se entregan como instalables y en el video |
 | Tiempo real | Server-Sent Events, con consulta del estado como respaldo |
 | API de pey | `https://api.pey.mx`, autenticación `Bearer`, montos en MXN. No hay ambiente de pruebas: se prueba en producción con $0.01 |
-| Base de datos | Supabase (PostgreSQL). MongoDB solo entra si Juan justifica su uso (primer candidato: la imagen del QR) |
-| Hosting | AWS |
-| Imagen del QR | La que entrega pey. Dibujarla con una librería (`qrcode` o `segno`) está por decidir |
+| Base de datos | Supabase (PostgreSQL). MongoDB solo entra si Juan justifica su uso |
+| Hosting | La computadora de la demo, con un túnel HTTPS de dirección fija (Tailscale Funnel, spec 003). AWS queda como plan B (#34) |
+| Imagen del QR | La que entrega pey, guardada con el cobro en Supabase (#94, spec 003) |
 | Editores y agentes | Libres (Antigravity, Claude u otros). Todo agente lee esta constitución antes de escribir código |
 | Specs | spec-kit (`specify` 1.4.0) con plantillas en español en `.specify/templates/overrides/` |
 
@@ -194,4 +194,4 @@ Flujo de specs (spec → plan → tareas, con spec-kit):
   - Cada revisión de un pull request comprueba esta constitución y que su descripción siga la plantilla, no solo que el código funcione.
   - Quien trabaja con specs llena en cada plan su verificación de la constitución (*Constitution Check*) antes y después del diseño, y justifica toda excepción en el seguimiento de complejidad (*Complexity Tracking*).
 
-**Versión**: 3.0.0 | **Ratificada**: 2026-11-14 | **Última enmienda**: 2026-11-20
+**Versión**: 3.0.1 | **Ratificada**: 2026-11-14 | **Última enmienda**: 2026-11-20

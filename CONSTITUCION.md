@@ -2,7 +2,7 @@
 
 La constitución es la **regla común del equipo**, para las personas y para sus agentes de IA. Está en:
 
-**[`.specify/memory/constitution.md`](.specify/memory/constitution.md)** (versión 3.0.0)
+**[`.specify/memory/constitution.md`](.specify/memory/constitution.md)** (versión 3.0.1)
 
 Vive en esa carpeta porque ahí la lee spec-kit: los comandos `/speckit-plan` y `/speckit-analyze` revisan cada plan contra sus principios. Este archivo solo apunta a ella para que se encuentre desde la raíz del repositorio.
 

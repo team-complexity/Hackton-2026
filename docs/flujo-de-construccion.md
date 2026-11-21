@@ -26,7 +26,7 @@ Cuando se apruebe, sustituye el reparto y el calendario de `flujo-de-trabajo.md`
 
 | Puerta | Fecha | Qué tiene que funcionar en la demo pública |
 |---|---|---|
-| S1 | dom 22 nov | Un cobro real de $0.01 desde la URL pública, con los datos en Supabase y el CI en verde |
+| S1 | dom 22 nov | Un cobro real de $0.01 desde la URL pública por el túnel y el CI en verde. Los datos en Supabase llegan el miércoles 25 (spec 003, corte 2) |
 | S2 | dom 29 nov | Cobrar con la calculadora y la duración elegida. El pago suena y llega como notificación aunque la web esté en segundo plano. Cada app crea un cobro y muestra su QR |
 | S3 | dom 6 dic | **Funciones congeladas.** Cobro a distancia, asistente, cupones, cuentas y entregas se enseñan con cobros reales |
 | S4 | jue 10 dic | Postulación enviada con los cuatro integrantes. Video, textos y revisión de seguridad listos |
@@ -51,8 +51,8 @@ Cuando se apruebe, sustituye el reparto y el calendario de `flujo-de-trabajo.md`
 | Persona | Antes (`flujo-de-trabajo.md`) | Ahora |
 |---|---|---|
 | Leonel | No era integrante: revisor externo de seguridad, sin llaves | **Integrante oficial, ya inscrito en el portal del hackathon:** arquitectura por observaciones, revisión de lo unido, front y pruebas de la demo por túnel para los jueces. Para probar el túnel no necesita llaves. Si las necesita, por ejemplo para correr el backend de la demo, se las da Hugo (regla 8.1) |
-| Hugo | Producto, backend, integraciones, AWS, CI, seguridad y web de cobro | Igual, con la demo por túnel (spec 003) en lugar de AWS. Une sus propios pull requests. Deja los logs (#45) y la demo congelada (#57) a Juan |
-| Juan | Revisaba y unía todos los pull requests. BD, QA y app iOS | Hace QA y, con Leonel, revisa lo que se une a `main`. Ya no une los pull requests de los demás: cada quien une el suyo. Suma cupones (F-09), varias cuentas (F-11), #45 y #57 |
+| Hugo | Producto, backend, integraciones, AWS, CI, seguridad y web de cobro | Igual, con la demo por túnel (spec 003) en lugar de AWS. Une sus propios pull requests. Deja los logs (#45) a Juan; la demo encendida del 12 al 14 de diciembre (#57) sigue con él, en su computadora (spec 003, QA-13) |
+| Juan | Revisaba y unía todos los pull requests. BD, QA y app iOS | Hace QA y, con Leonel, revisa lo que se une a `main`. Ya no une los pull requests de los demás: cada quien une el suyo. Suma cupones (F-09), varias cuentas (F-11) y #45 |
 | Miguel | Frontend web, UI/UX, landing, guías QA y app Android | Igual, centrado en diseño y pantallas. La PWA base (#22) pasa a Leonel |
 
 ### 2.3 Cómo entra Leonel (primeras 72 horas)
@@ -249,7 +249,7 @@ La demo pública sale por un túnel con HTTPS desde la computadora de la demo (s
 
 | Spec | Qué cubre | Funciones e issues | La escribe | La construyen | Etapa |
 |---|---|---|---|---|---|
-| 003 | Infraestructura de la demo: Supabase, túnel y CI (en curso) | #90, #19, #35, #94, #65 | Hugo | Hugo | S1 |
+| 003 | Infraestructura de la demo: Supabase, túnel y CI (spec aprobada; dos cortes, 22 y 25 nov) | #35, #65, #66 (corte 1); #90, #19, #94 (corte 2) | Hugo | Hugo | S1 |
 | 004 | Cobro rápido | F-03, F-04, F-07 · #100, N-06, #31, #32 | Hugo | Leonel (comportamiento), Miguel (visual), Hugo (backend) | S2 |
 | 005 | Aviso de pago en todas partes | F-05, F-06, F-12 · #22, #33, N-07, N-08, N-09 | Hugo | Leonel (web), Miguel (diseño), Hugo (backend) | S2 |
 | 006 | Cuenta del negocio e historial | #24, #30, #38, #39 | Hugo | Hugo, Miguel | S2–S3 |
@@ -348,7 +348,7 @@ Los horarios se confirman en la primera planeación, según la disponibilidad de
 
 | Persona | Entregables |
 |---|---|
-| Hugo | Spec 003 aprobada y construida: Supabase, túnel y CI (#90, #35, #65). Cobro real de $0.01 desde la URL pública, que cierra #27 y #64. Alta de las CLABEs del titular en pey (N-10). Leonel en pey.build (N-01). Constitución 3.0.0 y flujo al día con el equipo de cuatro (N-02, PR #96). Issues de este documento creados. Requisitos de las apps con las funciones nuevas (#76) |
+| Hugo | Spec 003 aprobada y su corte 1 construido: túnel y CI (#35, #65, #66); el corte 2, Supabase (#90, #19, #94), el miércoles 25. Cobro real de $0.01 desde la URL pública, que cierra #27 y #64. Alta de las CLABEs del titular en pey (N-10). Leonel en pey.build (N-01). Constitución 3.0.0 y flujo al día con el equipo de cuatro (N-02, PR #96). Issues de este documento creados. Requisitos de las apps con las funciones nuevas (#76) |
 | Leonel | Arranque (2.3 y Anexo A). Revisión de los PR #72 y #96. Revisión de arquitectura de las specs 001 a 003 (N-03). Propuesta de arquitectura del front (N-04). Primera prueba de la URL pública por túnel desde fuera de nuestra red (N-17) |
 | Juan | Unir los PR #72, #96, #98, #99 y #101 cuando estén revisados. Comparativa del stack de las apps con Miguel (N-05). Primera ronda de QA de la web de cobro (#88) |
 | Miguel | Mockups con las funciones nuevas: calculadora, duración, notificación, cupón, vista del repartidor, cuentas y asistente (#20). Identidad visual (#21). Plantilla de guía QA (#87). Comparativa del stack de las apps con Juan (N-05) |
@@ -380,7 +380,7 @@ Los horarios se confirman en la primera planeación, según la disponibilidad de
 | Juan | QA de regresión en la web y las apps (#88). Instrucciones de prueba y declaración de componentes (#55). Compilación instalable de iOS (#84) |
 | Miguel | Pulido de pantallas. Pruebas con negocios reales (#43, con Hugo). APK de Android (#80) |
 
-**Ajustes (11–12 dic).** Solo se corrigen errores de QA y se afinan textos; no entra ninguna función nueva. Hugo envía la entrega (#56). Juan congela la demo y la deja encendida durante la evaluación (#57). Leonel la prueba por el túnel cada día del 12 al 14 y avisa a Hugo y a Juan en el momento si algo falla (N-17).
+**Ajustes (11–12 dic).** Solo se corrigen errores de QA y se afinan textos; no entra ninguna función nueva. Hugo envía la entrega (#56). Hugo congela la demo y la deja encendida en su computadora del 12 al 14 (#57, spec 003). Leonel la prueba por el túnel cada día del 12 al 14 y avisa a Hugo y a Juan en el momento si algo falla (N-17).
 
 ### 6.3 Trámites que hay que empezar ya
 
@@ -391,7 +391,7 @@ Los horarios se confirman en la primera planeación, según la disponibilidad de
 | Cuenta de desarrollador de Apple, si el stack la pide para instalar en iPhones ajenos | Es de pago y su activación puede tardar | Juan | mié 25 nov |
 | App de Meta, número de prueba y plantilla "Te pagaron" (#46, #48) | La plantilla pasa por la aprobación de Meta | Hugo | dom 29 nov |
 | Proveedor y llave del servicio de IA del asistente | La spec 007 lo necesita, y los bounties pueden premiar a uno | Hugo | lun 30 nov |
-| Demo encendida del 12 al 14 de diciembre, o regreso a la nube (#34) | Sin nube, la demo solo existe con la computadora y el túnel encendidos | Hugo | dom 6 dic |
+| Demo encendida sin parar del 12 al 14 de diciembre en la computadora de Hugo (spec 003, RF-060); #34 queda como plan B | Sin nube, la demo solo existe con la computadora y el túnel encendidos | Hugo | dom 6 dic |
 
 ### 6.4 Orden de corte
 
@@ -448,7 +448,7 @@ Se crean cuando Hugo apruebe este documento, con la plantilla del Anexo B.
 | #36 | Sube de prioridad (base de F-02 y F-10), pierde la etiqueta `opcional` y entra en la spec 007 |
 | #37 | Es el canje de los cupones de F-09 |
 | #40 | Se separa: los cupones pasan a N-14 y queda la pantalla Premium |
-| #45, #57 | Pasan de Hugo a Juan |
+| #45 | Pasa de Hugo a Juan. #57 se queda con Hugo (spec 003, QA-13) |
 | #46, #47, #48 | Pierden "(Opcional)" y la etiqueta `opcional`: WhatsApp es la F-02. #46 pasa a S2 por los tiempos de Meta |
 | #56 | La lista de integrantes incluye a Leonel |
 | #60, #61, #67, #68 | Hugo confirma que se enviaron (vienen del kickoff) y los cierra |
@@ -465,9 +465,9 @@ Se crean cuando Hugo apruebe este documento, con la plantilla del Anexo B.
 
 | Persona | Construye o escribe | Además | Carga |
 |---|---|---|---|
-| Hugo | Specs 003 a 007. Backend de N-06, N-07, N-15, #24, #36, #38, #44, #92 y WhatsApp (#46–#48) | Aprueba sus specs y prioriza el producto. Trámites con pey y Meta. Pilotos, bounties y entregables (#53, #54, #56) | **Alta.** Por eso Grok implementa sus fases, Leonel escribe la spec 009, Juan la 008 y la 010, y #45, #57 y #91 salen de su lista |
+| Hugo | Specs 003 a 007. Backend de N-06, N-07, N-15, #24, #36, #38, #44, #92 y WhatsApp (#46–#48) | Aprueba sus specs y prioriza el producto. Trámites con pey y Meta. Pilotos, bounties y entregables (#53, #54, #56) | **Alta.** Por eso Grok implementa sus fases, Leonel escribe la spec 009, Juan la 008 y la 010, y #45 y #91 salen de su lista |
 | Leonel | #22, N-08, #100, parte web de N-06, N-09, N-16 y la spec 009 | Con Juan, revisa lo que se une a `main`. Observaciones de arquitectura. N-03, N-04, seguridad (#52, #95) y pruebas de la demo por túnel (N-17) | **Media o alta**, según sus horas. Si tiene menos tiempo, #100 y N-09 pasan a Miguel |
-| Juan | Specs 008 y 010. N-11, N-13, la tabla de N-15 y las tablas de 004 a 006. App iOS (#81–#84) | QA de cada etapa (#88), unir pull requests, #45, #55 y #57 | **Alta.** La app iOS sigue la regla de corte del 29 de noviembre |
+| Juan | Specs 008 y 010. N-11, N-13, la tabla de N-15 y las tablas de 004 a 006. App iOS (#81–#84) | QA de cada etapa (#88), #45 y #55 | **Alta.** La app iOS sigue la regla de corte del 29 de noviembre |
 | Miguel | #30, #31, #32, #33, #39, #40, #93, N-12, N-14 y la landing. App Android (#77–#80) | Mockups (#20), identidad (#21), guías QA (#87), accesibilidad (#42) y pruebas con usuarios (#43) | **Alta.** La PWA base pasa a Leonel. La app Android sigue la regla de corte |
 
 ---
@@ -479,10 +479,10 @@ Se crean cuando Hugo apruebe este documento, con la plantilla del Anexo B.
 | 1 | **Alcance:** 12 funciones, dos apps y el núcleo en tres semanas | Prioridades (3.1), puertas de cada domingo (sección 1) y orden de corte (6.4) |
 | 2 | **Hugo es cuello de botella:** escribe sus specs y hace el backend | Cada quien une su propio pull request y decide si hace spec, así nadie espera a Hugo. Leonel lo respalda en el backend y la web. Grok implementa sus fases. Juan escribe las specs 008 y 010 y Leonel la 009. #45 y #57 pasan a Juan. NFC se congela |
 | 3 | **Disponibilidad de Leonel** | Acordar sus horas esta semana. Revisiones asíncronas en menos de 24 h. Si tiene menos tiempo, sus piezas de construcción pasan a Miguel y él se queda con arquitectura y revisión |
-| 4 | **S1 va tarde:** la spec 003 sigue en borrador y los PR #72 y #96 no están unidos | Leonel revisa #72 esta semana y Juan lo une. Si la puerta S1 no se cumple, se mueve como máximo al martes 24, y S2 empieza igual con las specs |
+| 4 | **S1 va tarde:** el plan de la 003 espera a que se unan los PR #72 y #96 | Hugo une los dos en cuanto estén listos (constitución 3.0.0), y la 003 va en dos cortes (22 y 25 nov). Si la puerta S1 no se cumple, se mueve como máximo al martes 24, y S2 empieza igual con las specs |
 | 5 | **Trámites externos** (pey, Meta y Apple) | Empiezan esta semana (6.3) |
 | 6 | **Notificaciones en iPhone:** la web solo las recibe si está instalada (iOS 16.4 o posterior) | La app iOS las cubre. Con la web abierta suena igual. Las instrucciones de prueba lo dicen (#55) |
-| 7 | **Demo sin nube** (spec 003): sin la computadora encendida no hay demo | Leonel prueba el túnel desde fuera cada semana (N-17), así las fallas salen antes de la evaluación. Decidir el 6 de diciembre: turnos para tenerla encendida del 12 al 14, o volver a la nube (#34) |
+| 7 | **Demo sin nube** (spec 003): sin la computadora encendida no hay demo | Leonel prueba el túnel desde fuera cada semana (N-17), así las fallas salen antes de la evaluación. Del 12 al 14 de diciembre queda encendida sin parar en la computadora de Hugo (spec 003, RF-060); el 6 de diciembre se confirma, o se vuelve a la nube (#34) |
 | 8 | **Reglas del hackathon:** cuentas ajenas (7.3 c), integrantes (4.3), componentes de terceros (9.2) y credenciales (8.1) | F-11 solo con cuentas del titular. Leonel ya inscrito. #55 declara lo de terceros. Las llaves, solo a quien las necesita |
 | 9 | **Montos equivocados del asistente** | El código calcula y el dueño confirma (4.2, regla 3) |
 | 10 | **Bounties** publicados hasta el 30 de noviembre | Se revisan en la planeación del lunes 30 (#51) y pueden mover prioridades de S3 |
