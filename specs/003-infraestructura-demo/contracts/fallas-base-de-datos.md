@@ -1,22 +1,19 @@
 # Contrato: respuestas cuando la base de datos falla
 
-> **Pendiente de revisar con el plan nuevo.** El 2026-11-17 la spec cambió de rumbo (D-4): ya no hay AWS, dominio, presupuesto ni publicación, y la demo sale por un túnel desde una computadora del equipo. Lo de este documento sobre el guardado, las migraciones y el CI sigue sirviendo de punto de partida; lo que menciona AWS, CloudFront, el dominio o la publicación ya no aplica.
-
 ## 1. Propósito
 
-Las rutas de la spec 001 no cambian de forma: mismas peticiones, mismos cuerpos y mismos códigos de éxito. Este contrato agrega **solo** las respuestas nuevas para cuando la base de datos no responde o la estructura está pendiente. Todas siguen la forma de error de la 001: `{"detail": "<mensaje para el dueño>"}` (DP-9 de la 001).
+Las rutas de la spec 001 no cambian de forma: mismas peticiones, mismos cuerpos y mismos códigos de éxito. Este contrato agrega **solo** las respuestas nuevas para cuando la base de datos no responde. Todas siguen la forma de error de la 001: `{"detail": "<mensaje para el dueño>"}` (DP-9 de la 001).
 
 "No responde" incluye: no se puede conectar, la operación tarda más de lo permitido (2 s en cada escritura de crear un cobro, DP-35; 5 s en las demás) o la base de datos devuelve un error que no es de los datos. Un **error de datos** (PostgreSQL rechaza el valor) no es "no responde": ver §3.1.
 
 ## 2. Requisitos
 
-RF-012, RF-013, RF-014, RF-015, RF-016, RF-047 (corte 2), RF-048, RF-052, RF-021. Decisiones del plan DP-34 y DP-35.
+RF-012, RF-013, RF-014, RF-015, RF-016, RF-048, RF-052, RF-061, RF-021. Decisiones del plan DP-34 y DP-35.
 
 ## 3. Respuestas nuevas por ruta
 
 | Ruta | Momento | Código | `detail` | Qué pasa además | Requisitos |
 |---|---|---|---|---|---|
-| `POST /api/cobros` | Estructura pendiente (corte 2) | 503 | "La demo se está actualizando. Intenta de nuevo en unos minutos." | No se guarda nada ni se llama a pey | RF-047 |
 | `POST /api/cobros` | Al guardar el cobro, antes de pey | 503 | "No se pudo guardar el cobro. Intenta de nuevo en un momento." | No se llama a pey | RF-012 |
 | `POST /api/cobros` | pey falló y se borra el cobro | Lo que diga la 001 para la falla de pey (502 o 503) | Igual que la 001 | Si el borrado también falla, se registra y la respuesta no cambia | RF-052, RF-016 |
 | `POST /api/cobros` | Al guardar el QR que pey ya creó | 503 | "No se pudo guardar el cobro. Intenta de nuevo en un momento." | La respuesta no trae el QR; el cobro sale de la memoria | RF-013 |
@@ -33,6 +30,7 @@ RF-012, RF-013, RF-014, RF-015, RF-016, RF-047 (corte 2), RF-048, RF-052, RF-021
 | `POST /webhooks/pey` | Aviso sin `type` | 200, como cualquier aviso ignorado | — | Se guarda con `tipo` vacío |
 | `POST /webhooks/pey` | Cualquier otro error de datos de PostgreSQL | 400 | "Aviso con datos no válidos" | Se registra con el nombre de la clase del error; **nunca** entra a la lista de reintentos |
 
+- La conciliación (data-model §4.1) tampoco responde a nadie: si pey o la base de datos fallan con un cobro, lo registra y el siguiente latido lo vuelve a intentar, hasta 10 veces; un 4xx de pey salta el cobro de inmediato (RF-061, QP-13).
 - La consulta de respaldo (dentro de ver cobro y del canal) no responde nada a nadie: si no puede guardar un pago, lo registra en el log y lo intenta en la próxima consulta (RF-016). Ver cobro sigue respondiendo con lo que hay en memoria.
 - Un 503 de `GET /api/cobros/{id}` ya lo trata la web como "sin conexión" y reintenta (`web/js/servidor.js`; QA de la spec, bloque 3), así que la web no cambia.
 
@@ -40,7 +38,7 @@ RF-012, RF-013, RF-014, RF-015, RF-016, RF-047 (corte 2), RF-048, RF-052, RF-021
 
 Cada falla deja una línea `WARNING` o `ERROR` en el registro `pago_facil` con:
 
-- la operación (`guardar cobro`, `guardar QR`, `borrar cobro`, `registrar pago`, `guardar aviso`, `cancelar`, `cargar cobro`, `consulta de vida`);
+- la operación (`guardar cobro`, `guardar QR`, `borrar cobro`, `registrar pago`, `guardar aviso`, `cancelar`, `cargar cobro`, `conciliar`, `latido`);
 - el id del cobro cuando lo hay;
 - **solo el nombre de la clase** del error (por ejemplo `OperationalError`), nunca su texto, porque el texto de psycopg puede traer el servidor y el usuario de la conexión (DP-15, RF-021).
 

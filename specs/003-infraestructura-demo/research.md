@@ -1,216 +1,138 @@
-# Investigación (Fase 0): Spec 003 — Infraestructura de la demo pública
+# Investigación (Fase 0): Spec 003 — Infraestructura de la demo por el túnel
 
-> **Sustituido.** El 2026-11-17 la spec cambió de rumbo (D-4): ya no hay AWS, dominio, presupuesto ni publicación, y la demo sale por un túnel desde una computadora del equipo. Este documento queda como historia de la versión con AWS y se rehace con el plan nuevo.
-
-- **Fecha**: 2026-11-17
+- **Fecha**: 2026-11-20 (versión con túnel). La versión con AWS (R-1 a R-19 del 2026-11-17) está en el historial de git, en el commit `5db47ed`.
 - **Plan**: [plan.md](plan.md)
-- **Base**: el código de la rama `feature/90-infraestructura-demo`, la constitución 2.0.0 del PR #96 (commit `aa187d7`), el esquema del PR #97 (`supabase/001_esquema_inicial.sql`, commit `891960d`) y la documentación citada en cada punto.
+- **Base**: el código de la rama `feature/90-infraestructura-demo` (`5db47ed`), la constitución 3.0.0 del PR #96 (`a962dc5`), el esquema del PR #97 (`supabase/001_esquema_inicial.sql`, en `main`), la spec aprobada el 2026-11-20 y la documentación citada en cada punto, leída el 2026-11-20.
 
-Cada punto sigue el formato **Decisión / Por qué / Alternativas**. Los puntos con comparativa (R-1, R-8, R-9, R-14 y R-19) llevan una recomendación: decide Hugo (principio IX), y su decisión queda en el plan (§9.2).
+Cada punto sigue el formato **Decisión / Por qué / Alternativas**. Los puntos con comparativa (R-1, R-6 y R-7) llevan una recomendación: decide Hugo (principio IX), y su decisión queda en el plan (§9.2). R-6 y R-7 ya los decidió Hugo el 2026-11-17 y siguen igual.
 
 ---
 
-## R-1. Servicio de AWS para el servidor y la web (comparativa, DP-1)
+## R-1. Servicio de túnel (comparativa, DP-38)
 
-**Lo que se necesita** (spec 003): un solo proceso (RF-055, QP-5 de la 001); un canal de avisos de 20 minutos sin cortes (RF-026); HTTPS en la dirección que asigna AWS, sin dominio propio (RF-024); que el presupuesto pueda apagarlo solo (RF-034); costo ≤ 150 dólares hasta el 31 de enero de 2027 (RF-035); y la misma dirección después de cada publicación y de cada apagado (RF-030).
+Se compara contra los 7 criterios del túnel de la spec (§7, QA-16). "No documentado" quiere decir que la documentación oficial leída no lo dice; esos puntos se comprueban en la primera prueba de F2.
 
-| | A. EC2 + CloudFront (recomendada) | B. Lightsail, servicio de contenedores | C. App Runner | D. ECS Fargate + balanceador + CloudFront |
+| Criterio (spec §7) | A. Tailscale Funnel (recomendada) | B. Cloudflare Tunnel con nombre + dominio propio | C. ngrok gratuito | D. Túnel rápido de Cloudflare / `localhost.run` |
 |---|---|---|---|---|
-| HTTPS sin dominio | Sí: `*.cloudfront.net` trae su certificado | Sí: dirección propia del servicio | Sí | Solo con CloudFront delante: el balanceador no da HTTPS sin dominio |
-| Canal de 20 min | Sí, si llega un dato cada menos de 30 s (R-3); el canal manda señal de vida cada 15 s | Sin confirmar: no se pudo leer su tiempo de inactividad (QA de la spec, bloque 7) | **No**: corta toda petición a los 120 s ([App Runner, develop](https://docs.aws.amazon.com/apprunner/latest/dg/develop.html); [re:Post sobre SSE](https://repost.aws/questions/QUHFHBKsCYQlueDcXywdZ5jw/apprunner-timeout-for-sse-connection)) | Sí (balanceador hasta 4000 s) |
-| Apagado por el presupuesto | **Nativo**: la acción "detener instancias EC2" de AWS Budgets ([budgets-controls](https://docs.aws.amazon.com/cost-management/latest/userguide/budgets-controls.html)) | Hace falta una función propia (aviso → Lambda) | Hace falta una función propia | Hace falta una función propia |
-| Un solo proceso | Sí (systemd) | Sí | Sí | Sí |
-| Costo hasta el 31 ene | ≈ 25 dólares (R-6) | ≈ 18 dólares (7 dólares al mes) | — | ≈ 60 dólares o más (el balanceador solo cuesta unos 16 al mes) |
-| Trabajo de Hugo | Preparar un servidor Linux una vez (guía) | Escribir una imagen de contenedor y subirla | — | Lo más largo de configurar |
-| Curva de aprendizaje | Media: EC2, CloudFront y grupos de seguridad | Media: contenedores | — | Alta |
+| 1. HTTPS sin advertencias | Certificados válidos automáticos ("Tailscale automatically creates valid HTTPS certificates", [funnel](https://tailscale.com/kb/1223/funnel)); no documenta páginas intermedias | Sí, con el dominio en Cloudflare | **No**: "ngrok shows an interstitial page in front of all HTML browser traffic on the free tier" ([free-plan-limits](https://ngrok.com/docs/pricing-limits/free-plan-limits/)) | Sí |
+| 2. Canal sin retención | El HTTPS termina en la computadora y el relevo solo pasa bytes cifrados, así que no puede retener eventos HTTP. Sin tiempos de corte documentados | No documentado para túneles con nombre; el rápido sí falla (columna D) | No documentado | **No**: "Quick Tunnels do not support Server-Sent Events (SSE)" ([quick-tunnels](https://developers.cloudflare.com/tunnel/get-started/quick-tunnels/)), lo mismo que se vio en la 002 |
+| 3. Canal durante toda la ventana | No documentado; se prueba primero (20 minutos) | No documentado; se prueba primero | No documentado | `localhost.run` se cortó cada ~16 min (002) |
+| 4. Dirección fija | Sí, sin dominio propio: "Funnel can only use DNS names in your tailnet's domain (`tailnet-name.ts.net`)" | Sí, pero "A domain on Cloudflare (required to publish applications)" ([tunnel](https://developers.cloudflare.com/tunnel/get-started/)) | Sí: un dominio de desarrollo que "doesn't change when you restart the agent" | **No**: "The hostname changes each time you create a Quick Tunnel" |
+| 5. IP real del celular | No documentado. Funnel no agrega cabeceras de identidad ([serve](https://tailscale.com/kb/1312/serve)); si tampoco manda `X-Forwarded-For`, todas las peticiones llegan como `127.0.0.1` (R-2) | Cloudflare manda la IP del visitante en sus cabeceras (no se leyó en esta pasada; se comprueba en F2 si se elige B) | No documentado | — |
+| 6. Gratis | Sí: plan Personal, "$0 Free forever", y Funnel "available for all plans" ([pricing](https://tailscale.com/pricing)). Ojo: el plan Personal dice "only suitable for non-commercial use", y Funnel está en beta | El túnel es gratis; el dominio cuesta (un `.xyz`, unos pocos dólares al año) | Sí, pero con 1 GB al mes y 20 000 peticiones HTTP al mes. La consulta de respaldo de una pantalla abierta pide cada 3 a 5 s, así que tres días de evaluación pasan de ese límite | Sí |
+| 7. HTTPS termina en la computadora | **Sí**: "The Tailscale server running on your device … terminates the TLS connection" | No: termina en Cloudflare, así que Cloudflare ve los avisos de pey sin cifrar (limitación aceptada, spec §4) | No (termina en ngrok) | No |
+| Curva de aprendizaje | Baja: instalar Tailscale, iniciar sesión, activar HTTPS y Funnel, y `tailscale funnel 8000` | Media: comprar el dominio, pasarlo a Cloudflare, `cloudflared` y su configuración | Baja | Baja |
 
-**Decisión recomendada**: **A**, una instancia EC2 `t4g.micro` con IP elástica y CloudFront delante.
-**Por qué**: es la única opción que cumple a la vez el canal de 20 minutos, el HTTPS sin dominio y el apagado nativo por presupuesto, y además es de las más baratas. CloudFront entra en su capa siempre gratuita (1 TB y 10 millones de peticiones al mes).
-**Alternativas**: B, si Hugo prefiere no administrar un servidor, a cambio de escribir una función de apagado y de medir antes su corte del canal. C queda descartada por el límite de 120 s. D cuesta más y tarda más.
-**Después de la QA del plan**: con C-9, la demo no usa `*.cloudfront.net` sino el dominio propio, y el tramo de CloudFront a la instancia va por HTTPS (R-2, R-19). La comparativa no cambia: A sigue siendo la única que cumple todo.
+**Decisión**: **A, Tailscale Funnel** (Hugo, 2026-11-20), como se recomendaba. Es la única que cumple los 7 criterios sin pagar ni comprar un dominio. Además, el HTTPS termina en la computadora de la demo, así que nadie más ve los datos de quien paga. Lo que no está documentado (canal largo, IP real y si el nombre sobrevive al reinicio de la computadora) se prueba **antes que todo lo demás de F2**, en este orden: canal de 25 minutos con eventos, IP real (R-2) y reinicio de la computadora.
+**Si A falla en esa prueba**: **B**, con un dominio barato. Comprar el dominio es una decisión nueva de Hugo (spec §7: "Si solo hay opción de pago, es una decisión nueva de Hugo"), y Cloudflare viendo los avisos queda como limitación aceptada (spec §4).
+**Descartadas**: C, por la página de advertencia (criterio 1) y por el límite de peticiones. D, por los criterios 2, 3 y 4.
+**Riesgos de A**: (a) beta y plan "no comercial": la demo del hackathon y las pruebas con pilotos no venden nada, pero si el proyecto sigue después, se cambia de túnel; (b) límites de ancho de banda sin número, de sobra para unos KB por cobro.
 
-## R-2. HTTPS de punta a punta con el dominio propio (C-9)
+## R-2. La IP real del celular a través del túnel
 
-**Decisión**: Hugo compra un dominio barato (un `.xyz` cuesta cerca de 1 dólar el primer año) y delega su DNS a una zona de Route 53. CloudFront atiende en `<dominio>` con un certificado gratuito de AWS Certificate Manager (en `us-east-1`, como exige CloudFront). El servidor atiende en `origen.<dominio>` (registro A hacia la IP elástica) con su propio certificado (R-19), y CloudFront se conecta a él **solo por HTTPS** al puerto 443. El grupo de seguridad solo deja entrar a CloudFront (R-4).
-**Por qué**: la QA del plan (QP-7) encontró que, sin dominio, el tramo de CloudFront a la instancia va por HTTP, y por ahí pasa la `metadata` del aviso de pey con la CLABE, el banco y el nombre de quien paga. CloudFront solo se conecta por HTTPS a un origen con un certificado público válido para su nombre, y eso exige un dominio. Hugo eligió el dominio propio (C-9, RF-024 y RF-056).
-**Costo**: el dominio lo paga Hugo, porque los créditos de AWS no pagan registros de dominios ([Route 53, registrar un dominio](https://docs.aws.amazon.com/Route53/latest/DeveloperGuide/domain-register.html)); la zona de Route 53 (0.50 dólares al mes) sí la cubre el crédito (R-6).
-**Alternativas**: la dirección `*.cloudfront.net` con el tramo sin cifrar (era la recomendación de QP-7; Hugo eligió el dominio); balanceador con dominio (cuesta más).
+**Decisión**: no se agrega código. El servidor ya usa `ProxyHeadersMiddleware` con `PROXIES_CONFIABLES=127.0.0.1` (`backend/app/main.py:140`, `config.py:35`). El agente del túnel (`tailscaled` o `cloudflared`) se conecta al servidor desde `127.0.0.1`, así que si manda `X-Forwarded-For`, el límite ya usa la IP del celular (RF-028). uvicorn toma de `X-Forwarded-For` la primera IP de derecha a izquierda que no está en la lista de confianza, así que un celular que mande su propio `X-Forwarded-For` falso no puede cambiar la IP que cuenta.
+**Comprobación (F2, paso 2)**: abrir la demo desde dos celulares en redes distintas y ver en el registro del servidor que cuenta dos IP distintas, y que ninguna es `127.0.0.1`.
+**Si el túnel no manda la IP**: todas las peticiones cuentan como una sola IP, y el límite por IP se vuelve un límite para toda la demo. Entonces, en la demo, `LIMITE_COBROS_POR_MINUTO` y `CANALES_POR_IP` suben a 60. Queda como limitación escrita (TK en el registro de implementación) y no cambia ningún RF: RF-028 queda incumplido solo para la demo, y se anota.
+**Alternativas**: una cabecera propia del túnel (como la de Cloudflare). Solo si se elige B en R-1.
 
-## R-3. El canal de avisos a través de CloudFront
+## R-3. El canal de avisos a través del túnel
 
-**Decisión**: tiempo de respuesta del origen de **60 s** (QP-4), **sin** tiempo de respuesta completa, sin caché y sin compresión en el comportamiento del servidor. Se comprueba al principio de F4 con un canal real de 20 minutos (CE-004).
-**Por qué**: CloudFront espera el primer dato y **cada dato siguiente** hasta ese tiempo, y lo reinicia con cada dato que llega ([anuncio de julio de 2025](https://aws.amazon.com/about-aws/whats-new/2025/07/amazon-cloudfront-origin-response-timeout-controls)). El canal de la 001 manda `retry` en cuanto se abre y una señal de vida cada 15 s (`canal.py:91`). Con 30 s no bastaba: en el peor caso, a esos 15 s se suman hasta 5 s de espera (`canal.py:21`), una consulta a pey de varias páginas de hasta 4 s cada una y las escrituras en la base de datos (QP-4). Con 60 s hay margen. El "tiempo de respuesta completa" sí cortaría el canal, por eso no se configura. Ver cobro y crear cobro esperan a pey como máximo 4 y 10 s (DP-13 de la 001), por debajo de 30 s.
-**Alternativas**: dejar 30 s (el canal podría quedarse más tiempo sin datos, QP-4); mandar la señal de vida más seguido (cambia el canal de la 001 y no cubre una consulta de varias páginas).
-**Riesgo**: la guía para desarrolladores que describe el comportamiento con respuestas que van llegando por partes no se pudo leer completa. Por eso la prueba de 20 minutos va al principio de F4: si CloudFront corta el canal, se cambia a B (R-1) antes de seguir.
+**Decisión**: el canal no cambia. Ya manda una señal de vida cada 15 s (`backend/app/canal.py:91`), así que ninguna conexión pasa más de 15 a 20 s sin datos. La prueba de 25 minutos de F2 comprueba RF-026, RF-057 y CE-004 antes de construir lo demás.
+**Por qué**: con A (R-1), el HTTPS termina en la computadora y nadie en medio puede retener eventos. Con B, Cloudflare suele cortar una respuesta que pasa unos 100 s sin datos (no se leyó en esta pasada); la señal de vida cada 15 s queda muy por debajo.
 
-## R-4. La IP real del celular detrás de CloudFront
+## R-4. Encender la demo en la Mac de Hugo
 
-**Decisión**: en la demo, la IP de los límites sale de la cabecera `CloudFront-Viewer-Address` (`<ip>:<puerto>`), que CloudFront agrega cuando el comportamiento usa la política de origen administrada `AllViewerAndCloudFrontHeaders-2022-06`. El grupo de seguridad de la instancia solo acepta el puerto 443 desde la lista de prefijos administrada `com.amazonaws.global.cloudfront.origin-facing`, así que esa cabecera no la puede mandar nadie más.
-**Por qué**: CloudFront **agrega** la IP del celular al final de `X-Forwarded-For` y deja lo que mandó el celular ([políticas de origen administradas](https://docs.aws.amazon.com/AmazonCloudFront/latest/DeveloperGuide/using-managed-origin-request-policies.html)). Con `PROXIES_CONFIABLES=*`, uvicorn tomaría la primera dirección de la lista, que la escribe el atacante, y cualquiera se saltaría el límite por IP (RF-028). Listar las IP de CloudFront en `PROXIES_CONFIABLES` es una lista larga que cambia. `CloudFront-Viewer-Address` trae un solo valor puesto por CloudFront ([re:Post](https://repost.aws/articles/AR-VvhzdKVRgOIYl4SJMTcHg/how-to-identify-the-real-client-ip-on-alb-when-using-cloudfront-as-a-front-end)).
-**Alternativas**: tomar la última dirección de `X-Forwarded-For` (sirve, pero depende de que nadie más agregue saltos); `ProxyHeadersMiddleware` con todas las IP de CloudFront (frágil).
-**Cómo**: variable `CABECERA_IP_REAL`. Vacía en local y en las pruebas: se sigue usando `ProxyHeadersMiddleware` con `PROXIES_CONFIABLES`, como en la 001 (DP-7). En la demo vale `CloudFront-Viewer-Address`. Si falta la cabecera, se usa la IP de la conexión.
+**Decisión**: la demo es la computadora de Hugo con dos procesos y un tercero que la mantiene despierta. La guía `docs/operacion-demo.md` (RF-058) lleva los pasos:
 
-## R-5. Apagado por el presupuesto y quién reenciende
+1. Poner al día la rama `main` y las dependencias (`uv sync --locked`).
+2. En el corte 2: exportar una copia de la base de la demo y aplicar las migraciones pendientes (RF-017, RF-051).
+3. Arrancar el servidor **solo en `127.0.0.1`** (el valor por defecto de uvicorn; la guía nunca usa `--host 0.0.0.0`), con `--workers 1` y con `CARPETA_WEB` (RF-056, R-6 de la 001).
+4. Arrancar el túnel hacia el puerto 8000.
+5. Mantener la computadora despierta con `caffeinate` mientras la demo está encendida, conectada a la corriente (supuesto de la spec §7).
+6. Pedir `/salud` desde un celular con datos móviles (CE-016).
 
-**Decisión**: un presupuesto mensual de costo de 200 dólares que **no** descuenta créditos ("Unblended costs", sin la opción de restar créditos), con avisos por correo al 50, 80 y 100 % del gasto real y al 100 % del pronóstico, y una acción al 90 % del gasto real que **detiene la instancia EC2** de la demo, de ejecución automática. La acción usa un rol de IAM propio con permiso solo para detener esa instancia.
-**Por qué**: RF-031 a RF-034 y QA-2. Es la acción nativa de AWS Budgets para EC2. Solo Hugo tiene acceso a la cuenta (supuesto de §7), y el rol de la publicación automática no tiene permiso de encender instancias (DP-29), así que solo Hugo reenciende (RF-040, RF-045).
-**Limitaciones aceptadas** (ya en la spec): el gasto se actualiza hasta tres veces al día y el pronóstico necesita unas 5 semanas de datos.
+**Por qué**: RF-058 pide una sola guía, y RF-060 pide que la demo no se suspenda en los momentos acordados. `caffeinate` viene con macOS: no es una herramienta nueva.
+**Configuración de la demo** (en `backend/.env.demo` de la computadora de Hugo, que git ignora por `.env.*`; nunca en el repositorio): `PEY_API_KEY` y `PEY_WEBHOOK_SECRET` de la llave de la demo, `DATABASE_URL` (corte 2), `WEB_ORIGIN` con la dirección del túnel, `CARPETA_WEB=../web` y los límites de la demo (DP-36). El servidor la carga con `uvicorn … --env-file .env.demo`, y el comando de migraciones con `uv run --env-file backend/.env.demo`. En pydantic-settings las variables de entorno mandan sobre `backend/.env`, así que no hace falta código nuevo (QP-14).
+**Desarrollo en la misma computadora**: `backend/.env`, con la segunda llave y la base de desarrollo. Si la demo está encendida, el servidor de desarrollo usa el puerto 8001.
+**Servidor de desarrollo**: el mismo arranque, con la segunda llave de producción (RF-053) y la base de desarrollo (RF-049). Si quien prueba quiere avisos de pey, levanta su propio túnel y lo da de alta en el aviso de esa llave; si no, usa la consulta de respaldo.
 
-## R-6. Costo estimado hasta el 31 de enero de 2027 (CE-009)
+## R-5. Conciliación al arrancar (RF-061)
 
-Precios de `us-east-1`; en otras regiones de Estados Unidos son parecidos. Periodo: del 21 de noviembre al 31 de enero, 72 días.
+**Decisión**: un **latido de conciliación** guardado en la base de datos (DP-39):
 
-| Pieza | Cálculo | Dólares |
-|---|---|---|
-| EC2 `t4g.micro` (2 vCPU, 1 GB) | 0.0084 × 24 × 72 | 14.52 |
-| IP elástica (IPv4 pública) | 0.005 × 24 × 72 | 8.64 |
-| Disco gp3 de 8 GB | 0.08 × 8 × 2.37 meses | 1.52 |
-| CloudFront | Capa siempre gratuita (1 TB y 10 millones de peticiones al mes) | 0 |
-| Datos de EC2 a CloudFront | Sin costo | 0 |
-| Session Manager (SSM), AWS Budgets (dos presupuestos con acciones) | Sin costo | 0 |
-| Zona de Route 53 (C-9) | 0.50 × 2.37 meses, más consultas de DNS de centavos | 1.19 |
-| Certificado de ACM para CloudFront | Sin costo | 0 |
-| **Total con crédito** | | **≈ 25.9** (13 % del presupuesto) |
-| Dominio `.xyz`, primer año | **Lo paga Hugo**: el crédito no cubre dominios | ≈ 1 |
+- Una tabla de una sola fila, `estado_del_servidor`, guarda `conciliado_hasta`: la última hora hasta la que el servidor revisó las ventanas que terminaron.
+- La tarea de fondo (DP-14), cada 60 s del `Reloj`, busca los cobros cuya `fin_ventana` cae entre `conciliado_hasta` y ahora, consulta en pey sus transacciones (`GET /transaction/codi/qr/{id}`, la misma consulta de la consulta de respaldo) y registra las que falten, con `fuente = consulta`. Después mueve `conciliado_hasta` a ahora.
+- La primera vez (sin fila), la crea con la hora actual y no revisa nada hacia atrás.
+- Si pey responde 4xx con un cobro (por ejemplo, un QR que no conoce, como los ficticios de los datos de prueba), se registra y ese cobro se salta. Si la falla es pasajera (sin conexión, tiempo agotado, 5xx), `conciliado_hasta` solo avanza hasta antes de ese cobro y el siguiente latido lo vuelve a intentar, hasta 10 veces; después se registra como `ERROR` y se salta (QP-13).
 
-Con `t4g.small` (2 GB), el total sube a unos 39 dólares (20 %). Los dos quedan muy por debajo de 150 (RF-035). El cálculo se repite en F4 con los precios de la región elegida (DP-24).
+**Por qué**: así se cubren los dos huecos de §4 de la spec con una sola pieza: las ventanas que terminaron con el servidor apagado (al arrancar, `conciliado_hasta` es la hora del último latido antes de apagarse) y los avisos que se perdieron de la memoria en un reinicio (la ventana de su cobro termina después, con el servidor encendido, y el latido la revisa). Cuesta una consulta a pey por cobro, una sola vez. La escritura de cada minuto también cumple RF-039 (uso diario de la base de datos), así que la consulta de vida cada 6 h de la versión con AWS ya no hace falta.
+**Sin sonido**: cuando termina la ventana, el canal ya está cerrado (RF-032 de la 001), así que nadie recibe el pago en ese momento; queda guardado para el historial (#38).
+**Alternativas**: (a) revisar al arrancar todos los cobros de los últimos 7 días: muchas consultas a pey en cada arranque, y no cubre los avisos perdidos de cobros que siguen abiertos; (b) una columna `conciliado_en` por cobro: una escritura por cobro y una consulta más compleja para el mismo resultado.
 
-## R-7. Tipo de cuenta de AWS (por confirmar)
+## R-6. Librería para conectarse a PostgreSQL (comparativa, DP-2; decidida)
 
-**Hallazgo**: desde julio de 2025, las cuentas nuevas de AWS reciben hasta 200 dólares de crédito y eligen entre el **plan gratuito**, que dura hasta 6 meses o hasta acabar el crédito, nunca cobra y bloquea algunos servicios, y el **plan de pago** ([anuncio](https://aws.amazon.com/about-aws/whats-new/2025/07/aws-free-tier-credits-month-free-plan); [FAQ](https://aws.amazon.com/free/faqs/)). Si la cuenta de Hugo está en el plan gratuito, al acabar el crédito o los 6 meses AWS deja de servir y, sin cambiar de plan en 90 días, borra la cuenta.
-**Decisión**: Hugo confirma en F4, antes de crear nada, el plan de la cuenta y su fecha de alta. Con el plan gratuito, los 6 meses deben pasar del 31 de enero, y se comprueba que EC2 `t4g.micro` y CloudFront estén permitidos. El presupuesto se configura igual (RF-031).
-**Por qué**: cambia qué pasa al acabar el crédito, pero no el diseño.
-
-## R-8. Librería para conectarse a PostgreSQL (comparativa, DP-2)
-
-| | A. psycopg 3 (`psycopg[binary]` + `psycopg-pool`) (recomendada) | B. asyncpg | C. SQLAlchemy 2 asíncrono + un controlador |
+| | A. psycopg 3 (`psycopg[binary]` + `psycopg-pool`) (decidida) | B. asyncpg | C. SQLAlchemy 2 asíncrono + un controlador |
 |---|---|---|---|
 | Asíncrono | Sí, y también síncrono (sirve para el comando de migraciones) | Sí, solo asíncrono | Sí |
 | SQL | SQL escrito a mano con parámetros `%s` | SQL a mano con `$1` | ORM o SQL; una capa más |
 | Con el *pooler* de Supabase | Funciona en modo sesión y en modo transacción (`prepare_threshold=None`) | En modo transacción hay que apagar las sentencias preparadas | Según el controlador |
 | Dependencias nuevas | 2 | 1 | 2 o más |
 | Curva de aprendizaje | Baja: el mismo SQL del PR #97 | Baja | Media o alta: el ORM no hace falta |
-| Rendimiento | De sobra para decenas de cobros al día | El más rápido | El más lento |
 
-**Decisión recomendada**: **A**. Una sola librería sirve para el servidor y para el comando de migraciones (R-9), con el mismo SQL del PR #97, sin ORM.
-**Alternativas**: B, si se prefiere una sola dependencia (el comando de migraciones también puede ser asíncrono). C añade un ORM que no hace falta (principio IX).
+**Decisión**: **A** (Hugo, 2026-11-17). Una sola librería para el servidor y para el comando de migraciones, con el mismo SQL del PR #97, sin ORM. Se fija a versiones publicadas hace al menos dos semanas.
 
-## R-9. Herramienta para los cambios de estructura (comparativa, DP-3)
+## R-7. Herramienta para los cambios de estructura (comparativa, DP-3; decidida)
 
-| | A. Comando propio con psycopg (recomendada) | B. CLI de Supabase (`supabase db push`) | C. dbmate |
+| | A. Comando propio con psycopg (decidida) | B. CLI de Supabase (`supabase db push`) | C. dbmate |
 |---|---|---|---|
-| Qué es | `python -m app.migraciones` (unas 100 líneas): aplica en orden los `.sql` de `supabase/migraciones/` y anota cada uno en una tabla | Herramienta oficial; migraciones en `supabase/migrations/` y datos en `seed.sql` | Un ejecutable de Go con SQL plano |
-| Herramienta nueva | Ninguna (usa R-8) | Un ejecutable (npm o Homebrew) en cada computadora y en el CI | Un ejecutable |
+| Qué es | `python -m app.migraciones`: aplica en orden los `.sql` de `supabase/migraciones/` y anota cada uno en una tabla | Herramienta oficial; migraciones en `supabase/migrations/` | Un ejecutable de Go con SQL plano |
+| Herramienta nueva | Ninguna (usa R-6) | Un ejecutable en cada computadora y en el CI | Un ejecutable |
 | Idempotente (RF-019) | Sí: salta lo ya anotado | Sí | Sí |
-| Base de la demo ya creada a mano (historia 6, escenario 3) | Opción `--ya-aplicada 0001` después de revisar | `supabase migration repair --status applied` | Insertar la fila a mano |
-| Datos de prueba solo en local (RF-054) | Marca de entorno en la base (DP-18) | `seed.sql` solo lo carga su entorno local con Docker; con un segundo proyecto en la nube hay que cargarlo a mano | No tiene datos de prueba |
-| Lo que lee el servidor para RF-047 | Su propia tabla | La tabla interna de la CLI | Su tabla `schema_migrations` |
-| Curva de aprendizaje | Ninguna, pero es código que se prueba | Media | Baja |
+| Base de la demo creada a mano (historia 6, escenario 3) | Opción `--ya-aplicada 0001` después de revisar | `supabase migration repair` | Insertar la fila a mano |
+| Datos de prueba solo en desarrollo (RF-054) | Marca de entorno en la base (DP-18) | `seed.sql` solo en su entorno local con Docker | No tiene |
 
-**Decisión recomendada**: **A**. No agrega herramientas, corre igual en local, en el CI y desde la computadora de Hugo contra la demo (RF-017), y el servidor lee la misma tabla para RF-047. Se prueba en el CI contra un PostgreSQL desechable (R-12, CE-007).
-**Alternativas**: B, si el equipo quiere la herramienta oficial, a cambio de instalarla en el CI y en cada computadora. C, si se prefiere una herramienta probada sin datos de prueba.
+**Decisión**: **A** (Hugo, 2026-11-17). Corre igual en desarrollo, en el CI y desde la computadora de Hugo contra la demo (RF-017), y se prueba en el CI contra un PostgreSQL desechable (R-10, CE-007).
 
-## R-10. Cómo guardar sin cambiar el comportamiento de la 001
+## R-8. Cómo guardar sin cambiar el comportamiento de la 001
 
 **Decisión**: el servidor sigue trabajando con los objetos `Cobro` en memoria (el canal y la consulta de respaldo no cambian), pero la memoria pasa a ser una **caché de escritura directa** sobre un *almacén*:
 
 1. Toda escritura va **primero** a la base de datos; solo si se guardó se cambia la memoria y se emite por el canal (RF-002).
-2. Un cobro que no está en memoria (después de un reinicio) se carga de la base de datos al pedirlo por su id o por su `codi_qr_id` (RF-005).
-3. Registrar un pago va dentro de un candado por cobro (`asyncio.Lock`): el número del pago se calcula dentro del candado, y el `insert … on conflict (transaccion_id) do nothing returning` dice si el pago es nuevo (RF-007, RF-008).
+2. Un cobro que no está en memoria (después de un reinicio) se carga de la base de datos al pedirlo por su id o por su `codi_qr_id` (RF-005), y nunca quedan dos objetos del mismo cobro (DP-33).
+3. Registrar un pago va dentro de un candado por cobro (`asyncio.Lock`): el número se calcula dentro del candado, y `insert … on conflict (transaccion_id) do nothing returning` dice si el pago es nuevo (RF-007, RF-008).
 
-**Por qué**: hay un solo proceso (supuesto de la spec), así que la memoria no puede quedar desactualizada respecto a la base de datos. El candado evita que el aviso y la consulta de respaldo calculen el mismo número a la vez; la restricción `unique (cobro_id, numero)` del PR #97 queda como red.
-**Alternativas**: leer siempre de la base de datos (cambia el canal y la consulta, que hoy guardan el objeto en memoria, y multiplica las consultas: una cada 3 a 5 s por cada pantalla abierta); cargar todos los cobros al arrancar (innecesario: se cargan al pedirlos).
+**Por qué**: hay un solo proceso, así que la memoria no puede quedar desactualizada. El candado evita que el aviso, la consulta de respaldo y la conciliación calculen el mismo número a la vez; `unique (cobro_id, numero)` del PR #97 queda como red.
+**Alternativas**: leer siempre de la base de datos (una consulta cada 3 a 5 s por pantalla abierta); cargar todos los cobros al arrancar (innecesario).
 
-## R-11. Conexión con Supabase desde AWS
+## R-9. Conexión con Supabase desde la computadora de la demo
 
-**Decisión**: `DATABASE_URL` apunta al *pooler* de Supabase en **modo sesión** (puerto 5432, IPv4), con un *pool* de 1 a 3 conexiones y 5 s de espera para conectar.
-**Por qué**: la conexión directa de Supabase es solo IPv6, y la VPC por defecto de EC2 no tiene IPv6 (QA de la spec, bloque 5). El modo sesión admite todo PostgreSQL. Con un solo proceso, 3 conexiones sobran.
-**Región**: la instancia EC2 va en la misma región que el proyecto de Supabase de la demo (DP-24), para que cada consulta tarde milisegundos.
+**Decisión**: `DATABASE_URL` apunta al *pooler* de Supabase en **modo sesión** (puerto 5432), con un *pool* de 1 a 3 conexiones y 5 s de espera para conectar.
+**Por qué**: la conexión directa de Supabase es solo por IPv6 (QA de la spec, versión con AWS, bloque 5), y no todas las redes de casa o de un evento dan IPv6. El *pooler* funciona por IPv4. El modo sesión admite todo PostgreSQL. Con un solo proceso, 3 conexiones sobran.
+**Latencia**: cada escritura viaja de la computadora de Hugo a la región del proyecto de Supabase. Se mide en F3 contra CE-003 (QR en menos de 3 s) y contra la respuesta al aviso de pey en menos de 1 s (CE-010 de la 001).
 
-## R-12. Probar el almacén sin la base de datos real
+## R-10. Probar el almacén sin la base de datos real
 
 **Decisión**: dos niveles:
 
-- **Las pruebas de la API** (todas las de hoy y las nuevas de fallas) usan el almacén en memoria y un almacén que falla a propósito. No necesitan PostgreSQL.
+- **Las pruebas de la API** (todas las de hoy y las nuevas de fallas y conciliación) usan el almacén en memoria y un almacén que falla a propósito. No necesitan PostgreSQL.
 - **Las pruebas del almacén de PostgreSQL y del comando de migraciones** corren contra un **PostgreSQL 17 desechable**: en el CI, un contenedor de servicio de GitHub Actions; en una computadora, solo si se define `PRUEBAS_DATABASE_URL` (si no, se saltan con el motivo escrito). Antes de migrar, la prueba crea los roles `anon` y `authenticated`, que el PR #97 usa en su `revoke` y que solo existen en Supabase.
 
-**Por qué**: CE-011 y RF-038 prohíben la base de datos **real**, no un PostgreSQL vacío que se crea y se destruye en cada corrida. Sin esa prueba, el SQL solo se probaría en la demo.
-**Alternativas**: probar el SQL solo a mano en el proyecto local de Supabase (frágil); simular psycopg (no prueba el SQL).
+**Por qué**: CE-011 y RF-038 prohíben la base de datos **real**, no un PostgreSQL vacío que se crea y se destruye en cada corrida.
 
-## R-13. CI en GitHub Actions
+## R-11. CI en GitHub Actions
 
-**Decisión**: un flujo `.github/workflows/ci.yml` que corre con `pull_request` hacia `main` (y en `push` a `main`), con `permissions: contents: read` y tres trabajos en `ubuntu-latest`:
+**Decisión**: `.github/workflows/ci.yml`, con `pull_request` hacia `main` y `push` a `main`, `permissions: contents: read`, sin secretos, y tres trabajos en `ubuntu-latest` ([contrato](contracts/ci.md)):
 
-1. **Servidor**: `uv sync --locked`, `ruff check`, `ruff format --check` y `pytest -q`.
-2. **Web**: lo mismo para `../web`, más `playwright install --with-deps chromium webkit`. Como el CI llega después de unir el #72 (QP-1), `web/tests/` ya está en `main`.
-3. **Base de datos** (desde F2): PostgreSQL 17 como servicio; corre el comando de migraciones dos veces (CE-007) y las pruebas del almacén.
+1. **`servidor`** (F1): `uv sync --locked`, `ruff check`, `ruff format --check` y `pytest -q`.
+2. **`web`** (F1): lo mismo para `../web`, más `playwright install --with-deps chromium webkit`.
+3. **`base-de-datos`** (F4, corte 2): PostgreSQL 17 como servicio; corre el comando de migraciones dos veces (CE-007) y las pruebas del almacén.
 
-**Por qué**: RF-036 a RF-038. `pull_request` (no `pull_request_target`) no expone secretos a los forks, y el flujo no usa ninguno. Juan hace obligatorios los tres trabajos en la protección de `main` (RF-037, dependencia de §7).
-**Riesgo**: las 6 pruebas de WebKit que fallan fuera de Mac (revisión del PR #72) pueden fallar también en Linux. Se resuelven en el PR #72; si no, el trabajo de la web sale en rojo.
+**Por qué**: RF-036 a RF-038. `pull_request` (no `pull_request_target`) no expone secretos a los forks. La protección de `main` exige los trabajos y ya no exige aprobación (constitución 3.0.0; dependencia de §7 de la spec).
+**Riesgo**: las pruebas de WebKit en Linux. El PR #72 trae su arreglo (`1a15c14`); si alguna falla en el CI, se decide en ese momento con un TK (`skip` con motivo escrito o arreglo).
 
-## R-14. Cómo se crea la infraestructura (comparativa, DP-4)
+## R-12. La web, desde el mismo servidor
 
-| | A. Guía paso a paso en la consola de AWS (recomendada) | B. Plantilla de CloudFormation |
-|---|---|---|
-| Herramienta nueva | Ninguna | Ninguna fuera de AWS, pero hay que aprender su formato |
-| Tiempo para el corte 1 | 1 a 2 horas de Hugo con la guía | Escribir y depurar la plantilla: medio día o más |
-| Repetible | Con la guía; a mano | Sí, con un comando |
-| Revisable en un PR | La guía, sí; lo creado, no | Sí |
-
-**Decisión recomendada**: **A** para esta spec. Es una sola instancia, una distribución y un presupuesto, y la demo vive hasta el 31 de enero. La guía `docs/operacion-demo.md` deja cada valor escrito (RF-041).
-**Alternativas**: B, si el equipo quiere volver a crear la demo desde cero con un comando; se puede hacer después sin cambiar el código.
-
-## R-15. Publicar una versión nueva
-
-**Decisión**: un solo script en la instancia, `infra/servidor/publicar.sh <commit>`, que usan Hugo a mano (corte 1) y el flujo automático (corte 2):
-
-1. Descarga ese commit en una carpeta nueva `releases/<commit>` (el repositorio es público: no hacen falta credenciales).
-2. Corre `uv sync --locked --no-dev`. Si falla, se detiene, y sigue la versión anterior (RF-044).
-3. Cambia el enlace `actual` a la carpeta nueva y reinicia el servicio de systemd: es el corte de RF-055.
-4. Espera hasta 45 s a que `GET /salud` responda con la base de datos en `responde`. Si no responde, devuelve el enlace a la versión anterior, reinicia y sale con error (RF-044).
-5. Deja las 3 versiones más recientes y borra las demás.
-
-**A mano** (corte 1): Hugo lo corre con `aws ssm send-command` desde su computadora, o en una sesión de Session Manager. **Automático** (corte 2): el flujo `publicar.yml` hace lo mismo con OIDC (R-16).
-**Por qué**: un solo camino para las dos formas; la carpeta por versión permite volver atrás sin descargar nada.
-**Alternativas**: `git pull` sobre la misma carpeta (sin vuelta atrás limpia); imágenes de contenedor (exigen un registro y Docker en la instancia).
-
-## R-16. Publicación automática sin credenciales guardadas (corte 2)
-
-**Decisión**: GitHub Actions obtiene credenciales temporales con **OIDC** (`aws-actions/configure-aws-credentials` con `role-to-assume`). El rol solo confía en `repo:Altairtm/Hackton-2026:ref:refs/heads/main` y solo puede:
-
-- `ec2:DescribeInstances`, para comprobar que la instancia está encendida;
-- `ssm:SendCommand` sobre esa instancia y el documento `AWS-RunShellScript`;
-- `ssm:GetCommandInvocation`.
-
-No puede encender instancias (RF-045). El ARN del rol va como **variable** del repositorio (no es una credencial).
-**Por qué**: RF-042 a RF-045 y el principio III: ninguna llave de AWS vive en GitHub. Si la instancia está detenida (presupuesto o Hugo), el flujo falla con el mensaje "La demo está apagada; solo Hugo la enciende" y no la enciende.
-**Alternativas**: llaves de acceso de IAM como secretos de GitHub (prohibido por RF-043).
-
-## R-17. Dónde viven los secretos del servidor
-
-**Decisión**: en la instancia, un archivo `/etc/pago-facil/entorno`, de `root` y con permisos `0640` (grupo del servicio), que systemd carga con `EnvironmentFile`. Tiene `PEY_API_KEY`, `PEY_WEBHOOK_SECRET`, `DATABASE_URL`, `WEB_ORIGIN` (`https://<dominio>`), `CABECERA_IP_REAL`, `PROXIES_CONFIABLES`, `CARPETA_WEB` y los límites de la demo: `LIMITE_COBROS_POR_MINUTO=30` y `CANALES_POR_IP=30`, porque los jueces en una misma red comparten IP pública (QP-6, DP-36). Hugo lo escribe en una sesión de Session Manager; nunca pasa por el repositorio ni por GitHub.
-**Por qué**: son las "variables del hosting" del principio III. pydantic-settings ya lee variables de entorno (`config.py`).
-**Alternativas**: AWS Systems Manager Parameter Store (más piezas para el mismo resultado con una sola instancia).
-
-## R-18. La web, desde el mismo servidor
-
-**Decisión**: el servidor entrega la carpeta `web/` en `/` cuando `CARPETA_WEB` está definida (en la demo y en local; vacía en las pruebas del servidor). La CSP de `web/index.html` queda en `connect-src 'self'`.
-**Por qué**: la web y el servidor quedan en el mismo origen. `web/config.js` ya vale `""` para ese caso (spec 002, RF-064; `web/README.md:33`). CORS no hace falta para la propia web, y `WEB_ORIGIN` solo deja pasar `https://<dominio>` (RF-027). La web solo puede conectarse a su propio servidor (RF-029). Una sola publicación sube servidor y web (RF-042).
-**Alternativas**: S3 con su propio comportamiento en CloudFront (otra pieza y otra publicación); dejar `connect-src https:` (incumple RF-029).
-**Consecuencia en local**: la web se abre en `http://localhost:8000` (el servidor la entrega) en lugar del puerto 5173. La forma con `config.js` en `http://localhost:8000` deja de pasar la CSP; se quita del `web/README.md` y de los documentos de la 002 con el cambio C-7 (b) y (c) (QP-8).
-
-## R-19. Certificado del servidor para `origen.<dominio>` (comparativa, DP-37)
-
-Salió al aplicar QP-7 (C-9). CloudFront exige al origen un certificado público válido para su nombre. Let's Encrypt lo da gratis, pero hay que demostrarle que el dominio es nuestro: por HTTP (puerto 80 o 443 abiertos a internet) o por DNS (un registro en Route 53).
-
-| | A. certbot + complemento de Route 53, uvicorn con HTTPS (recomendada) | B. Caddy delante de uvicorn, comprobación por HTTP | C. Caddy compilado con el módulo de Route 53 |
-|---|---|---|---|
-| Herramienta nueva | certbot y `python3-certbot-dns-route53` (paquetes de Ubuntu) | Caddy | Caddy compilado a medida con `xcaddy` |
-| Puertos abiertos | Solo el 443, solo a CloudFront (R-4 intacto) | 80 y 443 abiertos a internet para Let's Encrypt; hay que filtrar con una cabecera secreta que pone CloudFront, o cualquiera podría mandar `CloudFront-Viewer-Address` falsa | Solo el 443, solo a CloudFront |
-| Renovación | Automática (temporizador de certbot); al renovar, reinicia el servicio: un corte de segundos cada unos 60 días (§11) | Automática y sin corte | Automática y sin corte |
-| Proceso extra en la instancia | Ninguno: uvicorn atiende HTTPS con `--ssl-keyfile` y `--ssl-certfile` | Caddy | Caddy |
-| Permiso de AWS | El rol de la instancia puede cambiar registros `_acme-challenge` de la zona | Ninguno | El mismo que A |
-| Curva de aprendizaje | Baja | Baja, pero la cabecera secreta es otra pieza de seguridad | Media: compilar y mantener un binario propio |
-
-**Decisión recomendada**: **A**. Mantiene el origen cerrado a todo menos CloudFront, sin proxy ni secretos nuevos. El corte al renovar es como el de una publicación (RF-055).
-**Alternativas**: B, si se prefiere renovar sin corte, a cambio de abrir el 80 y el 443 a internet y validar una cabecera secreta en cada petición. C, si se quiere lo mejor de las dos, a cambio de compilar Caddy.
+**Decisión**: el servidor entrega la carpeta `web/` en `/` cuando `CARPETA_WEB` está definida (en la demo y en desarrollo; vacía en las pruebas del servidor). La CSP de `web/index.html` queda en `connect-src 'self'` (DP-21).
+**Por qué**: con un solo túnel hacia un solo puerto, la web y el servidor quedan en el mismo origen. `web/config.js` ya vale `""` para ese caso (spec 002, RF-064). La web solo puede conectarse a su propio servidor (RF-029), y CORS solo deja pasar la dirección del túnel (RF-027).
+**Consecuencia en desarrollo**: la web se abre en `http://localhost:8000` en lugar del puerto 5173. Se quita esa forma del `web/README.md` y de los documentos de la 002 con el cambio C-7 (b) y (c).
+**Alternativas**: dos túneles (uno para la web y otro para el servidor): dos direcciones fijas, CORS entre ellas y una CSP más abierta.

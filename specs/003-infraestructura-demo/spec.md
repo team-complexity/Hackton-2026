@@ -2,9 +2,9 @@
 
 - **ID**: `003-infraestructura-demo`
 - **Fecha**: `2026-11-17`
-- **Estado**: `Borrador` (cambio de rumbo). El 2026-11-17 el equipo decidió no montar nada en la nube por ahora (D-4): esta spec, que ese mismo día estaba `Aprobada` con Supabase + AWS + CI, se reescribió para que todo corra en local. En la entrevista del cambio de rumbo (E-6 a E-10), Hugo decidió que Supabase se queda, que la demo sale entera por un túnel con una dirección fija, que el CI se queda y que la demo se enciende solo en momentos acordados. La versión con AWS (spec, plan, QA del plan y C-9) queda en el historial de git, en el commit `fe837cc`, por si se retoma. Lo redactó Claude el 2026-11-17. Sin marcas abiertas. Falta la QA de una sola pasada de esta versión: §8.4 conserva la QA de la versión anterior. Propone el cambio C-6 a la spec 001 y el C-7 a la spec 002 (§8.2). Sigue vigente el C-8: el plan se aprueba cuando se unan los PR #72 y #96.
+- **Estado**: `Aprobada` el 2026-11-20 por Hugo, con la QA de la versión con túnel (QA-12 a QA-20, §8.4) decidida y aplicada. Estado anterior: `Borrador` (cambio de rumbo). El 2026-11-17 el equipo decidió no montar nada en la nube por ahora (D-4): esta spec, que ese mismo día estaba `Aprobada` con Supabase + AWS + CI, se reescribió para que todo corra en local. En la entrevista del cambio de rumbo (E-6 a E-10), Hugo decidió que Supabase se queda, que la demo sale entera por un túnel con una dirección fija, que el CI se queda y que la demo se enciende solo en momentos acordados. La versión con AWS (spec, plan, QA del plan y C-9) queda en el historial de git, en el commit `fe837cc`, por si se retoma. Lo redactó Claude el 2026-11-17. Sin marcas abiertas. Propone el cambio C-6 a la spec 001 y el C-7 a la spec 002 (§8.2), que se aprueban aparte. Sigue vigente el C-8: el plan se aprueba cuando se unan los PR #72 y #96.
 - **Rama**: `feature/90-infraestructura-demo`
-- **Issues**: #90 (guardar cobros y pagos), #19 (conexión y cambios de estructura con un comando), #35 (CI), #94 (de dónde sale la imagen del QR) y #65 (HTTPS y aviso de pey, ahora por el túnel; su nota deja pendiente el despliegue en la nube). #34 (AWS) y #57 (mantener la demo hasta el 31 de enero) quedan fuera y siguen abiertos. Con el pago real de esta spec se cierran #27 y #64; #29 queda abierto hasta el inicio de sesión (#24), porque también pide que un negocio no reciba avisos de otro (QA-6).
+- **Issues**: corte 1: #35 (CI), #65 (HTTPS y aviso de pey, ahora por el túnel) y #66 (README con el enlace de la demo y cuándo está encendida); corte 2: #90 (guardar cobros y pagos), #19 (conexión y cambios de estructura con un comando; el PR #99 de Juan lo referencia) y #94 (de dónde sale la imagen del QR) (QA-12, QA-20). #34 (AWS) y #57 (mantener la demo hasta el 31 de enero) quedan fuera y siguen abiertos. Con el pago real de esta spec se cierran #27 y #64; #29 queda abierto hasta el inicio de sesión (#24), porque también pide que un negocio no reciba avisos de otro (QA-6).
 - **Entrada**: "Cambio de rumbo de la spec 003 (Hugo, 2026-11-17): por decisiones del equipo, por ahora no se monta nada en la nube; todo se hace local, y puede que se retome en el futuro. La base de datos sigue siendo Supabase (E-6). La web, el servidor y el aviso de pey salen por un túnel con HTTPS desde la computadora que corre la demo (E-7). El CI en cada pull request se queda (E-8). Salen AWS, el dominio propio, el presupuesto y la publicación." La entrada de la versión con AWS está en `fe837cc`.
 
 > **Notas para los comandos de spec-kit.**
@@ -12,7 +12,7 @@
 > - `CE-###` equivale a *Success Criterion* (SC-###).
 > - `[NECESITA ACLARACIÓN: …]` equivale a *NEEDS CLARIFICATION*.
 >
-> La spec describe **QUÉ** y **POR QUÉ**. Están prohibidos el stack, la arquitectura, los nombres de archivos, los esquemas de datos, los algoritmos y las firmas de funciones: eso va en `plan.md` y `tasks.md`. Toda la spec se escribe en español. Supabase se nombra solo porque es una decisión ya tomada por el equipo (constitución 2.0.0 del PR #96, tabla de restricciones técnicas). El servicio de túnel lo elige el plan, con su comparativa (principio IX).
+> La spec describe **QUÉ** y **POR QUÉ**. Están prohibidos el stack, la arquitectura, los nombres de archivos, los esquemas de datos, los algoritmos y las firmas de funciones: eso va en `plan.md` y `tasks.md`. Toda la spec se escribe en español. Supabase se nombra solo porque es una decisión ya tomada por el equipo (constitución 3.0.0 del PR #96, tabla de restricciones técnicas; la QA-19 la lleva a 3.0.1). El servicio de túnel lo elige el plan, con su comparativa (principio IX).
 
 ---
 
@@ -40,7 +40,7 @@ Los términos *cobro*, *pago*, *monto fijo*, *monto libre*, *vigencia*, *ventana
 | Término | Significado en esta spec |
 |---|---|
 | Servidor | El backend de PAGO FÁCIL de la spec 001. Es el único que habla con pey y con la base de datos. |
-| Base de datos | Donde el servidor guarda cobros, pagos y avisos para que sobrevivan a un reinicio. Es el proyecto de Supabase que creó Juan (#19, #23). |
+| Base de datos | Donde el servidor guarda cobros, pagos y avisos para que sobrevivan a un reinicio. Es el proyecto de Supabase de la demo, que creó Juan (#19, #23); los servidores de desarrollo usan otro (RF-049). |
 | Reinicio | Cualquier momento en que el servidor deja de correr y vuelve a arrancar: una versión nueva, una falla, la computadora que se apaga o se suspende, o un reinicio a mano. |
 | Computadora de la demo | La computadora del equipo donde corren el servidor y el túnel de la demo. |
 | Túnel | El servicio que le da a la computadora de la demo una dirección pública con HTTPS y le hace llegar las peticiones de los celulares y los avisos de pey, sin abrir puertos de la red donde está. |
@@ -52,12 +52,19 @@ Los términos *cobro*, *pago*, *monto fijo*, *monto libre*, *vigencia*, *ventana
 
 ### 1.2 Orden de entrega
 
-Una sola entrega, hasta el 22 de noviembre (meta de S1). Sustituye los dos cortes de QA-1: lo que era del corte 2 (publicación automática, RF-047 y CE-012) salió con D-4. El orden va de lo que más desbloquea a lo que menos (P-1, E-5):
+Dos cortes (QA-12). Sustituyen a los de QA-1, cuyo corte 2 (publicación automática, RF-047, CE-012 y CE-013) salió con D-4. El orden va de lo que más desbloquea a lo que menos (P-1, E-5):
 
-1. **CI** (historia 5): desbloquea la revisión de los pull requests, que Juan condiciona a ver las pruebas en GitHub.
-2. **Guardar cobros, pagos y avisos** (historias 1 y 6).
-3. **Demo pública por el túnel y guía para encenderla** (historias 2 y 4).
-4. **Pago real desde la demo pública** (historia 3), que cierra #27 y #64.
+**Corte 1, a más tardar el domingo 22 de noviembre (puerta S1):**
+
+1. **CI** (historia 5): desbloquea la revisión de lo que se une a `main`.
+2. **Demo pública por el túnel y guía para encenderla** (historias 2 y 4), con los cobros todavía en memoria.
+3. **Pago real desde la demo pública** (historia 3), que cierra #27 y #64.
+
+**Corte 2, a más tardar el miércoles 25 de noviembre**, antes de construir las specs 004 y 005, que dependen de esta:
+
+4. **Guardar cobros, pagos y avisos, cambios de estructura e imagen del QR** (historias 1 y 6), con la conciliación al arrancar (RF-061).
+
+Las partes de la historia 4 que dependen de la base de datos (escenario 2, salud de la base de datos en CE-016) se comprueban en el corte 2.
 
 ---
 
@@ -92,6 +99,7 @@ Una sola entrega, hasta el 22 de noviembre (meta de S1). Sustituye los dos corte
 5. **Dado** un cobro *cancelado* o *vencido* antes de un reinicio, **cuando** el servidor arranca, **entonces** el cobro conserva su estado y sus pagos tardíos se siguen registrando dentro de la ventana de escucha.
 6. **Dado** un cobro cuya imagen del QR no mandó pey, **cuando** se consulta después de un reinicio, **entonces** se devuelve sin imagen y la pantalla muestra "No se pudo mostrar el QR. Intenta de nuevo." (spec 002, C-3).
 7. **Dado** que la base de datos no responde, **cuando** el dueño pide un cobro nuevo, **entonces** el servidor no le pide el QR a pey y la pantalla muestra un mensaje para el dueño.
+8. **Dado** un cobro pagado mientras el servidor estaba apagado, cuya ventana de escucha terminó antes de que volviera, **cuando** el servidor arranca, **entonces** consulta el cobro en pey y registra el pago, sin sonido, para que aparezca en el historial (QA-14).
 
 ---
 
@@ -108,7 +116,7 @@ Una sola entrega, hasta el 22 de noviembre (meta de S1). Sustituye los dos corte
 1. **Dado** la demo encendida y un celular con datos móviles, **cuando** abre la dirección pública, **entonces** carga la pantalla de cobro con HTTPS, sin advertencias del navegador ni inicio de sesión.
 2. **Dado** la demo pública, **cuando** el dueño crea un cobro, **entonces** ve el QR en menos de 3 segundos, en 9 de cada 10 intentos.
 3. **Dado** un cobro en pantalla, **cuando** el cliente lo paga, **entonces** el aviso de pey llega al servidor a través del túnel, con su firma válida.
-4. **Dado** un canal de avisos abierto por la dirección pública, **cuando** pasan 20 minutos (vigencia más ventana de escucha), **entonces** el canal sigue abierto hasta que el servidor lo cierra por fin de ventana, sin cortes del túnel.
+4. **Dado** un canal de avisos abierto por la dirección pública, **cuando** pasa toda la ventana de escucha (20 minutos con la vigencia actual), **entonces** el canal sigue abierto hasta que el servidor lo cierra por fin de ventana, sin cortes del túnel.
 5. **Dado** un canal de avisos abierto por la dirección pública, **cuando** el servidor emite un evento, **entonces** la pantalla lo recibe en ese momento, sin que el túnel lo retenga hasta cerrar el canal.
 6. **Dado** una página de otro dominio, **cuando** intenta usar el servidor desde el navegador, **entonces** el navegador lo bloquea.
 7. **Dado** otro equipo conectado a la misma red que la computadora de la demo, **cuando** intenta conectarse directo al servidor sin pasar por el túnel, **entonces** no recibe respuesta.
@@ -151,9 +159,9 @@ Una sola entrega, hasta el 22 de noviembre (meta de S1). Sustituye los dos corte
 
 ### Historia 5 — Saber antes de unir un pull request si algo se rompió (Prioridad: P1)
 
-**Como** quien revisa y une los pull requests (Juan, o Hugo con los de Juan, constitución 2.0.0), **quiero** ver en cada pull request si las pruebas y el lint pasan, **para** no tener que correrlos a mano ni unir algo roto.
+**Como** integrante que une su propio pull request (constitución 3.0.0), **quiero** ver en cada pull request si las pruebas y el lint pasan, **para** no tener que correrlos a mano ni unir algo roto.
 
-**Por qué esta prioridad:** Juan condiciona sus revisiones a ver las pruebas en GitHub. Es lo más rápido de entregar y lo primero que desbloquea.
+**Por qué esta prioridad:** cada quien une su PR cuando el CI está en verde, y Juan y Leonel revisan después lo que entró a `main`. Es lo más rápido de entregar y lo primero que desbloquea.
 
 **Prueba independiente:** abrir un pull request con un error a propósito y ver que el CI falla; corregirlo y ver que pasa.
 
@@ -194,10 +202,11 @@ Los números retirados por D-4 no se reutilizan (§8.1).
 - **RF-003** (Ubicuo): EL SISTEMA guardará en la base de datos el identificador de cada aviso de pey ya procesado.
 - **RF-004** (Ubicuo): EL SISTEMA guardará en la base de datos la cancelación de cada cobro con su hora.
 - **RF-005** (Dirigido por evento): CUANDO el servidor arranca, EL SISTEMA atenderá los cobros guardados (consultar, abrir el canal, consulta de respaldo, cancelar y registrar pagos) igual que si no se hubiera reiniciado.
-- **RF-006** (Ubicuo): EL SISTEMA calculará el estado y la ventana de escucha de un cobro guardado con la hora del servidor, no con la de la base de datos, y las mismas reglas de la spec 001 (RF-017, RF-021 y RF-022), haya habido reinicio o no (QA-11).
+- **RF-006** (Ubicuo): EL SISTEMA calculará el estado y la ventana de escucha de un cobro guardado con la hora del servidor, no con la de la base de datos, y las mismas reglas de la spec 001 (RF-017, RF-021 y RF-022), haya habido reinicio o no (QA-11). Las horas que guarda (creación, vencimiento, pago y cancelación) las pone el servidor con su reloj, no la base de datos (QA-18).
 - **RF-007** (Ubicuo): EL SISTEMA registrará cada transacción pagada de pey una sola vez, aunque el aviso y la consulta de respaldo la traigan al mismo tiempo, aunque pey reenvíe el aviso y aunque haya habido un reinicio entre las dos llegadas.
 - **RF-008** (Ubicuo): EL SISTEMA numerará los pagos de un cobro sin saltos ni repetidos (1, 2, 3…), haya habido reinicio o no.
 - **RF-009** (Ubicuo): EL SISTEMA no guardará en la base de datos ni escribirá en los registros los datos de quien paga (nombre, CLABE o cuenta, banco, teléfono ni clave de rastreo), aunque pey los mande en el aviso o en la consulta; de cada pago solo guarda lo que pide la spec 001 (RF-018) (QA-10).
+- **RF-061** (Dirigido por evento): CUANDO el servidor arranca, EL SISTEMA consultará en pey los cobros guardados cuya ventana de escucha terminó mientras estaba apagado y registrará sus pagos una sola vez (RF-007), sin emitirlos por el canal porque nadie los escucha, para que el sistema nunca pierda un pago (principio VIII) (QA-14).
 
 **Imagen del QR** (historia 1, decisión de #94)
 
@@ -220,7 +229,7 @@ Los números retirados por D-4 no se reutilizan (§8.1).
 - **RF-018** (Ubicuo): EL SISTEMA incluirá en ese comando el esquema del PR #97 y la columna nueva de la imagen del QR.
 - **RF-019** (Dirigido por evento): CUANDO se aplica el comando a una base de datos que ya está al día, EL SISTEMA no cambiará nada ni borrará datos.
 - **RF-049** (Ubicuo): EL SISTEMA usará en los servidores de desarrollo una base de datos distinta de la de la demo, para que las pruebas de desarrollo no queden en los datos de la demo (QA-4).
-- **RF-053** (Ubicuo): EL SISTEMA usará en los servidores de desarrollo una llave de pey distinta de la de la demo, con su propio aviso: la del ambiente de pruebas de pey o, si ese ambiente no funciona, una segunda llave de producción (E-1).
+- **RF-053** (Ubicuo): EL SISTEMA usará en los servidores de desarrollo una segunda llave de producción de pey, distinta de la de la demo y con su propio aviso; quien prueba sin túnel lo hace sin aviso, con la consulta de respaldo. El ambiente de pruebas de pey se propone aparte cuando pey lo publique (E-1, QA-15).
 - **RF-054** (Ubicuo): EL SISTEMA cargará los datos de prueba ficticios solo en la base de datos de desarrollo, nunca en la de la demo (E-2).
 - **RF-051** (Dirigido por evento): CUANDO Hugo va a aplicar un cambio de estructura en la base de datos de la demo, EL SISTEMA le indicará en su guía que primero exporte una copia de esa base de datos, porque el plan gratuito no incluye respaldos (QA-5).
 
@@ -232,15 +241,15 @@ Los números retirados por D-4 no se reutilizan (§8.1).
 - **RF-022** (Ubicuo): EL SISTEMA solo permitirá leer y escribir los datos guardados desde el servidor; la web, las apps y cualquiera con la dirección pública de la base de datos no podrán leerlos ni cambiarlos.
 - **RF-023** (Dirigido por evento): CUANDO se consulta la salud del servidor, EL SISTEMA indicará además si la base de datos está configurada y responde, sin mostrar sus valores (amplía RF-038 de la spec 001, cambio C-6).
 - **RF-039** (Estado): MIENTRAS el servidor está encendido, EL SISTEMA consultará la base de datos al menos una vez al día, aunque nadie cree cobros, para que el plan gratuito no la pause por falta de uso.
-- **RF-050** (Ubicuo): EL SISTEMA tendrá en la guía de Hugo los pasos para reactivar el proyecto de Supabase de la demo si se pausa, y para comprobar después con la salud del servidor que la base de datos responde (QA-5).
+- **RF-050** (Ubicuo): EL SISTEMA tendrá en la guía de Hugo los pasos para reactivar el proyecto de Supabase de la demo si se pausa, y para comprobar después con la salud del servidor que la base de datos responde (QA-5). La guía también pide encender la demo y comprobar la salud al menos cada 5 días y el día antes de cada momento acordado, para que el proyecto no pase 7 días sin uso (QA-13).
 
 **Demo pública por el túnel** (historias 2, 3 y 4)
 
 - **RF-024** (Estado): MIENTRAS la demo está encendida, EL SISTEMA abrirá la web y el servidor por el túnel en una dirección pública con HTTPS, y cualquier celular la abrirá sin invitación ni inicio de sesión (E-7).
-- **RF-060** (Estado): MIENTRAS dura un momento acordado por el equipo (pruebas, grabación del video, demos con negocios piloto y la demo en vivo de la evaluación, del 12 al 14 de diciembre), EL SISTEMA estará encendido y responderá en la dirección pública; fuera de esos momentos la demo puede estar apagada (E-9).
+- **RF-060** (Estado): MIENTRAS dura un momento acordado por el equipo (pruebas, grabación del video, demos con negocios piloto y las pruebas de Leonel antes de cada puerta) o la evaluación, sin parar desde la entrega del 12 de diciembre hasta el anuncio del 14 de diciembre, EL SISTEMA estará encendido en la computadora de Hugo y responderá en la dirección pública; fuera de esos momentos la demo puede estar apagada (E-9, QA-13).
 - **RF-056** (Ubicuo): EL SISTEMA solo atenderá las peticiones que llegan de fuera de la computadora de la demo a través del túnel; otro equipo de la misma red que intente conectarse directo al servidor no recibirá respuesta, porque por ahí pasarían sin cifrar los avisos de pey con los datos bancarios de quien paga.
 - **RF-025** (Ubicuo): EL SISTEMA recibirá los avisos de pey en la dirección pública del túnel, dada de alta en el portal de pey con su secreto.
-- **RF-026** (Estado): MIENTRAS un canal de avisos está dentro de la ventana de escucha de su cobro, EL SISTEMA lo mantendrá abierto, sin cortes del túnel, hasta que el servidor lo cierre (hasta 20 minutos).
+- **RF-026** (Estado): MIENTRAS un canal de avisos está dentro de la ventana de escucha de su cobro, EL SISTEMA lo mantendrá abierto, sin cortes del túnel, durante toda esa ventana y hasta que el servidor lo cierre (hoy, 20 minutos; con F-04, de la spec 004, puede ser más) (QA-17).
 - **RF-057** (Ubicuo): EL SISTEMA hará llegar cada evento del canal de avisos a la pantalla en el momento en que el servidor lo emite, sin que el túnel lo retenga. En las pruebas de la 002, el túnel rápido de Cloudflare retuvo los eventos hasta que se cerró el canal.
 - **RF-027** (Ubicuo): EL SISTEMA aceptará peticiones del navegador solo desde la dirección de la web de la demo (aplica RF-035 de la spec 001 con la dirección real).
 - **RF-028** (Ubicuo): EL SISTEMA aplicará los límites por IP de la spec 001 (RF-034 y RF-041) con la IP real del celular, no con la del túnel.
@@ -277,19 +286,20 @@ Los límites por IP y los canales abiertos **no** se guardan: siguen en la memor
 | La base de datos no responde al crear un cobro | No se le pide el QR a pey; mensaje para el dueño. | RF-012 |
 | La base de datos falla justo después de que pey creó el QR | La pantalla no recibe el QR y ve un mensaje; ese QR queda sin enseñarse. | RF-013 |
 | La base de datos no responde cuando llega un aviso de pago | Se le responde con error a pey, por si lo reenvía, y el servidor conserva el aviso y reintenta registrarlo cada 15 s; el pago se registra y suena cuando la base de datos vuelve. | RF-014, RF-048 |
-| El servidor se reinicia con avisos todavía sin registrar | Esos avisos se pierden de la memoria. El pago se recupera si pey reenvía el aviso o si la consulta de respaldo lo encuentra dentro de la ventana de escucha. Limitación aceptada: requiere una falla de la base de datos y un reinicio a la vez. | RF-014, RF-048 |
+| El servidor se reinicia con avisos todavía sin registrar | Esos avisos se pierden de la memoria. El pago se recupera si pey reenvía el aviso, si la consulta de respaldo lo encuentra dentro de la ventana de escucha o, después de la ventana, con la conciliación al arrancar. | RF-014, RF-048, RF-061 |
 | La base de datos no responde al consultar un cobro | Error temporal; la pantalla muestra "Reconectando…" y reintenta, sin ir a la vista Error. | RF-015 |
 | Aviso de pey de un QR que no está en la base de datos | Se le responde bien a pey y queda registro, como en la spec 001. Ya no se espera por reinicio: solo por un QR ajeno o por RF-013. | RF-016 |
 | Reinicio con canales de avisos abiertos | Los canales se cortan; la pantalla aplica su respaldo y su reconexión (spec 002, historia 4) y recibe el estado guardado. | RF-005 |
 | Límites por IP tras un reinicio | Empiezan de cero. Limitación aceptada: un reinicio no es algo que un atacante provoque. | — |
 | El proyecto de Supabase está pausado o sin servicio | Si en 7 días nadie enciende un servidor, Supabase puede pausar el proyecto, y no garantiza qué cuenta como uso (RF-039). Si no responde, la salud del servidor lo indica, los cobros nuevos se rechazan con un mensaje (RF-012) y Hugo lo reactiva con su guía (RF-050). | RF-012, RF-023, RF-039, RF-050 |
 | Una migración daña datos de la demo | El plan gratuito no tiene respaldos: Hugo restaura la copia que exportó antes de aplicarla. | RF-051 |
-| La computadora de la demo se suspende, se apaga o pierde internet | La demo deja de responder y la pantalla muestra "Reconectando…". Al volver, los pagos de ese rato se registran por la consulta de respaldo o por un aviso reenviado, si llegan dentro de la ventana de escucha. Si la ventana termina con la demo apagada, el pago queda en pey y en la cuenta del negocio, pero la pantalla no lo avisa. Limitación de correr en una computadora, que la QA revisa contra el principio VIII. | RF-005, RF-060 |
+| La computadora de la demo se suspende, se apaga o pierde internet | La demo deja de responder y la pantalla muestra "Reconectando…". Al volver, los pagos de ese rato se registran por la consulta de respaldo o por un aviso reenviado, si llegan dentro de la ventana de escucha. Si la ventana termina con la demo apagada, el pago se registra al volver a arrancar, sin sonido, y aparece en el historial; la pantalla no lo avisa en su momento (limitación de correr en una computadora). | RF-005, RF-060, RF-061 |
 | El túnel se cae con la demo encendida | Igual que la fila anterior. La guía de Hugo dice cómo volver a arrancarlo; la dirección sigue siendo la misma (RF-030). | RF-030, RF-058 |
 | Un juez abre el enlace fuera de un momento acordado | Ve el error del túnel o de su navegador. El video y las instrucciones de prueba de la entrega muestran el flujo completo y dicen cuándo está encendida la demo. | RF-060 |
-| El túnel retiene los eventos del canal o lo corta antes de 20 minutos | Incumple RF-026 y RF-057. El plan elige un túnel que no lo haga y lo prueba antes que todo lo demás de la demo pública. | RF-026, RF-057 |
+| El túnel retiene los eventos del canal o lo corta antes de que termine la ventana de escucha | Incumple RF-026 y RF-057. El plan elige un túnel que no lo haga y lo prueba antes que todo lo demás de la demo pública. | RF-026, RF-057 |
 | Otro equipo de la misma red intenta conectarse directo al servidor | No recibe respuesta: el servidor solo atiende lo que llega por el túnel. | RF-056 |
 | La demo está apagada | Quien abre el enlace ve el error del túnel o de su navegador; no hay página de "demo en pausa". | RF-060, E-3 |
+| El servicio de túnel termina el HTTPS en sus servidores | Ve sin cifrar los avisos de pey, con los datos de quien paga. Si el túnel elegido no termina el HTTPS en la computadora de la demo, queda como limitación aceptada y escrita, igual que con cualquier hosting (§7, criterios del túnel). | RF-056, §7 |
 | **Devolución** | Fuera de alcance, como en la spec 001: pey no ofrece devoluciones por API. | — |
 
 ---
@@ -309,7 +319,7 @@ Los límites por IP y los canales abiertos **no** se guardan: siguen en la memor
 | Varios servidores a la vez o escalado automático | La spec 001 exige un solo proceso (E-4) |
 | Página de "demo en pausa" cuando la demo está apagada | No se construye: se ve el error del túnel o del navegador (E-3) |
 | Cupones | #37 |
-| Demo encendida sin parar (toda la evaluación o hasta el 31 de enero) | Solo en momentos acordados (E-9, RF-060). #57 sigue abierto por si se retoma la nube |
+| Demo encendida sin parar fuera de la evaluación (por ejemplo, hasta el 31 de enero) | Solo en momentos acordados y del 12 al 14 de diciembre (E-9, QA-13, RF-060). #57 sigue abierto por si se retoma la nube |
 
 ---
 
@@ -318,7 +328,7 @@ Los límites por IP y los canales abiertos **no** se guardan: siguen en la memor
 - **CE-001**: un cobro creado antes de un reinicio del servidor de la demo se paga con $0.01 después del reinicio, y la pantalla recargada vuelve a mostrar su QR y suena "Pago recibido".
 - **CE-002**: desde la demo pública, con datos móviles, un pago real de $0.01 suena y muestra "Pago recibido" en menos de 2 segundos después de que pey entrega el aviso, en un Android y en un iPhone. Cierra #27 y #64 (spec 002, CE-001 y CE-002). #29 queda abierto hasta el inicio de sesión (#24), con una nota (QA-6).
 - **CE-003**: desde la demo pública, el dueño ve el QR en menos de 3 segundos después de tocar Cobrar, en 9 de cada 10 intentos.
-- **CE-004**: un canal de avisos abierto por la dirección pública dura los 20 minutos de vigencia y ventana sin cortarse antes de que el servidor lo cierre, y un pago avisado después del minuto 15 de ese canal suena en menos de 2 segundos.
+- **CE-004**: un canal de avisos abierto por la dirección pública dura los 20 minutos de vigencia y ventana actuales sin cortarse antes de que el servidor lo cierre, y un pago avisado después del minuto 15 de ese canal suena en menos de 2 segundos.
 - **CE-005**: ninguna transacción se registra dos veces, comprobado con pruebas automáticas de aviso reenviado, de aviso y consulta simultáneos y de llegada antes y después de un reinicio.
 - **CE-006**: todo pull request hacia `main` muestra el resultado del CI, y uno con un error a propósito queda marcado como fallido y no se puede unir.
 - **CE-007**: el comando de cambios de estructura se aplica dos veces seguidas sobre una base de datos vacía sin error, y la segunda vez no cambia nada.
@@ -326,6 +336,7 @@ Los límites por IP y los canales abiertos **no** se guardan: siguen en la memor
 - **CE-011**: todas las pruebas automáticas pasan sin conexión a pey ni a la base de datos real.
 - **CE-015**: con la demo encendida, la dirección pública abre con HTTPS, y una conexión directa al servidor desde otro equipo de la misma red no recibe respuesta.
 - **CE-016**: Hugo enciende la demo con la computadora recién prendida siguiendo solo su guía, y la salud pedida por la dirección pública, desde un celular con datos móviles, indica que el servidor responde y que la base de datos y pey están configurados y responden.
+- **CE-017**: un pago de un cobro cuya ventana de escucha terminó con el servidor apagado queda registrado una sola vez al volver a arrancar, comprobado con pruebas automáticas con pey simulado (RF-061).
 
 ---
 
@@ -334,9 +345,18 @@ Los límites por IP y los canales abiertos **no** se guardan: siguen en la memor
 **Supuestos**
 
 - La computadora de la demo es la de Hugo. Mientras la demo está encendida, esa computadora sigue prendida, sin suspenderse y con internet.
-- Existe un servicio de túnel gratuito que da HTTPS, entrega el canal de avisos sin retenerlo y no lo corta antes de 20 minutos. El plan lo elige con su comparativa (principio IX). Los dos que se probaron en la 002 no cumplían: el túnel rápido de Cloudflare retuvo el canal y el de `localhost.run` se cortó cada ~16 minutos (`specs/002-web-mvp/verification-guide.md`). Además debe dar una dirección fija (RF-030), aunque para eso pida una cuenta gratuita. Si solo hay opción de pago, es una decisión nueva de Hugo.
+- Existe un servicio de túnel gratuito que cumple los **criterios del túnel** (QA-16). El plan los compara con su comparativa (principio IX):
+  1. HTTPS sin advertencias ni páginas intermedias en el navegador (historia 2, escenario 1);
+  2. entrega los eventos del canal sin retenerlos (RF-057);
+  3. no corta el canal durante toda la ventana de escucha (RF-026); la comparativa anota cuánto aguanta un canal abierto (QA-17);
+  4. dirección fija, aunque para eso pida una cuenta gratuita (RF-030);
+  5. hace llegar al servidor la IP real del celular (RF-028);
+  6. gratuito;
+  7. de preferencia, el HTTPS termina en la computadora de la demo, para que el servicio no vea los avisos de pey sin cifrar; si no, queda como limitación aceptada (§4).
+
+  Los dos que se probaron en la 002 no cumplían: el túnel rápido de Cloudflare retuvo el canal y el de `localhost.run` se cortó cada ~16 minutos (`specs/002-web-mvp/verification-guide.md`). Si solo hay opción de pago, es una decisión nueva de Hugo.
 - Supabase se queda en el plan gratuito. Su documentación dice que "may pause" los proyectos gratuitos con poca actividad en 7 días, sin definir qué cuenta como actividad, y que el plan gratuito no incluye respaldos (QA-5). Sin un servidor siempre encendido, la consulta diaria (RF-039) solo pasa mientras hay uno encendido; si el proyecto se pausa, Hugo lo reactiva (RF-050). Pasar al plan de pago es una decisión nueva de Hugo.
-- pey admite un solo webhook por llave, así que la demo y los servidores de desarrollo usan llaves distintas (RF-053). Se supone que el ambiente de pruebas de pey (`https://api.dev.pey.mx`, que menciona `docs.pey.mx/llms.txt`) da una llave propia con su aviso. El aviso de desarrollo también llega por un túnel a la computadora de quien prueba (E-1).
+- pey admite un solo webhook por llave, así que la demo y los servidores de desarrollo usan llaves distintas (RF-053). El ambiente de pruebas de pey está "coming soon" en su documentación oficial (solo `docs.pey.mx/llms.txt` menciona `https://api.dev.pey.mx`), así que desarrollo usa una segunda llave de producción, ligada en el portal a la misma cuenta CoDi del titular (QA-15). Se supone que el portal permite ligar una cuenta CoDi a dos llaves; Hugo lo confirma al crearla. Las CLABEs que se den de alta por el API (`POST /bank-account`) quedan bajo la llave que las registró. El aviso de desarrollo llega por un túnel a la computadora de quien prueba (E-1).
 - El servidor no usa el estado que calcula la vista `cobros_con_estado` del PR #97 (con la hora de la base de datos): lo calcula él con su reloj (RF-006). Se le avisó a Juan en la revisión del PR #97, y el plan lo registra como decisión (QA-11).
 - El servidor sigue corriendo como un solo proceso, como exige la spec 001 (plan, QP-5): los canales de avisos y los límites por IP viven en su memoria.
 - La base de datos no guarda la CLABE ni datos bancarios del negocio (comentario de la tabla de negocios del PR #97).
@@ -347,16 +367,17 @@ Los límites por IP y los canales abiertos **no** se guardan: siguen en la memor
 
 | Dependencia | Para qué | Dueño | Estado |
 |---|---|---|---|
-| PR #97 unido (esquema inicial) | RF-018 y todo el guardado | Hugo revisa y une (constitución 2.0.0: nadie une su propio PR) | Unido por Hugo el 2026-11-17 (`f773939`); cerró #23 |
+| PR #97 unido (esquema inicial) | RF-018 y todo el guardado | Hugo | Unido por Hugo el 2026-11-17 (`f773939`); cerró #23 |
 | Proyecto de Supabase de la demo | Base de datos de la demo | Juan (#19) | Creado, según Hugo y el PR #97 |
 | Segundo proyecto gratuito de Supabase para desarrollo | RF-049 (QA-4) | Juan (dueño de la organización de Supabase) | Pendiente |
 | Credenciales de Supabase en la configuración del servidor de cada computadora | RF-020 | Hugo y cada integrante | Pendiente |
 | Servicio de túnel elegido, con su dirección fija y su cuenta si la pide | RF-024, RF-026, RF-030, RF-057 | Hugo | Se elige en el plan |
 | Aviso dado de alta en el portal de pey con la dirección del túnel | RF-025 | Hugo (#15) | Pendiente; depende del túnel |
-| Llave de pey para desarrollo, del ambiente de pruebas o una segunda de producción | RF-053 (E-1) | Hugo, con pey | Pendiente |
-| Protección de la rama `main` para exigir el CI | RF-037 | Juan (dueño del repositorio) | Pendiente |
-| PR #72 unido (web de cobro en `main`), **antes de aprobar el plan** | La demo sirve la web desde `main`; esta rama sale de la suya (QA-9, C-8) | Juan | Abierto; el arreglo de las 6 pruebas de WebKit se subió el 2026-11-17 y espera su revisión |
-| PR #96 unido (constitución 2.0.0), **antes de aprobar el plan** | La verificación de la constitución del plan se hace contra la 2.0.0 (QA-9, C-8) | Juan revisa, Hugo propone | Abierto; la rama se rehízo sobre `main` el 2026-11-17 y espera la revisión de Juan |
+| Segunda llave de producción de pey para desarrollo, ligada a la cuenta CoDi del titular, con su aviso | RF-053 (E-1, QA-15) | Hugo | Pendiente |
+| Protección de la rama `main` que exige el CI y ya no exige aprobación (constitución 3.0.0) | RF-037 | Quien administra el repositorio (organización `team-complexity`) | Pendiente |
+| Prueba de la demo desde fuera de la red del equipo (N-17) | RF-024, RF-060 | Leonel | Pendiente; necesita la demo encendida |
+| PR #72 unido (web de cobro en `main`), **antes de aprobar el plan** | La demo sirve la web desde `main`; esta rama sale de la suya (QA-9, C-8) | Hugo (une su PR, constitución 3.0.0) | Abierto; antes de unirlo, Hugo atiende los 4 cambios que pidió Juan (`Refs #64`, descripción al día, reparto de #64 con Miguel y fase FN) |
+| PR #96 unido (constitución 3.0.0, con el parche 3.0.1 de QA-19), **antes de aprobar el plan** | La verificación de la constitución del plan se hace contra esa versión (QA-9, C-8) | Hugo | Abierto; la rama se rehízo sobre `main` |
 | Computadora de la demo con internet estable | RF-024, RF-060 | Hugo | Disponible |
 | Un Android, un iPhone y la autorización de Hugo para pagos de $0.01 | CE-001, CE-002 y CE-004 | Hugo | Disponibles el 16 nov |
 
@@ -405,8 +426,8 @@ Los límites por IP y los canales abiertos **no** se guardan: siguen en la memor
 
 | # | Spec | Cambio propuesto | Origen | Estado |
 |---|---|---|---|---|
-| C-6 | 001 | (a) §4, fila "Reinicio del servidor": los cobros, pagos y avisos se conservan (spec 003), ya no se pierden. (b) §4, fila "Aviso de pago de un cobro desconocido": quitar "por ejemplo, tras reiniciar el servidor". (c) RF-038 y `contracts/salud.md`: la salud también indica si la base de datos está configurada y responde (RF-023 de esta spec). (d) §5, fila "Base de datos: los cobros se pierden al reiniciar": resuelto por la spec 003. (e) `data-model.md` (línea 5 y §5 y §6), `quickstart.md:80`, `contracts/ver-cobro.md:22` ("o se perdió al reiniciar") y `backend/README.md:118`: los cobros, pagos y avisos se guardan en la base de datos; los límites por IP y los canales siguen en memoria. (f) `contracts/aviso-pey.md:42`: el manejador ya hace una llamada de red (guardar en la base de datos); la meta de responder en menos de 1 s (CE-010 de la 001) se mantiene. (g) `contracts/aviso-pey.md`, respuesta 400: un `amount` de 0 o negativo se rechaza igual que uno ilegible, sin marcar el `webhook-id`, porque la base de datos no acepta pagos de 0 o menos (QP-3 del plan de la 003). | Esta spec, QA-7 y QP-3 | Propuesto |
-| C-7 | 002 | (a) RF-057: quitar el ejemplo "(por ejemplo, porque se reinició)", porque con la spec 003 un reinicio ya no hace que el servidor olvide un cobro. El comportamiento no cambia. (b) El flujo local abre la web desde el servidor en `http://localhost:8000` (el servidor la entrega, plan de la 003, DP-21) en lugar del puerto 5173 con `config.js` en `http://localhost:8000`: `quickstart.md:32-40`, `verification-guide.md:79-82` y `web/README.md:34-45`. (c) La política de seguridad de contenido queda en `connect-src 'self'`: `research.md:128-130` y `plan.md:379`, como ya anticipaba `quickstart.md:55`. *(b) y (c) salieron del plan de la versión con AWS (DP-21, QP-8): se confirman en el plan nuevo antes de aprobar este cambio.* | QA-7 y QP-8 | Propuesto |
+| C-6 | 001 | (a) §4, fila "Reinicio del servidor": los cobros, pagos y avisos se conservan (spec 003), ya no se pierden. (b) §4, fila "Aviso de pago de un cobro desconocido": quitar "por ejemplo, tras reiniciar el servidor". (c) RF-038 y `contracts/salud.md`: la salud también indica si la base de datos está configurada y responde (RF-023 de esta spec). (d) §5, fila "Base de datos: los cobros se pierden al reiniciar": resuelto por la spec 003. (e) `data-model.md` (línea 5 y §5 y §6), `quickstart.md:80`, `contracts/ver-cobro.md:22` ("o se perdió al reiniciar") y `backend/README.md:118`: los cobros, pagos y avisos se guardan en la base de datos; los límites por IP y los canales siguen en memoria. (f) `contracts/aviso-pey.md:42`: el manejador ya hace una llamada de red (guardar en la base de datos); la meta de responder en menos de 1 s (CE-010 de la 001) se mantiene. (g) `contracts/aviso-pey.md`, respuesta 400: un `amount` de 0 o negativo se rechaza igual que uno ilegible, sin marcar el `webhook-id`, porque la base de datos no acepta pagos de 0 o menos (QP-3 del plan de la 003); también en la fila de `amount` de la petición (`contracts/aviso-pey.md:28`). (h) `quickstart.md:80` arranca sin `--host 0.0.0.0` (solo `127.0.0.1`, RF-056 de esta spec), y `backend/README.md:41` dice que, con el túnel, `PROXIES_CONFIABLES` es `127.0.0.1`. (i) §4, fila "Pago después de la ventana de escucha": agregar que la conciliación de esta spec (RF-061) consulta una vez a pey cuando termina la ventana y registra lo que falte, sin canal. | Esta spec, QA-7, QP-3 y la revisión de C-6 del 2026-11-20 | **Aprobado por Hugo el 2026-11-20, ampliado con (h) e (i) · sin aplicar.** Se aplica en F5 del plan (QP-11) |
+| C-7 | 002 | (a) RF-057: quitar el ejemplo "(por ejemplo, porque se reinició)", porque con la spec 003 un reinicio ya no hace que el servidor olvide un cobro. El comportamiento no cambia. (b) El flujo local abre la web desde el servidor en `http://localhost:8000` (el servidor la entrega, plan de la 003, DP-21) en lugar del puerto 5173 con `config.js` en `http://localhost:8000`: `quickstart.md:32-40`, `verification-guide.md:79-82` y `web/README.md:34-45`. (c) La política de seguridad de contenido queda en `connect-src 'self'`: `research.md:128-130` y `plan.md:379`, como ya anticipaba `quickstart.md:55`. *(b) y (c) salieron del plan de la versión con AWS (DP-21, QP-8) y los confirma el plan nuevo (DP-21, R-12).* (d) §4, filas "Reinicio del servidor con un cobro en pantalla" y "Reinicio del servidor con cobros anteriores en escucha": con la spec 003 el cobro sigue guardado, y la pantalla reconecta y lo sigue escuchando. (e) `quickstart.md` §4: servir la web desde el backend ya lo hace la spec 003 (DP-21), sin C-n a la 001. En `verification-guide.md` no se tocan las secciones con fecha: solo se agrega una nota con el flujo nuevo en las líneas 79-82 y 153-163. | QA-7, QP-8 y la revisión de C-7 del 2026-11-20 | **Aprobado por Hugo el 2026-11-20, ampliado con (d) y (e) · sin aplicar.** Se aplica en F2 del plan (QP-11) |
 | C-9 | 003 | RF-024: la demo se publica en un dominio propio del equipo con HTTPS, en lugar de la dirección de AWS. Nuevo RF-056: el tramo entre el intermediario del hosting y el servidor también va cifrado. Nuevo CE-015. Se quita de §5 la fila "Dominio propio". §7: el dominio como dependencia de Hugo y como supuesto de costo. La aclaración del 2026-11-17 sobre la dirección queda sustituida. | QA del plan, QP-7 (Hugo, 2026-11-17) | Aprobado y aplicado el 2026-11-17. **Retirado** el mismo día por D-4: no hay dominio; RF-056 y CE-015 se reescribieron para el túnel |
 | C-8 | 003 | §7 y QA-9: los PR #72 y #96 unidos pasan de "antes del plan" a "antes de aprobar el plan". El plan se redacta ya, contra la constitución 2.0.0 del PR #96 (Juan ya aprobó su contenido) y el código de la rama del PR #72; su QA (`/qa-spec 003 plan`) no lo aprueba hasta que los dos estén en `main`. Si al unirse cambian algo que el plan usa, se ajusta en esa QA. | Hugo, por el corte 1 (≤ 22 nov) | Aprobado por Hugo y aplicado el 2026-11-17. Sigue vigente para el plan nuevo |
 
@@ -452,12 +473,48 @@ Los límites por IP y los canales abiertos **no** se guardan: siguen en la memor
 3. Encabezado y §9: quitar #29 de lo que se cierra si se acepta QA-6.
 4. §8.1, D-3: actualizar el umbral del apagado si se acepta QA-2.
 
+#### Revisión QA de la versión con túnel (2026-11-20, una sola pasada)
+
+> Revisada contra la constitución 3.0.0 (PR #96, commit `a962dc5`), porque es la que regirá el plan (C-8), y contra el código de esta rama (`5db47ed`).
+
+| # | Tipo | Hallazgo | Requisitos | Recomendación | Decisión |
+|---|---|---|---|---|---|
+| QA-12 | Promesa imposible | §1.2 promete toda la spec "hasta el 22 de noviembre". Hoy es 20 nov y faltan la QA, el plan, su QA, las tareas, su QA, la construcción (Grok), la revisión y el pago real. Además, el plan no se aprueba hasta unir #72 (con 4 cambios pedidos por Juan) y #96 (C-8). El issue #90 está en el milestone **S2** (29 nov), y la puerta S1 de `docs/flujo-de-construccion.md` pide "los datos en Supabase". Las specs 004 y 005 (S2) dependen de la 003 (N-06 y N-07). | §1.2, P-1, CE-001 a CE-016 | Dos cortes. **Corte 1 (≤ dom 22 nov), lo que pide la puerta S1 sin base de datos:** CI (historia 5), demo pública por el túnel y guía (historias 2 y 4) y pago real (historia 3); cierra #35, #65, #27 y #64. **Corte 2 (≤ mié 25 nov), antes de construir 004 y 005:** guardar, migraciones e imagen del QR (historias 1 y 6); cierra #90, #19 y #94. Ajustar la puerta S1 de `flujo-de-construccion.md` (PR #96). | Aceptada por Hugo el 2026-11-20: dos cortes (≤ dom 22 nov y ≤ mié 25 nov). Aplicada el 2026-11-20 |
+| QA-13 | Ambigüedad | RF-060 dice "la demo en vivo de la evaluación, del 12 al 14 de diciembre", pero no aclara si la demo queda encendida **los tres días** o solo durante la demo en vivo. Los jueces evalúan el enlace (constitución 3.0.0, IX; `docs/plan-hackathon.md:27` y `:40`). Además, choca con `flujo-de-construccion.md` §6.2: "Juan congela la demo y la deja encendida durante la evaluación (#57)", y con la constitución 3.0.0 (Leonel la prueba del 12 al 14). La spec supone que la computadora de la demo es la de Hugo. Por último, con E-9 la consulta diaria (RF-039) no evita la pausa de Supabase: entre momentos acordados pueden pasar más de 7 días sin un servidor encendido, y el día 12 la base podría estar pausada. | RF-039, RF-050, RF-060, §5 | RF-060: encendida **sin parar desde la entrega (12 dic) hasta el anuncio (14 dic)**, además de los momentos acordados. Los jueces no tienen otra forma de probar el enlace. La guía (RF-050 y RF-058) pide encender la demo y comprobar la salud al menos cada 5 días y el día antes de cada momento acordado. Queda en la computadora de Hugo; #57 pasa de Juan a Hugo, o la computadora de la demo se cambia a la de Juan. | Aceptada por Hugo el 2026-11-20: encendida sin parar del 12 al 14 dic en la computadora de Hugo, además de los momentos acordados; guía con encendido y salud al menos cada 5 días y el día antes de cada momento; #57 pasa a Hugo. Aplicada el 2026-11-20 |
+| QA-14 | Contradicción | Principio VIII: "El sistema NUNCA pierde un pago… se registra aunque llegue tarde". §4 acepta dos pérdidas. (a) "Si la ventana termina con la demo apagada… la pantalla no lo avisa". El pago tampoco queda en la base de datos, porque nada lo consulta después. (b) "El servidor se reinicia con avisos todavía sin registrar". pey no documenta reintentos del aviso (QA-3). Con la demo encendida solo en momentos acordados (E-9), (a) deja de ser raro. pey tiene `GET /transaction/codi/qr/{id}` (QA de la versión con AWS, bloque 4). | RF-005, RF-014, RF-048, §4 | Nuevo RF (Dirigido por evento): CUANDO el servidor arranca, EL SISTEMA consultará en pey los cobros guardados cuya ventana de escucha terminó mientras estaba apagado y registrará sus pagos, sin sonido porque no hay pantalla escuchando, para que aparezcan en el historial (#38). Así se cierran las dos filas de §4. | Aceptada por Hugo el 2026-11-20: RF nuevo de conciliación con pey al arrancar. Aplicada el 2026-11-20 |
+| QA-15 | API de pey | RF-053 y §7 suponen que el ambiente de pruebas de pey da una llave propia con su aviso. Solo `docs.pey.mx/llms.txt` menciona `https://api.dev.pey.mx`. La guía oficial para crear la llave ([create-an-api-key](https://docs.pey.mx/en/docs/tutorials/getting-started/create-an-api-key)) y `openapi.json` (versión 2026-10-20) dicen "A dedicated test environment is coming soon" y solo listan producción. Que el ambiente de pruebas admita avisos no está documentado. La tarea de §8.5 de corregir la fila "No hay ambiente de pruebas" de la constitución deja de tener sentido: hoy esa fila es correcta. | RF-053, §7, §8.5 | RF-053: los servidores de desarrollo usan una **segunda llave de producción** con su propio aviso. Quien no tenga túnel prueba sin aviso, apoyado en la consulta de respaldo. El ambiente de pruebas se propone aparte cuando pey lo publique. Se quita de §8.5 la tarea de corregir la constitución. Hugo confirma en el portal que puede crear una segunda llave. | Aceptada por Hugo el 2026-11-20, después de que se le explicara cómo funciona: segunda llave de producción con su propio aviso; sin túnel, consulta de respaldo; Hugo confirma en el portal que puede crearla; se quita de §8.5 la tarea de la constitución. Aplicada el 2026-11-20 |
+| QA-16 | Hueco | Lo que debe cumplir el túnel está repartido: HTTPS sin advertencias (historia 2, escenario 1), canal sin retención (RF-057), canal de 20 minutos (RF-026), dirección fija (RF-030), IP real del celular (RF-028) y gratis (§7). Falta un criterio de seguridad: si el servicio de túnel termina el HTTPS en sus propios servidores, ve sin cifrar los avisos de pey, que traen nombre, CLABE y banco de quien paga (QA-10). RF-056 protege ese mismo dato en la red local. Por ejemplo, el plan gratuito de un túnel conocido muestra una página de advertencia a los navegadores, lo que ya choca con la historia 2. | RF-024 a RF-030, RF-056, RF-057, §7 | Juntar en §7 la lista de **criterios del túnel**: los seis anteriores, más "de preferencia, el HTTPS termina en la computadora de la demo". Si el túnel elegido termina el HTTPS en su servicio, queda como limitación aceptada y escrita (igual que pasaría con cualquier hosting). El plan compara los túneles con esa lista. | Aceptada por Hugo el 2026-11-20: lista de criterios del túnel en §7, con el HTTPS en la computadora de la demo como preferencia; si no se cumple, limitación aceptada y escrita. Aplicada el 2026-11-20 |
+| QA-17 | Caso límite | RF-026 y CE-004 fijan el canal en "hasta 20 minutos" (10 de vigencia más 10 de ventana, spec 001, RF-021 y RF-022). F-04 (spec 004, S2) deja elegir la duración del QR, quizá sin vencimiento (`flujo-de-construccion.md` §3.2). Un túnel elegido para 20 minutos podría no servir una semana después. | RF-026, CE-004 | RF-026: el canal se mantiene "durante toda la ventana de escucha del cobro", sin un número fijo. CE-004 sigue midiendo 20 minutos. La comparativa del plan anota cuánto aguanta cada túnel un canal abierto. | Aceptada por Hugo el 2026-11-20: el canal dura toda la ventana de escucha; CE-004 sigue en 20 minutos. Aplicada el 2026-11-20 |
+| QA-18 | Ambigüedad | RF-006 pide calcular el estado con la hora del servidor, pero no dice de dónde salen las **horas guardadas**. El esquema del PR #97 pone `default now()` (hora de la base de datos) en `cobros.creado_en`, `pagos.registrado_en` y `avisos_webhook.recibido_en` (`supabase/001_esquema_inicial.sql:66`, `:93` y `:109`, en `main`). Si el servidor deja que la base de datos ponga la creación, el cálculo mezcla dos relojes, y las pruebas con reloj controlado (principio V) dejan de servir. | RF-006 | Ampliar RF-006: las horas de creación, vencimiento, pago y cancelación que se guardan las pone el servidor con su reloj, no la base de datos. | Aceptada por Hugo el 2026-11-20: las horas guardadas las pone el reloj del servidor (RF-006 ampliado). Aplicada el 2026-11-20 |
+| QA-19 | Contradicción | La tabla de restricciones de la constitución 3.0.0 contradice decisiones de esta spec. "Hosting: AWS" choca con D-4 (no hay nube). "Imagen del QR: … está por decidir" choca con D-2 (la imagen de pey, guardada en Supabase). "MongoDB solo entra si Juan justifica su uso (primer candidato: la imagen del QR)" también choca con D-2. El plan se verifica contra esa tabla (constitución 3.0.0, Gobierno, Cumplimiento). | §5, D-2, D-4 | Hugo propone una enmienda de **parche** (redacción de la tabla, sin tocar principios): Hosting = "computadora de la demo con túnel HTTPS (spec 003); AWS como plan B (#34)"; Imagen del QR = "la que entrega pey, guardada con el cobro en Supabase (#94)"; se quita la imagen del QR como candidata de MongoDB. Puede ir en el mismo PR #96 antes de unirlo. | Aceptada por Hugo el 2026-11-20: enmienda de parche (3.0.1) en el mismo PR #96, antes de unirlo. Aplicada el 2026-11-20 |
+| QA-20 | Hueco | Los issues de la spec no cuadran con ella ni con la 3.0.0. (a) #19 está asignado a **Juan** (S1) y pide "el backend se conecta" y "migraciones con un comando", que construye esta spec. Juan tiene el PR #99 (decisión de Supabase) con "#19". (b) #90 y #94 piden "La nota de implementación está en `docs/implementacion/`", y la 3.0.0 la quitó. (c) #66 (README con el enlace en vivo, Hugo, S1) depende de #65 y la dirección fija (RF-030) lo hace posible, pero la spec no lo nombra. (d) #65 todavía habla de Render o Railway y del "profesor". | Encabezado, §9 | La spec cierra con "Closes" #19 (conexión y comando), y el PR #99 de Juan usa "Refs #19". Se avisa a Juan en ese PR. Hugo quita de #90 y #94 el criterio de la nota y actualiza el contexto de #65. #66 entra en el encabezado como issue que se cierra con el corte 1, con la nota de cuándo está encendida la demo. | Aceptada por Hugo el 2026-11-20: issues alineados como se recomienda, con #66 en el corte 1. Aplicada el 2026-11-20 |
+
+**Bloques de la pasada:**
+
+1. **Coherencia interna:** glosario, casos límite contra RF, CE contra RF, restos de AWS y numeración. RF-001 a RF-030, RF-036 a RF-039 y RF-048 a RF-060 sin repetidos (los huecos son los retirados por D-4). CE-001 a CE-007, CE-010, CE-011, CE-015 y CE-016. El siguiente C-n libre es **C-10**. Salen QA-14, QA-17, QA-18 y las erratas 1 a 5.
+2. **Otras specs, plan, reglas e issues:** los 13 RF citados de la 001 (RF-008 a RF-010, RF-017 a RF-022, RF-034, RF-035, RF-038 y RF-041) y los de la 002 (RF-057, RF-078, CE-001 y CE-002) existen y dicen lo atribuido. C-6 y C-7 siguen cubriendo los lugares de la 001 y la 002. Constitución 3.0.0, `docs/plan-hackathon.md` (evaluación 12 al 14 dic, demo pública por enlace, producción de pey), `flujo-de-construccion.md` (puertas, F-04 y #57) e issues #90, #19, #35, #94, #65, #27, #29, #64, #66 y #57. Salen QA-12, QA-13, QA-19 y QA-20.
+3. **Código:** `backend/app/config.py` no lee `DATABASE_URL` (`.env.example:9` la tiene vacía). `backend/app/main.py:140` ya confía en las cabeceras del proxy configurado (RF-028). uvicorn escucha en `127.0.0.1` por defecto (`backend/README.md:12`), lo que ayuda a RF-056. `web/index.html:8` sigue con `connect-src … http://localhost:8000 https:` (RF-029 y C-7). El esquema de #97 no está en esta rama (sale de `feature/64-web-mvp`), solo en `main`, y tiene RLS activado en las 5 tablas sin políticas, lo que cumple RF-022 para la llave pública. Backend: **109 pruebas en verde** y `ruff` limpio. Sale QA-18.
+4. **API de pey:** `llms.txt`, webhooks, set-up-webhooks, create-an-api-key y `openapi.json` (2026-10-20). Un solo webhook por llave. Reintentos del aviso sin documentar. Ningún requisito documentado para la dirección del aviso. El aviso solo se cambia en el portal. `qrImage` solo llega si se pide `generateImage`, y puede ser `null`. El ambiente de pruebas está "coming soon". Salen QA-14 y QA-15.
+5. **Dependencias externas:** cada fila de §7 tiene dueño y estado. Falta la prueba de Leonel desde fuera de la red (N-17, constitución 3.0.0), que depende de que la demo esté encendida. Se agrega a §7 con la errata 4. Salen QA-13 y QA-16.
+6. **Ambigüedades y casos límite:** reinicio, pago tardío, monto distinto, pago repetido, aviso desconocido o reenviado, QR vencido, devoluciones, falla de pey, de la base de datos y del túnel, demo apagada y QR largo (F-04). No hay pantallas nuevas: RF-012 y RF-015 usan los mensajes y la reconexión de la 002. Salen QA-14 y QA-17.
+7. **Seguridad y rendimiento:** credenciales (RF-020, RF-021 y RF-059), RLS de #97 (RF-022), firma y deduplicación sin cambios, CORS y límites con la IP real (RF-027 y RF-028), datos de quien paga en el túnel y tiempos medibles (CE-002, CE-003 y CE-004). Sale QA-16.
+8. **Construibilidad y reparto:** quedan 2 días para S1, dependencias de #72 y #96, Grok implementa y Claude revisa, Juan tiene #19 y Supabase de desarrollo, Leonel tiene N-17 y Hugo tiene la computadora de la demo y las llaves. Salen QA-12, QA-13 y QA-20.
+
+**Erratas** (sin efecto en el comportamiento; corregidas el 2026-11-20 junto con las decisiones):
+
+1. Notas de spec-kit (§0), historia 5 y §7: citan la "constitución 2.0.0" y reglas que la 3.0.0 cambió. Historia 5: "quien revisa y une (Juan…)" pasa a "quien une su propio pull request (cada autor)". §7, fila del PR #97: quitar "nadie une su propio PR".
+2. §9: quitar "o su nota de implementación" y "#65 tiene su nota", porque la 3.0.0 quitó la nota. Lo hecho queda en el PR con la plantilla.
+3. §1.2: "lo que era del corte 2 (publicación automática, RF-047 y CE-012)" debe decir también CE-013.
+4. §7: agregar la dependencia "Prueba de la demo desde fuera de la red (N-17)", con Leonel como dueño. En la fila de la protección de `main`, el dueño es quien administra el repositorio (ahora en la organización `team-complexity`), y la protección debe exigir el CI y dejar de exigir la aprobación (constitución 3.0.0).
+5. Glosario, "Base de datos": hay dos proyectos (demo y desarrollo, RF-049). Decir "el proyecto de Supabase de la demo; los servidores de desarrollo usan otro".
+
 ### 8.5 Pendientes
 
 - Ninguna marca abierta: las dos del cambio de rumbo se resolvieron el 2026-11-17 (E-9 y E-10).
-- Falta la QA de una sola pasada de esta versión (`/qa-spec 003`), con numeración desde QA-12.
-- Tarea de Hugo fuera de la spec (E-1): confirmar con pey que su ambiente de pruebas da una llave propia con su aviso; si no, pedir una segunda llave de producción para desarrollo.
-- Tarea de Hugo fuera de la spec (E-1): proponer el pull request que corrige la fila de la constitución que dice "No hay ambiente de pruebas: se prueba en producción con $0.01". La demo sigue en producción (principio VI), así que no cambia ningún principio.
+- QA de la versión con túnel hecha el 2026-11-20 (QA-12 a QA-20), decidida y aplicada.
+- Tarea de Hugo fuera de la spec (QA-15): crear en el portal de pey la segunda llave de producción, ligada a la cuenta CoDi actual. Si el portal no deja ligar esa cuenta a dos llaves, se avisa antes del plan. La tarea de corregir la fila "No hay ambiente de pruebas" de la constitución se retiró: esa fila es correcta mientras pey no publique su ambiente de pruebas.
+- Tarea de Hugo fuera de la spec (QA-19): enmienda de parche 3.0.1 en el PR #96, antes de unirlo: Hosting = computadora de la demo con túnel HTTPS (spec 003), AWS como plan B (#34); Imagen del QR = la que entrega pey, guardada con el cobro en Supabase (#94); se quita la imagen del QR como candidata de MongoDB.
+- Tarea de Hugo fuera de la spec (QA-20): quitar de #90 y #94 el criterio de la nota de implementación, actualizar el contexto de #65 y avisar a Juan en el PR #99 que use "Refs #19". #57 pasa de Juan a Hugo en `flujo-de-construccion.md` (QA-13), y la puerta S1 de ese documento deja los datos en Supabase para el corte 2 (QA-12).
 - Tarea de Hugo fuera de la spec (QA-11): avisar a Juan en la revisión del PR #97 que el servidor no usa la columna `estado` de la vista. Hecha el 2026-11-17, en la aprobación del PR #97.
 - Con D-4 ya no hacen falta el dominio, la cuenta de AWS de la demo, la AWS CLI ni el complemento de Session Manager.
 
@@ -471,4 +528,4 @@ Los límites por IP y los canales abiertos **no** se guardan: siguen en la memor
 - [ ] Hay una revisión de seguridad hecha: secretos, firma de webhooks y validación de entradas, más las credenciales de la base de datos y del túnel, el acceso a la base de datos solo desde el servidor y el servidor solo por el túnel.
 - [ ] El cambio C-6 a la spec 001 está aprobado y aplicado.
 - [ ] El cambio C-7 a la spec 002 está aprobado y aplicado.
-- [ ] #27, #64, #90, #19, #35 y #94 tienen su cierre o su nota de implementación; #65 tiene su nota (HTTPS y aviso de pey por el túnel, despliegue en la nube pendiente), y #29 tiene una nota de que queda abierto hasta #24.
+- [ ] #27, #64, #35, #65 y #66 (corte 1) y #90, #19 y #94 (corte 2) están cerrados por su pull request, documentado con la plantilla, y #29 tiene una nota de que queda abierto hasta #24.

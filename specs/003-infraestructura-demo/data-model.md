@@ -1,8 +1,6 @@
-# Modelo de datos (Fase 1): Spec 003 — Infraestructura de la demo pública
+# Modelo de datos (Fase 1): Spec 003 — Infraestructura de la demo por el túnel
 
-> **Pendiente de revisar con el plan nuevo.** El 2026-11-17 la spec cambió de rumbo (D-4): ya no hay AWS, dominio, presupuesto ni publicación, y la demo sale por un túnel desde una computadora del equipo. Lo de este documento sobre el guardado, las migraciones y el CI sigue sirviendo de punto de partida; lo que menciona AWS, CloudFront, el dominio o la publicación ya no aplica.
-
-- **Fecha**: 2026-11-17
+- **Fecha**: 2026-11-17, revisado el 2026-11-20 para la versión con túnel (sin publicación ni estructura pendiente; con la conciliación de RF-061)
 - **Plan**: [plan.md](plan.md)
 - **Parte de**: el modelo de la [spec 001](../001-backend-mvp/data-model.md) (cobro, pago, estados y reglas de registro), que **no cambia**, y del esquema del PR #97 (`supabase/001_esquema_inicial.sql`). Aquí solo va lo que se guarda, cómo se traduce y lo que se agrega.
 
@@ -15,8 +13,9 @@
 | Cobro | `cobros` | Columna nueva `qr_imagen` (migración 0002) | RF-001, RF-010, RF-011, RF-018 |
 | Pago | `pagos` | Nada | RF-002, RF-007, RF-008, RF-009 |
 | `webhook-id` vistos | `avisos_webhook` | Nada | RF-003 |
-| — | `cambios_de_estructura` (nueva, la crea el comando) | Registro de migraciones aplicadas | RF-017, RF-019, RF-047 |
-| — | `entorno_de_la_base` (nueva, la crea el comando) | Marca `local` o `demo` | RF-049, RF-054 |
+| — | `cambios_de_estructura` (nueva, la crea el comando) | Registro de migraciones aplicadas | RF-017, RF-019 |
+| — | `entorno_de_la_base` (nueva, la crea el comando) | Marca `local` (desarrollo) o `demo` | RF-049, RF-054 |
+| — | `estado_del_servidor` (nueva, migración 0003) | Una sola fila con `conciliado_hasta`, el latido de la conciliación | RF-039, RF-061 |
 
 Las tablas `negocios` y `cupones` del PR #97 no se usan en esta spec (#24 y #37). Los límites por IP, los canales abiertos y `ultima_consulta_pey` siguen solo en memoria (DP-12, §3.2 de la spec).
 
@@ -73,7 +72,8 @@ Todas las escrituras van primero a la base de datos y después a la memoria y al
 | Registrar pago | Dentro del candado del cobro, en una transacción: `insert into pagos … on conflict (transaccion_id) do nothing returning id` y, si viene de un aviso, `insert into avisos_webhook … on conflict do nothing` | Aviso: 503 a pey y el aviso queda en la lista de reintentos (RF-014, RF-048). Consulta: se registra la falla y se reintenta en la próxima consulta | RF-002, RF-003, RF-007, RF-008 |
 | Aviso ignorado (otro tipo, QR desconocido) | `insert into avisos_webhook … on conflict do nothing` | 503 a pey | RF-003 |
 | Cancelar | `update cobros set cancelado_en = … where id = … and cancelado_en is null` | 503 | RF-004 |
-| Consulta de vida | `select 1` cada 6 h (y en la salud, DP-31) | Se registra la falla | RF-039, RF-023 |
+| Latido de conciliación | Cada 60 s: `select` de los cobros con `fin_ventana > conciliado_hasta and fin_ventana <= ahora`; por cada uno, consulta a pey y "Registrar pago" con `fuente = consulta`; al final, `update estado_del_servidor set conciliado_hasta = …` (§4.1) | Se registra la falla y `conciliado_hasta` no avanza; el siguiente latido lo vuelve a intentar | RF-039, RF-061 |
+| Salud | `select 1` con 2 s de espera, guardado 10 s (DP-31) | La salud dice `"no responde"` | RF-023 |
 
 **Lecturas**: un cobro se carga por `id` (ver, cancelar, canal) o por `codi_qr_id` (aviso), con sus pagos, solo si no está ya en memoria (RF-005). Si dos peticiones lo cargan a la vez, se queda el primer objeto que entró a la memoria y las dos usan ese mismo (DP-33).
 
@@ -89,7 +89,19 @@ Todas las escrituras van primero a la base de datos y después a la memoria y al
 
 - Cada 15 s, la tarea de fondo intenta registrar cada aviso de la lista; al lograrlo, emite el pago por el canal y lo quita (RF-048).
 - Si el mismo aviso vuelve a llegar de pey mientras está en la lista, no se duplica: se identifica por `webhook_id`.
-- Se pierde si el servidor se reinicia (limitación aceptada en §4 de la spec).
+- Se pierde si el servidor se reinicia. El pago se recupera con la conciliación cuando termina la ventana de su cobro (§4.1, RF-061).
+
+### 4.1 Conciliación (RF-061, DP-39)
+
+| Paso | Regla |
+|---|---|
+| Primera vez | Si `estado_del_servidor` no tiene fila, se crea con `conciliado_hasta` = la hora del `Reloj` y no se revisa nada hacia atrás |
+| Cada 60 s del `Reloj` | Cobros con `fin_ventana` entre `conciliado_hasta` (sin incluir) y ahora (incluido), en orden de `fin_ventana`, que tienen `codi_qr_id` |
+| Por cada cobro | Se carga (memoria o almacén, DP-33), se piden a pey sus transacciones (`pagos_del_qr`, con las transacciones de ese cobro, DP-13) y se registra cada una que falte, dentro del candado del cobro (§3, "Registrar pago"). No hay canal abierto: nadie la recibe en ese momento |
+| Si pey responde 4xx con un cobro | Se registra (RF-016) y el cobro se salta: pey no lo conoce (por ejemplo, los QR ficticios de los datos de prueba) y reintentarlo no sirve (QP-13) |
+| Si pey o la base de datos tienen una falla pasajera con un cobro (sin conexión, tiempo agotado, 5xx) | Se registra (RF-016), y `conciliado_hasta` queda en la `fin_ventana` del cobro anterior. El siguiente latido empieza por ese cobro. Después de 10 latidos seguidos con falla (contados en memoria), se registra como `ERROR` y se salta (QP-13) |
+| Al terminar | `conciliado_hasta` = ahora (o la `fin_ventana` anterior al primer cobro con falla pasajera que todavía se reintenta). Esta escritura de cada minuto también es el uso diario de la base que pide RF-039 |
+| Después de un apagado | `conciliado_hasta` quedó en el último latido antes de apagarse, así que el primer latido revisa todas las ventanas que terminaron mientras estaba apagado |
 
 ## 5. Migraciones
 
@@ -97,6 +109,7 @@ Todas las escrituras van primero a la base de datos y después a la memoria y al
 |---|---|---|
 | 0001 | `supabase/migraciones/0001_esquema_inicial.sql` | El esquema del PR #97, sin `begin` ni `commit` (los pone el comando, DP-17) |
 | 0002 | `supabase/migraciones/0002_imagen_del_qr.sql` | `alter table cobros add column qr_imagen text;` y el comentario de `cobros.qr` al día ("la imagen es la que manda pey") |
+| 0003 | `supabase/migraciones/0003_estado_del_servidor.sql` | Tabla `estado_del_servidor` (§5.1), con RLS y sin acceso para `anon` ni `authenticated` |
 
 Fuera de las migraciones:
 
@@ -115,7 +128,13 @@ entorno_de_la_base
   unico        boolean primary key default true check (unico)  -- una sola fila
   nombre       text not null check (nombre in ('local', 'demo'))
   definido_en  timestamptz not null
+
+estado_del_servidor                     -- migración 0003
+  unico             boolean primary key default true check (unico)  -- una sola fila
+  conciliado_hasta  timestamptz not null
 ```
+
+`local` es el nombre en la base de la marca de los servidores de desarrollo (RF-049); se conserva el del PR #97.
 
 El comando las crea con `if not exists` antes de cualquier migración, les enciende RLS y les quita el acceso a `anon` y `authenticated`, igual que el PR #97 (RF-022).
 
@@ -125,8 +144,8 @@ El comando las crea con `if not exists` antes de cualquier migración, les encie
 2. Una versión ya anotada no se vuelve a correr (RF-019, CE-007).
 3. Si `cambios_de_estructura` está vacía pero ya existe la tabla `cobros` (la base de la demo, creada a mano con el PR #97), el comando se detiene y pide `--ya-aplicada 0001` (DP-19). No lo decide solo.
 4. Toda tabla nueva de una migración futura enciende RLS y quita el acceso a `anon` y `authenticated`: Supabase les da permisos por defecto sobre las tablas nuevas del esquema `public`.
-5. **Versión esperada** (RF-047, corte 2): la mayor versión de los archivos de `supabase/migraciones/` que trae la versión publicada. Si es mayor que la mayor de `cambios_de_estructura`, la estructura está **pendiente**.
+5. La guía de la demo (RF-058) pide correr `estado` y `aplicar` antes de arrancar el servidor. La salud no avisa de una estructura pendiente (antes RF-047, retirado por D-4).
 
 ## 6. Límites (sin cambios)
 
-Siguen los de la 001 (`data-model.md` §6), en memoria. La IP con la que se cuentan sale de `CloudFront-Viewer-Address` en la demo (DP-22, RF-028).
+Siguen los de la 001 (`data-model.md` §6), en memoria. La IP con la que se cuentan sale de `X-Forwarded-For` que manda el agente del túnel desde `127.0.0.1` (research R-2, RF-028). En la demo, los límites valen 30 (DP-36), o 60 si el túnel no manda la IP (R-2).

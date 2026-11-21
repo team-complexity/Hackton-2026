@@ -1,16 +1,14 @@
 # Contrato: salud del servidor (amplía el de la spec 001)
 
-> **Pendiente de revisar con el plan nuevo.** El 2026-11-17 la spec cambió de rumbo (D-4): ya no hay AWS, dominio, presupuesto ni publicación, y la demo sale por un túnel desde una computadora del equipo. Lo de este documento sobre el guardado, las migraciones y el CI sigue sirviendo de punto de partida; lo que menciona AWS, CloudFront, el dominio o la publicación ya no aplica.
-
 ## 1. Método, ruta y propósito
 
-`GET /salud`: comprobar en segundos que el servidor responde, que tiene sus credenciales y que la base de datos responde, sin mostrar ningún valor. Lo usan Hugo, el script de publicación (`publicar.sh`, DP-25) y la guía de reactivación de Supabase (RF-050).
+`GET /salud`: comprobar en segundos que el servidor responde, que tiene sus credenciales y que la base de datos responde, sin mostrar ningún valor. Lo usan Hugo al encender la demo (RF-058, CE-016), la guía de reactivación de Supabase (RF-050) y las pruebas de Leonel desde fuera de la red (N-17).
 
 Sustituye al [contrato de la 001](../../001-backend-mvp/contracts/salud.md) cuando se aplique el cambio C-6 (c).
 
 ## 2. Requisitos
 
-RF-023 (amplía RF-038 de la 001), RF-021, RF-047 (corte 2), RF-050, CE-010.
+RF-023 (amplía RF-038 de la 001), RF-021, RF-050, CE-010, CE-016.
 
 ## 3. Petición
 
@@ -28,19 +26,18 @@ Sin parámetros.
 | `llave_pey` | booleano | RF-038 de la 001 |
 | `secreto_aviso_pey` | booleano | RF-038 de la 001 |
 | `base_de_datos` | `"responde"`, `"no responde"` o `"sin configurar"` (sin `DATABASE_URL`: el servidor guarda en memoria, DP-16) | RF-023 |
-| `estructura` | `"al dia"`, `"pendiente"` o `"desconocida"` (la base de datos no responde o no está configurada). **Corte 2** | RF-047 |
 
 - `base_de_datos` sale de un `select 1` con 2 s de espera. El resultado se guarda 10 s, para que pedir la salud muchas veces no cargue la base de datos (DP-31).
-- `estructura` compara la versión esperada con la registrada (data-model §5.2, regla 5). Se recalcula cada 60 s (DP-30).
+- `base_de_datos` llega con F5 (corte 2); en el corte 1 la salud es la de la 001. La salud no avisa de una estructura pendiente (RF-047 se retiró con D-4); la guía pide aplicar las migraciones antes de arrancar.
 
 ## 5. Ejemplos
 
 ```json
-{ "estado": "ok", "llave_pey": true, "secreto_aviso_pey": true, "base_de_datos": "responde", "estructura": "al dia" }
+{ "estado": "ok", "llave_pey": true, "secreto_aviso_pey": true, "base_de_datos": "responde" }
 ```
 
 ```json
-{ "estado": "ok", "llave_pey": true, "secreto_aviso_pey": true, "base_de_datos": "no responde", "estructura": "desconocida" }
+{ "estado": "ok", "llave_pey": true, "secreto_aviso_pey": true, "base_de_datos": "no responde" }
 ```
 
 ## 6. Seguridad
