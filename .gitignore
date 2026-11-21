@@ -34,3 +34,8 @@ Thumbs.db
 
 # Logs
 *.log
+
+# Playwright (salidas locales; los navegadores viven fuera del repositorio)
+test-results/
+playwright-report/
+blob-report/

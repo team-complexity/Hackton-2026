@@ -25,6 +25,7 @@ CAMPOS_COBRO = {
     "total_recibido",
     "pagado_en",
     "pagos",
+    "hora_servidor",
 }
 CAMPOS_PAGO = {"numero", "monto_recibido", "monto_distinto", "pagado_en"}
 
@@ -125,7 +126,7 @@ def test_monto_distinto_compara_el_monto_base_o_el_recibido_con_el_pedido() -> N
 
 
 def test_el_objeto_publico_del_cobro_tiene_los_campos_del_contrato() -> None:
-    """El JSON público tiene los 15 campos y el pago no lleva transaccion_id (RF-008)."""
+    """El JSON público tiene los 16 campos y el pago no lleva transaccion_id (RF-008, C-2)."""
     _reloj, repo = _repositorio(1_794_700_000)
     cobro = repo.nuevo(Decimal("0.01"), "Tacos", 600, ahora=1_794_700_000)
     repo.vincular_qr(cobro, "ab12cd34ef", '{"IDC":"x"}', "aW1n")
@@ -217,3 +218,12 @@ def test_una_propina_no_cuenta_como_monto_distinto(caplog: pytest.LogCaptureFixt
     assert [
         r for r in caplog.records if r.name == "pago_facil" and r.levelno >= logging.WARNING
     ] == []
+
+
+def test_el_objeto_publico_trae_la_hora_actual_del_servidor_como_entero() -> None:
+    """hora_servidor es la hora del reloj al armar el objeto, en segundos enteros (RF-008, C-2)."""
+    reloj, repo = _repositorio(1_794_700_009)
+    cobro = repo.nuevo(Decimal("1"), "Tacos", 600, ahora=1_794_700_000)
+    assert cobro.publico()["hora_servidor"] == 1_794_700_009
+    reloj.avanzar(5.7)
+    assert cobro.publico()["hora_servidor"] == 1_794_700_014

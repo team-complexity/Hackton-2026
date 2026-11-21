@@ -2,7 +2,7 @@
 
 - **ID**: `001-backend-mvp`
 - **Fecha**: `2026-11-14`
-- **Estado**: `Aprobada`. Hugo la aprobó el 2026-11-14, después de la entrevista (E-1 a E-7) y de la QA (QA-1 a QA-10, todas aplicadas). Se entrega en dos cortes (§1.2). El cambio C-1 (QR reutilizado y monto distinto en el corte M0) se aprobó y aplicó el 2026-11-14 (§8.2).
+- **Estado**: `Aprobada`. Hugo la aprobó el 2026-11-14, después de la entrevista (E-1 a E-7) y de la QA (QA-1 a QA-10, todas aplicadas). Se entrega en dos cortes (§1.2). El cambio C-1 (QR reutilizado y monto distinto en el corte M0) se aprobó y aplicó el 2026-11-14 (§8.2). El cambio C-2 (hora actual del servidor en cada cobro, pedido por la spec 002) se aprobó y aplicó el 2026-11-15.
 - **Rama**: `feature/18-backend-mvp`
 - **Issues**: #18 (estructura), #62 (crear cobro), #63 (aviso de pago), #65 (despliegue, solo como dependencia)
 - **Entrada**: "iniciemos la entrevista y preparativos de la redaccion de la spec 001"
@@ -183,7 +183,7 @@ Cada RF lleva su corte: **[M0]** para el kickoff o **[C2]** para el corte 2 (§1
 - **RF-042** (No deseado) [M0]: SI el concepto tiene caracteres no imprimibles, ENTONCES EL SISTEMA rechazará el cobro con un mensaje para el dueño sin pedirle nada a pey.
 - **RF-006** (Ubicuo) [M0]: EL SISTEMA pedirá cada QR a pey con una vigencia de 10 minutos.
 - **RF-007** (Ubicuo) [M0]: EL SISTEMA enviará a pey el identificador interno del cobro junto con la solicitud del QR, para poder relacionar cada pago con su cobro.
-- **RF-008** (Ubicuo) [M0]: EL SISTEMA devolverá de cada cobro su identificador, su identificador CoDi, el monto pedido o la indicación de monto libre, el concepto, el estado, el contenido del QR, la imagen del QR cuando pey la entregue, la hora de creación, la hora de vencimiento, el número de pagos recibidos, el total recibido y la hora del último pago.
+- **RF-008** (Ubicuo) [M0]: EL SISTEMA devolverá de cada cobro su identificador, su identificador CoDi, el monto pedido o la indicación de monto libre, el concepto, el estado, el contenido del QR, la imagen del QR cuando pey la entregue, la hora de creación, la hora de vencimiento, el número de pagos recibidos, el total recibido, la hora del último pago y la hora actual del servidor (C-2).
 - **RF-009** (No deseado) [M0]: SI pey no crea el QR, ENTONCES EL SISTEMA responderá con un mensaje para el dueño y no guardará el cobro.
 - **RF-010** (No deseado) [M0]: SI pey no crea el QR, ENTONCES EL SISTEMA distinguirá en su respuesta cuatro causas: falta configuración, llave rechazada, pey en mantenimiento y error general.
 
@@ -364,6 +364,7 @@ No hay specs previas. Cambios a **esta** spec después de aprobada:
 | # | Cambio | Por qué | Afecta | Estado |
 |---|---|---|---|---|
 | C-1 | El QR reutilizado (varios pagos numerados) y el monto distinto visible pasan del corte 2 al corte M0. Se quitan de §1.2 los puntos temporales "solo el primer pago se registra y se avisa" y "el cobro todavía no muestra ambos montos". | QT-3 de `tasks.md`: con la regla temporal, el segundo pago a un QR no se avisaba, en choque con el principio VIII ("se registra… y se avisa"). Hugo prefirió adelantar el QR reutilizado a registrar una excepción temporal. | §1.2, historia 2 (escenarios 2 y 6), RF-015, RF-016, RF-019, RF-020, §4 (QR reutilizado y monto distinto), CE-006; QA-1 queda modificada en ese punto | Aprobado y aplicado por Hugo el 2026-11-14 |
+| C-2 | RF-008 agrega "la hora actual del servidor" a cada cobro que se devuelve (crear, ver y cancelar) y a los eventos del canal de avisos. | QA-2 de la spec 002: `creado_en` se fija antes de pedirle el QR a pey (`main.py:181-185`), y sin la hora del servidor la pantalla no puede mostrar la cuenta regresiva con 2 s de error si el reloj del celular está desfasado (spec 002, RF-019). | RF-008, `contracts/crear-cobro.md` (objeto cobro), `contracts/canal-avisos.md`, pruebas del objeto cobro | Aprobado por Hugo el 2026-11-15 y aplicado el mismo día (campo `hora_servidor`; plan TK-6, tasks F9) |
 
 ### 8.3 Propuestas
 

@@ -35,6 +35,8 @@ Cada evento lleva `event:` y `data:` (JSON). Primero se envía `retry: 3000`.
 | `fin` | Termina la ventana de escucha, justo antes de cerrar | Objeto cobro | RF-032, RF-043 |
 | (comentario) `: sigo conectado` | Después de 15 s sin enviar nada | — | RF-033 |
 
+Cada objeto cobro de los eventos trae `hora_servidor` con la hora en que el servidor armó el evento (C-2). Los eventos `pago` y `cancelado` se arman al registrarse y se reenvían en el momento, así que la diferencia con la hora de envío es de milisegundos.
+
 **Obligación para la web (#64)**: al recibir `fin`, la pantalla llama a `eventSource.close()`. Si no lo hace, el navegador se reconecta cada 3 s y recibe `estado` y `fin` en un ciclo sin fin.
 
 ### Ciclo del servidor

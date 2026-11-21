@@ -60,3 +60,11 @@ def test_cancelar_un_cobro_que_no_existe_da_404(cliente) -> None:
     respuesta = cliente.post("/api/cobros/nada/cancelar")
     assert respuesta.status_code == 404
     assert respuesta.json()["detail"] == MENSAJE_NO_EXISTE
+
+
+def test_cancelar_devuelve_la_hora_del_servidor(cliente, reloj) -> None:
+    """La respuesta de cancelar trae hora_servidor (RF-008, C-2)."""
+    cobro = _crear(cliente)
+    reloj.avanzar(12)
+    cancelado = cliente.post(f"/api/cobros/{cobro['id']}/cancelar").json()
+    assert cancelado["hora_servidor"] == cobro["creado_en"] + 12

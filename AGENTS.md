@@ -71,7 +71,8 @@ Todo va en **español** (decisión de Hugo del 2026-11-14, constitución v1.0.0)
 | Pruebas del backend | `uv run --directory backend pytest -q` |
 | Lint | `uv run --directory backend ruff check .` |
 | Formato | `uv run --directory backend ruff format --check .` |
-| Pruebas de la web | Las define el plan de la primera spec de la web; se agregan aquí |
+| Pruebas de la web | `uv run --directory backend pytest ../web -q` (la primera vez, `uv run --directory backend playwright install chromium webkit`) |
+| Lint y formato de las pruebas de la web | `uv run --directory backend ruff check --config pyproject.toml ../web` y `uv run --directory backend ruff format --config pyproject.toml --check ../web` |
 | Conexión real con pey | `cd backend && uv run python scripts/probar_pey.py --esperar` |
 
 Una fase no se cierra sin tres cosas: todo en verde, su sección en `verification-guide.md` para Hugo y el mensaje de commit sugerido.

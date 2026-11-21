@@ -36,6 +36,7 @@ CAMPOS_COBRO = {
     "total_recibido",
     "pagado_en",
     "pagos",
+    "hora_servidor",
 }
 
 
@@ -98,7 +99,7 @@ def test_crear_cobro_pide_el_qr_a_pey_con_vigencia_de_10_minutos_y_el_id_del_cob
 
 
 def test_el_cobro_devuelve_todos_sus_campos(cliente) -> None:
-    """La respuesta trae los 15 campos del objeto cobro (RF-008, RF-022)."""
+    """La respuesta trae los 16 campos del objeto cobro (RF-008, RF-022, C-2)."""
     cobro = cliente.post("/api/cobros", json={"monto": 0.01, "concepto": "Tacos"}).json()
     assert set(cobro) == CAMPOS_COBRO
     assert re.fullmatch(r"[A-Za-z0-9_-]{12}", cobro["id"])
@@ -254,3 +255,22 @@ def test_si_pey_tarda_mas_de_10_segundos_al_crear_responde_intenta_de_nuevo(clie
     assert respuesta.status_code == 502
     assert respuesta.json()["detail"] == MENSAJE_REINTENTAR
     assert pey.solicitudes[0].extensions["timeout"]["read"] == 10.0
+
+
+def test_crear_cobro_descuenta_lo_que_tardo_pey_en_la_hora_del_servidor(
+    cliente, pey, reloj
+) -> None:
+    """Si pey tarda 9 s, creado_en queda antes y hora_servidor después (RF-008, C-2)."""
+    inicio = int(reloj.ahora())
+    pey.al_crear = lambda: reloj.avanzar(9)
+    cobro = cliente.post("/api/cobros", json={"monto": 1, "concepto": "Tacos"}).json()
+    assert cobro["creado_en"] == inicio
+    assert cobro["hora_servidor"] == inicio + 9
+
+
+def test_ver_cobro_trae_la_hora_actual_del_servidor(cliente, reloj) -> None:
+    """Al ver un cobro, hora_servidor es la hora de la consulta (RF-008, C-2)."""
+    cobro = cliente.post("/api/cobros", json={"monto": 1, "concepto": "Tacos"}).json()
+    reloj.avanzar(30)
+    visto = cliente.get(f"/api/cobros/{cobro['id']}").json()
+    assert visto["hora_servidor"] == cobro["creado_en"] + 30
