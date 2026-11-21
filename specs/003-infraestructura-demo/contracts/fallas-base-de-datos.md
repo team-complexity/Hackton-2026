@@ -44,6 +44,8 @@ Cada falla deja una línea `WARNING` o `ERROR` en el registro `pago_facil` con:
 
 Ejemplo: `ERROR pago_facil: Base de datos sin respuesta al guardar cobro cobro=Xy12ab34Cd56 (OperationalError)`.
 
+Al arrancar sin `DATABASE_URL`, el servidor deja una línea `WARNING`: `Sin DATABASE_URL: los cobros se guardan en memoria` (DP-16). En la demo, después de F6, esa línea es un error de configuración.
+
 ## 5. Seguridad
 
 - Ningún cuerpo de respuesta incluye datos de la conexión ni textos de PostgreSQL (RF-021).

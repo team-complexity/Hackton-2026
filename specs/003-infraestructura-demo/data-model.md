@@ -102,6 +102,7 @@ Todas las escrituras van primero a la base de datos y después a la memoria y al
 | Si pey o la base de datos tienen una falla pasajera con un cobro (sin conexión, tiempo agotado, 5xx) | Se registra (RF-016), y `conciliado_hasta` queda en la `fin_ventana` del cobro anterior. El siguiente latido empieza por ese cobro. Después de 10 latidos seguidos con falla (contados en memoria), se registra como `ERROR` y se salta (QP-13) |
 | Al terminar | `conciliado_hasta` = ahora (o la `fin_ventana` anterior al primer cobro con falla pasajera que todavía se reintenta). Esta escritura de cada minuto también es el uso diario de la base que pide RF-039 |
 | Después de un apagado | `conciliado_hasta` quedó en el último latido antes de apagarse, así que el primer latido revisa todas las ventanas que terminaron mientras estaba apagado |
+| Registro de cada consulta a pey (principio X) | Por cobro conciliado: `Conciliación cobro=<id> paginas=<n> pagos_nuevos=<n> requestId=<id de pey>`, como la consulta de respaldo (sin `requestId` si pey no lo manda). Con un 4xx o una falla pasajera de pey: `No se pudo conciliar el cobro <id> en pey (requestId=<id>)`. Nunca datos de quien paga (RF-009) |
 
 ## 5. Migraciones
 
