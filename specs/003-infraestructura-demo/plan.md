@@ -3,7 +3,7 @@
 - **Rama**: `feature/90-infraestructura-demo` (F1 va en su propio PR, `feature/35-ci`, DP-28)
 - **Fecha**: 2026-11-20
 - **Spec**: [spec.md](spec.md), estado: Aprobada el 2026-11-20 (QA-12 a QA-20)
-- **Estado del plan**: `En QA`: la QA del 2026-11-20 (QP-10 a QP-14, §9.3) está decidida y aplicada; se aprueba cuando se unan los PR #72 y #96 (C-8). Lo redactó Claude el 2026-11-20 con `/speckit-plan`, como permite C-8: contra la constitución 3.0.0 del PR #96 (`a962dc5`), que la QA-19 lleva a 3.0.1, y contra el código de esta rama (`5db47ed`). Sustituye al plan de la versión con AWS (en el historial de git, commit `5db47ed`), del que se conservan las decisiones del guardado, las migraciones y el CI con su mismo número. Hugo decidió DP-38 el mismo día: Tailscale Funnel (§9.2).
+- **Estado del plan**: `Aprobado` el 2026-11-21 por Hugo, con la QA del 2026-11-20 (QP-10 a QP-14, §9.3) decidida y aplicada y los PR #72 y #96 unidos a `main` ese mismo día (C-8 cumplido; `main` con la constitución 3.0.1, `f01f732`). Estado anterior: `En QA`. Lo redactó Claude el 2026-11-20 con `/speckit-plan`, como permite C-8: contra la constitución 3.0.0 del PR #96 (`a962dc5`), que la QA-19 lleva a 3.0.1, y contra el código de esta rama (`5db47ed`). Sustituye al plan de la versión con AWS (en el historial de git, commit `5db47ed`), del que se conservan las decisiones del guardado, las migraciones y el CI con su mismo número. Hugo decidió DP-38 el mismo día: Tailscale Funnel (§9.2).
 - **Entrada**: la spec de `specs/003-infraestructura-demo/spec.md`
 
 > **Notas para los comandos de spec-kit.**
@@ -87,7 +87,7 @@ La spec pide tres cosas sin cambiar lo que el dueño ve y oye: un CI en cada pul
 | IX. Lo más simple que gane la demo | Piezas nuevas justificadas por la spec (base de datos, túnel, CI). Cada herramienta nueva con comparativa y decisión de Hugo: DP-2 y DP-3 (decididas), DP-38 (pendiente); las comparativas van en la descripción del PR. Tabla de restricciones: Hosting y la imagen del QR, con el parche 3.0.1 (QA-19). Una tarea de fondo, justificada en §12 | Cumple, con excepción justificada en §12 |
 | X. Si no se ve, no existe | `/salud` agrega `base_de_datos` sin valores ([contrato](contracts/salud.md)). Cada falla de la base de datos y cada conciliación dejan su línea con el id del cobro (RF-016) | Cumple |
 
-**Después del diseño (Fase 1)**: sin cambios con los contratos y el modelo de datos escritos. No quedan `[NECESITA ACLARACIÓN]`. Si el PR #96 se une sin el parche 3.0.1, "Hosting: AWS" queda como excepción en §12 hasta que se una.
+**Después del diseño (Fase 1)**: sin cambios con los contratos y el modelo de datos escritos. No quedan `[NECESITA ACLARACIÓN]`. El PR #96 se unió el 2026-11-21 con el parche 3.0.1, así que "Hosting" ya dice túnel y no hace falta excepción en §12.
 
 ---
 
@@ -404,11 +404,11 @@ La QA de la versión con AWS (QP-1 a QP-9) está en el historial, commit `5db47e
 
 - [x] DP-2, DP-3 y DP-5 decididas por Hugo (2026-11-17), vigentes.
 - [x] DP-38 decidida por Hugo (2026-11-20): Tailscale Funnel.
-- [ ] PR #72 y PR #96 unidos a `main` (C-8).
+- [x] PR #72 y PR #96 unidos a `main` (C-8), el 2026-11-21; la rama de la 003 quedó rebasada sobre `main` (QP-10).
 - [x] Plan revisado con `/qa-spec 003 plan` y todos los hallazgos QP decididos (2026-11-20).
 - [x] Decisiones de la QA aplicadas (QP-10 a QP-14 y la errata), el 2026-11-20.
 - [x] C-6 y C-7 aprobados por Hugo, ampliados, el 2026-11-20 (QP-11). Se aplican en F5 y F2.
-- [ ] Aprobado por Hugo el [AAAA-MM-DD]. Aprobar no autoriza a empezar `tasks.md`: se espera a que Hugo lo pida.
+- [x] Aprobado por Hugo el 2026-11-21. Aprobar no autoriza a empezar `tasks.md`: se espera a que Hugo lo pida.
 
 ---
 
