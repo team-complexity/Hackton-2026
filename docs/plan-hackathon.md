@@ -63,7 +63,7 @@ Un **punto de venta sencillo para negocios** que cobra con CoDi:
 
 - **Backend:** Python + FastAPI. Es el único que conoce la API key.
 - **Web:** HTML, CSS y JS como PWA, instalable en Android, iPhone y computadora.
-- **Sin apps nativas** durante el hackathon: no da tiempo y la demo debe ser un enlace.
+- **Apps nativas** (decisión del 15 nov): una app Android (Miguel) y una app iOS (Juan), sobre el mismo backend. La demo que se evalúa sigue siendo el enlace web.
 - **Seguridad:** firma de webhooks, secretos en variables de entorno, HTTPS y validación de entradas.
 
 Endpoints de pey que usaremos:
@@ -86,6 +86,8 @@ No hay sandbox: se prueba en producción con cobros de **$0.01 MXN**.
 
 ### Milestones
 
+> **Actualización del 15 nov.** El calendario vigente, con roles, entregables por persona y el reparto de los issues, está en [flujo-de-trabajo.md](../flujo-de-trabajo.md): el desarrollo termina el 10 de diciembre y el 11 y el 12 son solo para ajustes. La tabla siguiente es el plan original; los milestones de GitHub ya llevan los nombres y fechas nuevos (S1 a S4 y "Ajustes y entrega").
+
 | Milestone | Fechas | Meta |
 |---|---|---|
 | M0 — Entrega kickoff | 14–15 nov (1:00 PM) | MVP en vivo (QR + webhook + sonido) con la CLABE de prueba de pey, repo público y formulario de Luma enviado |
@@ -98,15 +100,19 @@ No hay sandbox: se prueba en producción con cobros de **$0.01 MXN**.
 
 1. Toma un issue y asígnatelo.
 2. Crea una rama `feature/<número>-<descripcion-corta>`.
-3. Abre un pull request que diga `Closes #<número>` y pide revisión a otra persona.
-4. Se une a `main` cuando cumple los criterios de aceptación.
+3. Abre un pull request que diga `Closes #<número>` y documenta lo que hiciste con la [plantilla de pull request](../.github/pull_request_template.md).
+4. Únelo tú a `main` cuando el CI esté en verde y cumpla los criterios de aceptación.
+5. Juan y Leonel revisan lo que entra a `main` y avisan si algo salió mal.
+
+El detalle está en [flujo-de-trabajo.md](../flujo-de-trabajo.md).
 
 ## 7. Decisiones pendientes
 
 - [ ] Titular de la API key de pey (requisitos de la sección 3).
-- [ ] Integrantes oficiales (máximo 5) o autorización para ser más.
-- [ ] Responsables de cada área.
-- [ ] Base de datos y hosting.
+- [x] Integrantes oficiales: Hugo, Juan y Miguel (15 nov).
+- [x] Responsables de cada área: ver [flujo-de-trabajo.md](../flujo-de-trabajo.md) (15 nov).
+- [x] Base de datos y hosting: Supabase y AWS (15 nov).
+- [ ] Tecnología de la landing, de la app Android y de la app iOS; uso de MongoDB; librerías de QR.
 
 ## 8. Monetización (para el pitch)
 

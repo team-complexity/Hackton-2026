@@ -25,9 +25,11 @@ Proyecto para el **Hackatón México 2026** (pey + AI Builders México + SpaceXA
 
 ## Organización del trabajo
 
+- **Roles, calendario e issues:** [flujo-de-trabajo.md](flujo-de-trabajo.md) (también en [PDF](flujo-de-trabajo.pdf))
+- **Reglas comunes del equipo y de sus agentes de IA:** [CONSTITUCION.md](CONSTITUCION.md)
 - **Plan general:** [docs/plan-hackathon.md](docs/plan-hackathon.md)
-- **Épicas** por área (Frontend, UX/UI, Backend, Base de datos, Integraciones, Seguridad, DevOps, Producto y entrega). Cada una agrupa sus issues como sub-issues.
-- **Milestones** por fecha: M1 Arranque → M2 Cobro CoDi → M3 Extras → M4 Entrega (12 dic).
+- **Épicas** por área (Frontend, UX/UI, Backend, Base de datos, Integraciones, Seguridad, DevOps, Producto y entrega, App Android, App iOS, QA y revisión). Cada una agrupa sus issues como sub-issues.
+- **Milestones** por fecha: S1 Cobro en vivo (22 nov) → S2 Cuenta, historial y apps v1 (29 nov) → S3 Apps completas, Premium y pilotos (6 dic) → S4 Cierre (10 dic) → Ajustes y entrega (12 dic).
 - **Etiquetas:** `area: …`, `tipo: …`, `prioridad: …` y `opcional`.
 
 ## Reglas importantes

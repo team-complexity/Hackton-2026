@@ -6,6 +6,12 @@
 *.key
 secrets/
 
+# Guías personales de agentes de IA: cada quien tiene la suya en su computadora.
+# La regla común del equipo es .specify/memory/constitution.md.
+# La guía de Hugo (AGENTS.md) se le pide a él.
+AGENTS.md
+CLAUDE.md
+
 # Python
 __pycache__/
 *.py[cod]
