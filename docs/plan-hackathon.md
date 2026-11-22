@@ -111,7 +111,7 @@ El detalle está en [flujo-de-trabajo.md](../flujo-de-trabajo.md).
 - [ ] Titular de la API key de pey (requisitos de la sección 3).
 - [x] Integrantes oficiales: Hugo, Juan y Miguel (15 nov).
 - [x] Responsables de cada área: ver [flujo-de-trabajo.md](../flujo-de-trabajo.md) (15 nov).
-- [x] Base de datos y hosting: Supabase y AWS (15 nov).
+- [x] Base de datos y hosting: Supabase y la Mac de Hugo por Tailscale Funnel (21 nov, spec 003, DP-38).
 - [ ] Tecnología de la landing, de la app Android y de la app iOS; uso de MongoDB; librerías de QR.
 
 ## 8. Monetización (para el pitch)

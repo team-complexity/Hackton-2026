@@ -376,7 +376,7 @@ Detalle en [data-model.md](data-model.md). En resumen:
 - **Entradas**:
   - el teclado limita el monto (RF-003, RF-004, RF-068) y el campo, el concepto (RF-005), pero **el servidor sigue siendo quien valida** (spec 001, RF-002, RF-005, RF-042);
   - lo que llega del servidor o del almacenamiento se trata como texto (RF-077, DP-13), y lo recordado se valida antes de usarlo (DP-12).
-- **Política de seguridad de contenido** (R-11, QP-2): scripts y estilos solo del propio sitio; imágenes del propio sitio y `data:` (para el QR); sonido del propio sitio y `blob:`; conexiones al propio sitio, a `http://localhost:8000` (pruebas en local) y a HTTPS. Al desplegar, #65 cambia `https:` por el dominio exacto del servidor.
+- **Política de seguridad de contenido** (R-11, QP-2, spec 003 C-7): scripts y estilos solo del propio sitio; imágenes del propio sitio y `data:` (para el QR); sonido del propio sitio y `blob:`; conexiones solo al propio sitio (`connect-src 'self'`). La web la entrega el servidor.
 - **Abuso de la demo pública**: los límites por IP y CORS son del servidor (spec 001). La web no reintenta crear un cobro por su cuenta, y Cobrar se bloquea mientras se crea (RF-011).
 - **Lo recordado en el celular** (C2): solo identificadores de cobros. Quien tenga el celular podría verlos o cancelarlos, un supuesto ya aceptado en la spec 001 (§7).
 

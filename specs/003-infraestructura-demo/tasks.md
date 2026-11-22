@@ -3,7 +3,7 @@
 - **Spec**: [spec.md](spec.md), estado: Aprobada el 2026-11-20 (QA-12 a QA-20)
 - **Plan**: [plan.md](plan.md), estado: Aprobado el 2026-11-21 (DP-38 Tailscale Funnel, QP-10 a QP-14, C-8 cumplido)
 - **Fecha**: 2026-11-21
-- **Estado**: `Aprobado` el 2026-11-21 por Hugo, con `/speckit-analyze` y la QA de tareas (QT-1 a QT-9) decididos y aplicados (ver «Revisión QA de tasks»). Estado anterior: `En QA`. Lo redactó Claude el 2026-11-21 con `/speckit-tasks`. Aprobar no autoriza empezar F1: se espera a que Hugo lo pida (F0 es suya y puede empezar cuando quiera). **F0 terminada (Hugo, con Claude, 2026-11-21): Tailscale Funnel cumple, sin plan B (TK-5).** **F1 terminada (2026-11-21): CI en `main` con `servidor` y `web` obligatorios, también para administradores (PR #102; prueba del error en el PR #103, TK-6).**
+- **Estado**: `Aprobado` el 2026-11-21 por Hugo, con `/speckit-analyze` y la QA de tareas (QT-1 a QT-9) decididos y aplicados (ver «Revisión QA de tasks»). Estado anterior: `En QA`. Lo redactó Claude el 2026-11-21 con `/speckit-tasks`. Aprobar no autoriza empezar F1: se espera a que Hugo lo pida (F0 es suya y puede empezar cuando quiera). **F0 terminada (Hugo, con Claude, 2026-11-21): Tailscale Funnel cumple, sin plan B (TK-5).** **F1 terminada (2026-11-21): CI en `main` con `servidor` y `web` obligatorios, también para administradores (PR #102; prueba del error en el PR #103, TK-6).** **F2 en curso (Grok, 2026-11-21).**
 - **Entrada**: los documentos de `specs/003-infraestructura-demo/`: plan.md, spec.md, research.md, data-model.md, contracts/ y quickstart.md
 
 > **Notas para los comandos de spec-kit.**
@@ -56,7 +56,7 @@
 | Dependencia | Qué bloquea | Estado |
 |---|---|---|
 | PR #72 y PR #96 unidos a `main` (C-8) y rama de la 003 rebasada sobre `main` (QP-10) | F1 y F2 | Listo el 2026-11-21 (`f01f732`; rama en `2d73373` y después `17bdbf0`) |
-| C-6 y C-7 aprobados (QP-11) | T021 (C-7, F2) y T064 (C-6, F5) | Aprobados el 2026-11-20 · sin aplicar |
+| C-6 y C-7 aprobados (QP-11) | T021 (C-7, F2) y T064 (C-6, F5) | C-7 aplicado el 2026-11-21 (F2). C-6 aprobado el 2026-11-20 · sin aplicar (F5) |
 | Cuenta de Tailscale de Hugo con HTTPS, MagicDNS y el permiso `funnel` (DP-38) | F0 y todo lo demás de la demo | Pendiente (T001) |
 | Llave de pey de la demo y su secreto en `backend/.env.demo` (Hugo) | F0, F2, F3 y F6 | Pendiente (T002) |
 | Aviso de pey de la llave de la demo con la dirección del túnel (Hugo, en el portal) | El pago real de F3 (RF-025) | Pendiente (T025) |
@@ -216,7 +216,7 @@
 
 ### Pruebas de F2 (primero, deben fallar antes de implementar)
 
-- [ ] T015 [P] [US2] Pruebas de la web servida por el servidor en `backend/tests/test_web_desde_el_servidor.py` (archivo nuevo)
+- [X] T015 [P] [US2] Pruebas de la web servida por el servidor en `backend/tests/test_web_desde_el_servidor.py` (archivo nuevo)
   - Cada prueba arma su app con `crear_app(Configuracion(_env_file=None, pey_api_key=…, pey_webhook_secret=…, carpeta_web=…), cliente_pey, reloj)` y una carpeta temporal (`tmp_path`) con `index.html` (`<h1>PAGO FÁCIL</h1>`) y `config.js`.
   - `test_con_carpeta_web_el_servidor_entrega_la_web`: `GET /` responde 200, `text/html`, con "PAGO FÁCIL"; `GET /config.js` responde 200.
   - `test_las_rutas_del_api_mandan_sobre_la_web`: con `carpeta_web`, `GET /salud` sigue respondiendo el JSON de la salud y `GET /api/cobros/noexiste` responde 404 con `{"detail": "Ese cobro no existe"}`.
@@ -225,7 +225,7 @@
   - **RF**: RF-024, RF-029
   - **Dep.**: T014
   - **Hecho cuando**: las cuatro pruebas existen y fallan porque `carpeta_web` no existe.
-- [ ] T016 [P] [US2] Prueba de la política de seguridad de contenido en `web/tests/test_seguridad.py`
+- [X] T016 [P] [US2] Prueba de la política de seguridad de contenido en `web/tests/test_seguridad.py`
   - `test_la_politica_solo_permite_conectarse_al_mismo_origen`: lee `web/index.html` (sin abrir página), saca el `content` del `<meta http-equiv="Content-Security-Policy">` y comprueba que la directiva `connect-src` vale exactamente `'self'`, y que las demás no cambian: `default-src 'self'`, `script-src 'self'`, `style-src 'self'`, `img-src 'self' data:` y `media-src 'self' blob:`.
   - **RF**: RF-029
   - **Dep.**: T014
@@ -233,7 +233,7 @@
 
 ### Implementación de F2
 
-- [ ] T017 [US2] Agregar `carpeta_web` a `backend/app/config.py` y montar la web en `backend/app/main.py`
+- [X] T017 [US2] Agregar `carpeta_web` a `backend/app/config.py` y montar la web en `backend/app/main.py`
   - `config.py`: `carpeta_web: str = ""`, con su comentario (DP-21, R-12). Vacía en las pruebas del servidor.
   - `main.py`: al final de `crear_app`, **después de todas las rutas**, si `config.carpeta_web` no está vacía, `app.mount("/", StaticFiles(directory=<ruta>, html=True), name="web")`. Una ruta relativa se resuelve desde `RAIZ_BACKEND` (`CARPETA_WEB=../web` funciona aunque uvicorn arranque en otra carpeta). Si la carpeta no existe, el servidor no arranca (comportamiento de `StaticFiles`), y así se nota.
   - Docstring de `crear_app` con `(spec 003, RF-024, RF-029)`.
@@ -241,24 +241,24 @@
   - **RF**: RF-024, RF-029
   - **Dep.**: T015
   - **Hecho cuando**: T015 pasa y las demás pruebas del backend siguen en verde.
-- [ ] T018 [US2] Cambiar la política de `web/index.html` a `connect-src 'self'`
+- [X] T018 [US2] Cambiar la política de `web/index.html` a `connect-src 'self'`
   - Solo se cambia la directiva `connect-src`; el resto del `content` queda igual.
   - **RF**: RF-029
   - **Dep.**: T016
   - **Hecho cuando**: T016 pasa y todas las pruebas de la web siguen en verde en Chromium y WebKit (el servidor simulado sirve la página y las rutas en el mismo origen).
-- [ ] T019 [P] [US4] Documentar `CARPETA_WEB` en `backend/.env.example` y en la tabla de variables de `backend/README.md`
+- [X] T019 [P] [US4] Documentar `CARPETA_WEB` en `backend/.env.example` y en la tabla de variables de `backend/README.md`
   - `.env.example`: `CARPETA_WEB=` con el comentario "Carpeta de la web que entrega el servidor (en la demo, ../web). Vacía: no entrega la web."
   - `backend/README.md`: fila `CARPETA_WEB` · "Carpeta de la web que entrega el servidor en `/`" · vacío.
   - **RF**: RF-024
   - **Dep.**: T017
   - **Hecho cuando**: las dos líneas están y no se tocó nada más de esos archivos.
-- [ ] T020 [US2] Comprobar en local la web servida por el servidor
+- [X] T020 [US2] Comprobar en local la web servida por el servidor
   - **Quién**: Grok, con un servidor de desarrollo sin llave de pey (no crea cobros).
   - `cd backend && CARPETA_WEB=../web uv run uvicorn app.main:app --port 8001` y abrir `http://localhost:8001` en el navegador: se ve "PAGO FÁCIL" y el teclado, sin errores de la política en la consola. Parar por su PID exacto.
   - **RF**: RF-024, RF-029
   - **Dep.**: T017, T018
   - **Hecho cuando**: la página carga sin errores en la consola y se anota en la sección F2 de la guía.
-- [ ] T021 [US2] Aplicar el cambio C-7 a la spec 002 (QP-11)
+- [X] T021 [US2] Aplicar el cambio C-7 a la spec 002 (QP-11)
   - Las líneas citadas en C-7 (spec 003 §8.2) pudieron moverse con la unión del #72: se busca el texto.
   - (a) `specs/002-web-mvp/spec.md`, RF-057: quitar "(por ejemplo, porque se reinició)".
   - (b) Flujo local con la web desde el servidor en `http://localhost:8000` (con `CARPETA_WEB=../web`), en lugar del puerto 5173: `specs/002-web-mvp/quickstart.md` (pasos de arranque) y `web/README.md` («Correr en local»).
@@ -270,7 +270,7 @@
   - **RF**: RF-029 (C-7)
   - **Dep.**: T018
   - **Hecho cuando**: `git grep -n "5173" specs/002-web-mvp web/README.md` solo encuentra el puerto en secciones con fecha de la guía de verificación de la 002 (y en sus notas nuevas, que lo dan como flujo anterior) y en la fila histórica QP-2 de `specs/002-web-mvp/plan.md`, y la fila C-7 dice "aplicado".
-- [ ] T022 [US4] Escribir la guía `docs/operacion-demo.md`, parte del corte 1 (DP-42, DP-43, research R-4)
+- [X] T022 [US4] Escribir la guía `docs/operacion-demo.md`, parte del corte 1 (DP-42, DP-43, research R-4)
   - **Quién**: borrador de Grok; la valida Hugo al seguirla en T026.
   - Secciones, en español y para Hugo:
     1. **Cuándo está encendida** (RF-060): solo en los momentos acordados (pruebas, video, negocios piloto y las pruebas de Leonel antes de cada puerta) y sin parar desde la entrega del 12 dic hasta el anuncio del 14 dic. Al menos una vez cada 5 días (RF-050; la parte de Supabase llega en F6). Esos días: corriente conectada y actualizaciones automáticas de macOS en pausa.
@@ -289,7 +289,7 @@
 
 ### Encender la demo con la web (Hugo)
 
-- [ ] T023 [US4] Revisar los límites de la demo en `backend/.env.demo` con el resultado de F0
+- [X] T023 [US4] Revisar los límites de la demo en `backend/.env.demo` con el resultado de F0
   - **Quién**: Hugo.
   - 30 si T005 mostró la IP real (DP-36); 60 si no (DP-40).
   - **RF**: RF-028

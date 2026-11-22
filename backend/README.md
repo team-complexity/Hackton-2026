@@ -31,6 +31,7 @@ Sin valores de secretos. Los nombres y los valores por defecto del corte 2:
 | `PEY_API_KEY` | Llave de pey. Solo en `.env` o en el hosting | vacío |
 | `PEY_WEBHOOK_SECRET` | Secreto con el que se firma el aviso de pey | vacío |
 | `WEB_ORIGIN` | Orígenes CORS, separados por coma | `http://localhost:5173` |
+| `CARPETA_WEB` | Carpeta de la web que entrega el servidor en `/` | vacío |
 | `PROXIES_CONFIABLES` | De quién se acepta `X-Forwarded-For` | `127.0.0.1` |
 | `LIMITE_COBROS_POR_MINUTO` | Cobros por IP | `10` |
 | `CANALES_POR_IP` | Canales de avisos abiertos a la vez por IP | `10` |

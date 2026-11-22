@@ -29,15 +29,15 @@ uv run --directory backend pytest -q
 
 ## 3. La pantalla en local, contra el servidor real en local
 
-1. En `backend/.env`, agrega `WEB_ORIGIN=http://localhost:5173` (sin tocar las demás variables) y arranca el servidor como dice el quickstart de la 001 (puerto 8000).
-2. En `web/config.js`, pon `servidor: "http://localhost:8000"`.
-3. Sirve la carpeta `web/`:
+El servidor entrega la web en `http://localhost:8000` (spec 003, DP-21). `web/config.js` se queda con `servidor: ""`.
+
+1. En `backend/.env`, deja `CARPETA_WEB=../web` y `WEB_ORIGIN=http://localhost:8000` (sin tocar las demás variables) y arranca el servidor en el puerto 8000:
 
 ```bash
-uv run --directory backend python -m http.server 5173 --directory ../web
+cd backend && uv run uvicorn app.main:app --port 8000
 ```
 
-4. Abre `http://localhost:5173` en el navegador de la computadora, en modo celular (herramientas de desarrollo, 320 px de ancho).
+2. Abre `http://localhost:8000` en el navegador de la computadora, en modo celular (herramientas de desarrollo, 320 px de ancho).
 
 **Esperado**: la vista Teclado con "PAGO FÁCIL", el teclado y Cobrar desactivado. Con la llave de pey configurada, un cobro de $0.01 muestra el QR real con su cuenta regresiva.
 
@@ -45,14 +45,7 @@ En `http://localhost` no hay pantalla encendida en el celular: el navegador solo
 
 ## 4. Despliegue (para #65)
 
-La web son archivos estáticos: `web/` sin `tests/` ni `README.md`. Puede publicarse de dos formas (DP-4, lo decide #65):
-
-| Forma | `web/config.js` | En el servidor |
-|---|---|---|
-| Sitio estático aparte, con HTTPS | `servidor: "https://<dominio del servidor>"` | Agregar el dominio de la web a `WEB_ORIGIN` |
-| Servida por el backend | `servidor: ""` | Es un cambio al servidor: antes hay que proponer un `C-n` a la spec 001 |
-
-Antes de publicar, en `web/index.html`, cambiar `https:` de `connect-src` (política de seguridad de contenido) por el dominio exacto del servidor (QP-2). Si se sirve desde el backend, basta `'self'`.
+La web la sirve el backend (spec 003, DP-21): `CARPETA_WEB` apunta a `web/`, `web/config.js` queda en `servidor: ""` y la política de seguridad ya tiene `connect-src 'self'`. No hace falta un cambio a la spec 001.
 
 Comprobar después de publicar:
 

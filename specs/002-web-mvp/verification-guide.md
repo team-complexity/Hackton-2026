@@ -72,6 +72,8 @@ Las pruebas de esta fase se escribieron antes del código y fallaron porque falt
 
 Sigue el quickstart §3 para servir la carpeta. En F2 no hace falta el servidor real ni la llave de pey: la vista Teclado no pide un cobro.
 
+> **Flujo actual (spec 003, C-7, 2026-11-21).** La web la entrega el servidor en `http://localhost:8000` con `CARPETA_WEB=../web` y `web/config.js` en `servidor: ""`. Los pasos de abajo son el flujo anterior de esta sección, que tiene fecha.
+
 1. Deja `web/config.js` con `servidor: ""` (el mismo origen).
 2. Sirve la web:
 
@@ -149,6 +151,8 @@ Las pruebas de pantalla se escribieron antes del código. Fallaron porque pulsar
 ### Cobro de $0.01 en local, sin pagarlo
 
 Sigue el quickstart §3. Hace falta el servidor real de la 001 en el puerto 8000. No pagues el QR: esta fase solo comprueba que se genera y que la cuenta corre.
+
+> **Flujo actual (spec 003, C-7, 2026-11-21).** La web la entrega el servidor en `http://localhost:8000` con `CARPETA_WEB=../web`, `WEB_ORIGIN=http://localhost:8000` y `web/config.js` en `servidor: ""`. Los pasos de abajo son el flujo anterior de esta sección, que tiene fecha.
 
 1. En `backend/.env`, agrega `WEB_ORIGIN=http://localhost:5173` sin tocar las demás variables, y arranca el servidor como dice el quickstart de la 001.
 2. En `web/config.js`, pon `servidor: "http://localhost:8000"`. Al terminar, déjalo otra vez en `""` para no guardar esa dirección.

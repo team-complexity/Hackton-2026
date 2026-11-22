@@ -154,3 +154,31 @@ PR [#103](https://github.com/team-complexity/Hackton-2026/pull/103) `[NO UNIR]`,
 `main` solo acepta PR con `servidor` y `web` en verde, también para los administradores (RF-036, RF-037, RF-038, CE-006). El flujo solo lee el repositorio y no usa secretos.
 
 - Commit sugerido: `docs(003): CI obligatorio en main y prueba del error (F1)`.
+
+## F2 Demo por el túnel, con la web desde el servidor
+
+Fecha: 2026-11-21. En curso (Grok). Quedaron el código, C-7 y el borrador de `docs/operacion-demo.md`. Faltan las comprobaciones de Hugo: límites y `CARPETA_WEB` en `backend/.env.demo` (T023 y T024), el aviso de pey (T025) y la demo por el túnel (T026 y T027).
+
+### T015 a T018 · Pruebas primero
+
+- `backend/tests/test_web_desde_el_servidor.py`: las pruebas que piden la web y `carpeta_web` fallaron antes de implementarlo (`GET /` en 404 y `Configuracion` sin el atributo). Las dos que ya pasaban comprueban que, sin la carpeta, `/` sigue en 404 y que el API no cambia.
+- `web/tests/test_seguridad.py`: `test_la_politica_solo_permite_conectarse_al_mismo_origen` falló porque `connect-src` incluía `http://localhost:8000 https:`.
+- Después del código: 113 pruebas del backend en verde. Web: 266 passed y 32 skipped, en Chromium y WebKit. `ruff check` y `ruff format --check` limpios en el backend y en las pruebas de la web.
+
+### T020 · Web servida en local
+
+Servidor de desarrollo **sin llave de pey**, en `127.0.0.1:8001`, con `CARPETA_WEB=../web`. El proceso del servidor fue el PID 19297. Se paró con `kill 19297`.
+
+- `http://127.0.0.1:8001/` muestra «PAGO FÁCIL», el teclado (0 a 9, punto y Borrar), el concepto y Cobrar desactivado con el monto en «$».
+- Pulsar 2 deja el monto en «$2» y activa Cobrar. En Chromium, 2 y 5 dejan «$25».
+- La consola no escribió errores y no hubo violaciones de la política. Un `fetch` a `/salud` en el mismo origen respondió `{"estado": "ok", "llave_pey": false, "secreto_aviso_pey": false}`: el proceso se arrancó sin llave, a propósito.
+
+### T021 · C-7 aplicado
+
+La fila C-7 de `specs/003-infraestructura-demo/spec.md` dice «aplicado el 2026-11-21». `git grep -n "5173" specs/002-web-mvp web/README.md` solo encuentra el puerto en la guía de verificación de la 002 (secciones con fecha) y en la fila histórica QP-2 de `specs/002-web-mvp/plan.md`.
+
+### T022 · Borrador de la guía
+
+`docs/operacion-demo.md` tiene las 10 secciones del corte 1. `git grep -n "0.0.0.0" docs/operacion-demo.md` no encuentra nada. Hugo la valida al seguirla en T026.
+
+La plantilla `backend/.env.demo.example` ya tiene `CARPETA_WEB=../web` (parte de T024 que hace Grok). Falta que Hugo agregue la misma línea a `backend/.env.demo`.

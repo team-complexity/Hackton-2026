@@ -125,10 +125,9 @@ Cada punto tiene el formato de spec-kit: **Decisión**, **Por qué** y **Alterna
 
 - **Decisión**:
   - Todo texto que viene de fuera (concepto, `detail` del servidor y datos recordados) se pone con `textContent`, nunca con `innerHTML`.
-  - La página lleva una política de seguridad de contenido en `<meta>` (QP-2): `default-src 'self'; script-src 'self'; style-src 'self'; img-src 'self' data:; media-src 'self' blob:; connect-src 'self' http://localhost:8000 https:`.
+  - La página lleva una política de seguridad de contenido en `<meta>` (QP-2, spec 003 C-7): `default-src 'self'; script-src 'self'; style-src 'self'; img-src 'self' data:; media-src 'self' blob:; connect-src 'self'`.
     - `media-src blob:` deja sonar el WAV que arma la página (R-7).
-    - `http://localhost:8000` permite la prueba en local del quickstart.
-    - Al desplegar, #65 cambia `https:` por el dominio exacto del servidor, para no permitir conexiones a cualquier sitio HTTPS.
+    - `connect-src 'self'` solo permite conectarse al mismo origen: la web la entrega el servidor (spec 003, DP-21).
 - **Por qué**: aunque se colara un texto con forma de código, no se ejecuta. Es la defensa en dos capas.
 - **Alternativas consideradas**: limpiar el HTML con una librería. Es otra dependencia y no hace falta si nunca se interpreta.
 
