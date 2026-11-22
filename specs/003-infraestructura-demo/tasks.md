@@ -3,7 +3,7 @@
 - **Spec**: [spec.md](spec.md), estado: Aprobada el 2026-11-20 (QA-12 a QA-20)
 - **Plan**: [plan.md](plan.md), estado: Aprobado el 2026-11-21 (DP-38 Tailscale Funnel, QP-10 a QP-14, C-8 cumplido)
 - **Fecha**: 2026-11-21
-- **Estado**: `Aprobado` el 2026-11-21 por Hugo, con `/speckit-analyze` y la QA de tareas (QT-1 a QT-9) decididos y aplicados (ver «Revisión QA de tasks»). Estado anterior: `En QA`. Lo redactó Claude el 2026-11-21 con `/speckit-tasks`. Aprobar no autoriza empezar F1: se espera a que Hugo lo pida (F0 es suya y puede empezar cuando quiera). **F0 terminada (Hugo, con Claude, 2026-11-21): Tailscale Funnel cumple, sin plan B (TK-5).** **F1 terminada (2026-11-21): CI en `main` con `servidor` y `web` obligatorios, también para administradores (PR #102; prueba del error en el PR #103, TK-6).** **F2 terminada (Grok y Hugo, 2026-11-22): web servida por el servidor, C-7 aplicado, demo por el túnel comprobada en T026 y T027, aviso de pey con `secreto_aviso_pey: true` (T025).**
+- **Estado**: `Aprobado` el 2026-11-21 por Hugo, con `/speckit-analyze` y la QA de tareas (QT-1 a QT-9) decididos y aplicados (ver «Revisión QA de tasks»). Estado anterior: `En QA`. Lo redactó Claude el 2026-11-21 con `/speckit-tasks`. Aprobar no autoriza empezar F1: se espera a que Hugo lo pida (F0 es suya y puede empezar cuando quiera). **F0 terminada (Hugo, con Claude, 2026-11-21): Tailscale Funnel cumple, sin plan B (TK-5).** **F1 terminada (2026-11-21): CI en `main` con `servidor` y `web` obligatorios, también para administradores (PR #102; prueba del error en el PR #103, TK-6).** **F2 terminada (Grok y Hugo, 2026-11-22): web servida por el servidor, C-7 aplicado, demo por el túnel comprobada en T026 y T027, aviso de pey con `secreto_aviso_pey: true` (T025).** **F3 terminada (Hugo, Grok y Claude, 2026-11-22): pagos reales de $0.01 con aviso de firma válida en Android y en iPhone, QR en 3 a 5 s con C-10 (meta de 5 s), reenvío comprobado por repetición del aviso (TK-8), README con la demo (T032) y la prueba de Leonel en el issue #105 (TK-9). Fin del corte 1.**
 - **Entrada**: los documentos de `specs/003-infraestructura-demo/`: plan.md, spec.md, research.md, data-model.md, contracts/ y quickstart.md
 
 > **Notas para los comandos de spec-kit.**
@@ -338,18 +338,19 @@
 
 ## Fase 3 (F3): Pago real desde la dirección del túnel · 22 nov · cierre del corte 1
 
-**Objetivo**: medir la promesa de PAGO FÁCIL desde la demo pública: QR en menos de 3 s y "Pago recibido" en menos de 2 s después del aviso, en Android y en iPhone (historia 3). Después se cierran #66, #27 y #64.
+**Objetivo**: medir la promesa de PAGO FÁCIL desde la demo pública: QR en 5 s o menos (C-10) y "Pago recibido" en menos de 2 s después del aviso, en Android y en iPhone (historia 3). Después se cierran #66, #27 y #64.
 
 **Prueba independiente**: el quickstart §4.
 
-- [ ] T029 [US3] QR en menos de 3 s (quickstart §4, paso 2; CE-003)
+- [X] T029 [US3] QR en 5 s o menos (quickstart §4, paso 2; CE-003, C-10)
   - **Quién**: Hugo, con un celular con datos móviles.
   - Crear 10 cobros y medir de "Cobrar" al QR en pantalla. No se pagan.
   - Si no se cumple, Hugo decide con un C-n a la 003 y a la 002 si el QR se dibuja desde `qr` (riesgo del plan §11, D-2).
   - **RF**: RF-024
   - **Dep.**: T028
-  - **Hecho cuando**: 9 de 10 en menos de 3 s, con los 10 tiempos anotados en la sección F3 de la guía de verificación.
-- [ ] T030 [US3] Pagos reales de $0.01 en Android y en iPhone (quickstart §4, pasos 1 y 3; CE-002, CE-004)
+  - **Hecho cuando**: 9 de 10 en 5 s o menos (C-10; antes, menos de 3 s), con los 10 tiempos anotados en la sección F3 de la guía de verificación.
+  - **Cierre (2026-11-22):** Hugo midió 10 cobros de 3 a 5 s (dio el rango, no los 10 valores). Con la meta de 3 s no cumplía; Hugo aprobó y se aplicó C-10 (5 s o menos). Con la meta nueva cumple.
+- [X] T030 [US3] Pagos reales de $0.01 en Android y en iPhone (quickstart §4, pasos 1 y 3; CE-002, CE-004)
   - **Quién**: Hugo, con su autorización en ese momento. Se paga desde otro celular con la app del banco.
   - Por cada celular: hora del aviso en el registro del servidor frente a la hora en que la pantalla muestra "Pago recibido" (con sonido).
   - En uno de los dos, pagar después del minuto 15 del canal (CE-004). Con la vigencia normal el QR vence en el minuto 10 y la web lo oculta, así que **solo para ese pago** (QT-2) la demo se arranca con la vigencia en la línea de comando, que manda sobre `backend/.env.demo`: `cd backend && EXPIRACION_SEGUNDOS=1200 uv run uvicorn app.main:app --env-file .env.demo --workers 1 --port 8000`. Se paga en el minuto 16 y después se para el servidor por su PID y se vuelve a arrancar normal (pey no tiene máximo para `expiration`; mínimo 360). Se anota en la guía de verificación.
@@ -357,14 +358,15 @@
   - **RF**: RF-025, RF-026, RF-057
   - **Dep.**: T025, T029
   - **Hecho cuando**: en los dos celulares suena y muestra "Pago recibido" en menos de 2 s después del aviso, y los tiempos quedan anotados.
-- [ ] T031 [US3] Reenvío del aviso y prueba de Leonel (quickstart §4, pasos 4 y 5)
+- [X] T031 [US3] Reenvío del aviso y prueba de Leonel (quickstart §4, pasos 4 y 5)
   - **Quién**: Hugo (reenvío desde el portal de pey) y Leonel (desde su red y sus celulares, N-17).
   - Reenvío: la pantalla no vuelve a sonar y `GET /api/cobros/<id>` sigue con un solo pago.
-  - Leonel repite el paso 3.1 (abrir con HTTPS) y el 4.2 (QR en menos de 3 s) y avisa a Hugo si algo falla.
+  - Leonel repite el paso 3.1 (abrir con HTTPS) y el 4.2 (QR en 5 s o menos) y avisa a Hugo si algo falla.
   - **RF**: RF-007, RF-024
   - **Dep.**: T030
   - **Hecho cuando**: los dos resultados quedan anotados en la sección F3 de la guía de verificación.
-- [ ] T032 [P] [US3] Agregar la sección de la demo a `README.md` (#66)
+  - **Cierre parcial (2026-11-22, TK-8):** el reenvío se hizo con una repetición del aviso (el portal de pey no reenvía). La prueba de Leonel pasa al [issue #105](https://github.com/team-complexity/Hackton-2026/issues/105), asignado a él: Hugo lo decidió porque Leonel no podrá probar hoy. El criterio «los dos resultados anotados» queda cumplido en el reenvío y pendiente en lo de Leonel hasta cerrar el #105.
+- [X] T032 [P] [US3] Agregar la sección de la demo a `README.md` (#66)
   - Enlace `https://<dirección>`, cuándo está encendida (los momentos acordados y del 12 al 14 dic, RF-060) y cómo probarla: abrir en el celular, cobrar y pagar con la app del banco (CoDi), no con la cámara.
   - Lo demás que pide #66 (QT-5), en secciones cortas: «Correr en local», con enlaces a `backend/README.md` y `web/README.md` (sin repetir sus pasos), y «Equipo y tecnologías»: Hugo, Juan, Miguel y Leonel con los usuarios de GitHub que dé Hugo, y Python con FastAPI, la web PWA, Supabase y el API de pey. El aviso de que no es un producto oficial ya está.
   - **RF**: RF-024, RF-060
@@ -768,7 +770,7 @@
   - Paso 3 (CE-001): cobro en la demo, parar y arrancar el servidor, recargar la pantalla y pagar $0.01; vuelve el mismo QR con su tiempo restante y suena "Pago recibido".
   - Paso 4 (RF-061): cobro de $0.01, apagar el servidor, pagar, esperar a que termine la ventana (20 min) y encender; en el primer minuto el registro muestra la conciliación y `GET /api/cobros/<id>` lo da *pagado*, con un solo pago.
   - Paso 5 (RF-012, RF-015): con un servidor de desarrollo en el puerto 8001 y `DATABASE_URL=postgresql://nadie@127.0.0.1:1/x` en la línea de comando (valor falso, no un secreto), crear un cobro; mensaje para el dueño y el registro dice que no se llamó a pey.
-  - Medir otra vez el QR con la base de datos: 10 cobros, 9 en menos de 3 s (CE-003, riesgo del plan §11). Si no se cumple, TK y decisión de Hugo (región del proyecto).
+  - Medir otra vez el QR con la base de datos: 10 cobros, 9 en 5 s o menos (CE-003 con C-10, riesgo del plan §11). Si no se cumple, TK y decisión de Hugo (región del proyecto).
   - **RF**: RF-005, RF-012, RF-015, RF-061
   - **Dep.**: T072
   - **Hecho cuando**: los cuatro resultados quedan anotados en la sección F6 de la guía.

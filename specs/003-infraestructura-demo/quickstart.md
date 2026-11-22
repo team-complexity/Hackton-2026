@@ -58,7 +58,7 @@ Con el servidor actual (que todavía no entrega la web) y la configuración de l
 ## 4. Pago real desde la dirección del túnel (CE-002, CE-003, CE-004) — F3
 
 1. **Aviso de pey (RF-025)**: en el portal de pey, el aviso de la llave de la demo apunta a `https://<dirección del túnel>/webhooks/pey`. **Se espera**: después del primer pago, el registro muestra el aviso con firma válida.
-2. **QR en menos de 3 s (CE-003)**: crea 10 cobros desde el celular con datos móviles y mide de "Cobrar" al QR. **Se espera**: 9 de 10 en menos de 3 s. Anota los tiempos en la guía de verificación.
+2. **QR en 5 s o menos (CE-003, C-10)**: crea 10 cobros desde el celular con datos móviles y mide de "Cobrar" al QR. **Se espera**: 9 de 10 en 5 s o menos. Anota los tiempos en la guía de verificación.
 3. **Pago de $0.01** con autorización de Hugo, en un Android y en un iPhone, pagando desde otro celular con la app del banco. **Se espera**: suena y muestra "Pago recibido" en menos de 2 s después de que pey entrega el aviso (hora del aviso en el registro frente a la hora en pantalla). En uno de los dos, paga después del minuto 15 del canal (CE-004).
 4. **Reenvío**: en el portal de pey, reenvía el aviso. **Se espera**: la pantalla no vuelve a sonar y el cobro sigue con un pago.
 5. **Leonel (N-17)**: abre el enlace desde su red y sus celulares y repite 3.1 y 4.2. Avisa a Hugo si algo falla.

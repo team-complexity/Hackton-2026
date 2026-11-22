@@ -238,3 +238,74 @@ Hugo dio de alta el aviso de la llave de la demo en el portal de pey, con la dir
   - Un `POST /api/cobros` de otra página sí llega al servidor y crea un QR de monto libre, aunque CORS bloquea la lectura (T027). Está acotado por el límite por IP. Cerrarlo sería un cambio `C-n`.
   - El túnel desapareció una vez tras reiniciar el servidor (T025).
 - **Commit sugerido:** `feat(003): demo por el túnel con la web desde el servidor y C-7 (F2)`.
+
+## F3 Pago real desde la dirección del túnel
+
+### T029 · QR en menos de 3 s (2026-11-22, en curso)
+
+- **Medición de Hugo** (celular con datos móviles, 10 cobros de $0.01 sin pagar, de «Cobrar» al QR en pantalla): los 10 tiempos quedaron **entre 3 y 5 s**. Hugo dio el rango, no los 10 valores. **No cumple CE-003** (9 de 10 en menos de 3 s).
+- **Diagnóstico del servidor** (con la autorización de Hugo, 5 cobros de $0.01 desde la Mac contra el servidor local, sin pasar por el túnel, cancelados al terminar): crear el cobro tarda **2.24 a 2.35 s** en cada uno, y casi todo es la llamada a pey (`crear_qr`), que el servidor espera antes de contestar a la web.
+- **Costo del túnel** (`GET /salud` por internet, vía el relay, desde la Mac): ~0.6 s por petición, contra ~0.001 s en local. Desde un celular con datos móviles es más.
+- **Lectura:** pey por sí sola ya gasta unos 2.3 s de los 3 s de la meta, así que el túnel y la red del celular la rebasan. Coincide con la 001, TK-5 (2.39 a 9.09 s con `generateImage: true`). Es una lectura de estas muestras, no una medición del tramo del celular.
+- **Decisión (2026-11-22):** Hugo eligió relajar la meta y aprobó **C-10**: CE-003 pasa a "5 segundos o menos en 9 de cada 10" (antes, menos de 3 s), aplicado en la spec, el plan, el quickstart y las tareas (TK-10). Con esa meta, los 10 cobros de Hugo (de 3 a 5 s) cumplen. **T029 completa.** Queda el riesgo de los picos de 8 y 9 s de pey vistos en T030: la meta tolera uno de cada diez. No se cambió D-2 (la imagen del QR sigue siendo la de pey).
+
+### T030 · Pagos reales de $0.01 (2026-11-22, en curso)
+
+El servidor se arrancó con registro con hora y con la vigencia de 20 minutos para los dos pagos (`PYTHONUNBUFFERED=1 EXPIRACION_SEGUNDOS=1200`), una sola vez, como desviación de lo que dice T030 (que solo el pago tardío la usa). El primer pago no depende de la vigencia. Pagos de $0.01 de Hugo, con su cuenta y por CoDi, cada uno autorizado por él en ese momento. La hora del canal se midió con una escucha desde la Mac por internet (vía el relay) con el mismo reloj del registro, que solo marca segundos.
+
+- **Observación sobre la lentitud (T029 y T030):** el tiempo que el servidor tarda en registrar el QR (desde que empieza la petición hasta el registro, con precisión de segundos) fue de 2.2 a 2.6 s en 11 cobros hechos desde la Mac, en local y por el túnel, y de 2 a 3 s en 3 cobros hechos desde el otro celular (IP distinta de la del Android que mostraba los cobros 1 y 2). En cambio, **los dos primeros cobros hechos desde el celular durante T030 tardaron 8 y 9 s** en el servidor (el primero tras arrancar con la vigencia de 20 minutos). No se encontró una causa: una pausa de 20 s antes de crear no los reproduce, la vigencia de 20 minutos no cambia los cobros siguientes, y el túnel solo suma ~0.6 s. Queda como pico de la llamada a pey, que coincide con la 001, TK-5 (primer cobro tras arrancar de 7.77 a 9.09 s). Es un riesgo para CE-003 que la guía registra sin resolver.
+
+- **Pago 1** (cobro `4MkQZ8yecB7x`, pantalla en el **Android**, paga el **iPhone**):
+  - Pago en pey (`datePaid`) 08:36:31. Aviso (`POST /webhooks/pey`, `200`) 08:36:35. «pago» en el canal 08:36:35.101. Del aviso al canal: menos de 1 s (CE-002).
+  - **Firma del aviso válida** (RF-025): `200`, sin «Aviso rechazado».
+  - El pago lo registró la consulta de respaldo (`fuente=consulta`) en el mismo segundo del aviso; el aviso llegó entonces como repetido. No afecta CE-002.
+  - Hugo: «Pago recibido» apareció en A y sonó de inmediato. Falta anotar el tiempo exacto en pantalla, que el rango del registro no da.
+- **Pago 2** (cobro `9i4oMre8Hncv`, pantalla en el **Android**, paga el **iPhone**; Hugo confirmó que ese fue su pago de $0.01 con su cuenta. Los celulares **no se invirtieron**, como se había propuesto: el registro muestra la misma IP creando y consultando los dos cobros):
+  - Cobro creado a las 08:38:34 con vigencia de 1200 s (comprobada en `expira_en`). QR vencido en la web a las 08:58:34. Hugo pagó **a los 20 min 11 s del canal**: pey dio `datePaid` 08:58:45, la consulta de respaldo lo registró a las 08:58:49, y el aviso (`POST /webhooks/pey`, `200`, sin «Aviso rechazado», firma válida) llegó en el mismo segundo. «pago» en el canal a las 08:58:49.107: del aviso al canal, menos de 1 s (CE-002).
+  - **Caso extremo (CE-004):** el pago llegó después del minuto 15 del canal y **después del vencimiento** del QR, dentro de la gracia del servidor. El canal seguía abierto, el servidor registró el pago y la pantalla lo mostró. Hugo: «Pago recibido» apareció y **sonó**, aunque el QR ya estaba oculto. Se queda como caso documentado que funciona como debe. El plan pedía pagar en el minuto 16; el pago real se hizo al final de la ventana, que es el caso más difícil. A las 08:54:43 (minuto 16) se avisó a Hugo y el pago no se hizo en ese momento sino al final de la ventana.
+  - La hora exacta de «Pago recibido» en pantalla no se midió: se anota lo que Hugo vio y oyó.
+- **Corrección sobre los celulares:** al arrancar T030 se llamó «A» y «B» a los celulares y se propuso invertirlos en el pago 2. Hugo aclaró después que el Android es el de cobro y el iPhone el de pago. Por eso **el iPhone aún no ha mostrado «Pago recibido»**: T030 pide que suene y se muestre en los dos celulares (Android y iPhone), y solo el Android lo ha hecho. Falta un pago con la pantalla en el iPhone.
+- **Pagos 3 y 4** (cobros `ysPw7dIBQaC5` y `Sr3aDh4EWCTW`; la pantalla con el QR fue otra vez el **Android**, y pagó un iPhone con $0.01 de Hugo; no se anota ningún dato de la cuenta). Primero se anotó el pago 3 como «pantalla en el iPhone», y era un error: Hugo aclaró después que el Android tenía el QR.
+  - **Pago 3** (`ysPw7dIBQaC5`): creado 09:08:13. Pago en pey (`datePaid`) 09:10:51, registrado por la consulta de respaldo en el mismo segundo; el aviso (`POST /webhooks/pey`, `200`, firma válida) llegó a las 09:10:55, 4 s después, y ya no encontró nada nuevo. En el Android «Pago recibido» apareció y sonó de inmediato, sin tocar la pantalla.
+  - **Pago 4** (`Sr3aDh4EWCTW`): creado 09:11:30, pagado por Hugo otra vez. El pago lo registró **el aviso** de pey a las 09:12:04 (`fuente=aviso`, `POST /webhooks/pey` `200`), no la consulta. Es la primera vez en T030 que el aviso, y no la consulta de respaldo, procesa el pago (RF-025 con firma válida y procesado). No se midió la hora de la pantalla (no había escucha del canal armada).
+  - La diferencia de «las 9:12» que Hugo recordó era por este segundo pago, no un error de reloj.
+  - **Otro iPhone con PAGO FÁCIL abierto no sonó.** Es lo esperado: el canal de un cobro solo lo abre el celular que lo creó, y recuperar los cobros en otro celular o navegador es del issue #24, que requiere cuentas (spec 002). En el registro solo hay un canal abierto por cada cobro, el del Android.
+- **Pago 5** (cobro `_YvkqhViwF6g`, pantalla en un **iPhone**, paga el otro iPhone con $0.01 de Hugo; no se anota ningún dato de la cuenta):
+  - Cobro creado 09:16:49. Pago en pey (`datePaid`) 09:17:19, registrado por la consulta de respaldo a las 09:17:20 (`fuente=consulta`). «pago» llegó al canal, medido desde la Mac por internet, a las **09:17:20.785**, unos 1.8 s después del `datePaid` y unos 2 s **antes** que el aviso (`POST /webhooks/pey`, `200`, firma válida, 09:17:23). El celular que cobró consultó el cobro a las 09:17:22.
+  - Hugo: en el iPhone «Pago recibido» apareció y **sonó de inmediato**. No dijo si hizo falta tocar la pantalla antes.
+- **Estado de T030:** pagos reales de $0.01 con la pantalla en el **Android** (cobros 1, 2, 3 y 4) y en el **iPhone** (cobro 5). En todos el aviso de pey llegó con firma válida y «Pago recibido» apareció y sonó de inmediato en el celular que cobró. Casos cubiertos: pago tardío a los 20 min 11 s con el QR ya vencido (pago 2), pago procesado por el aviso (pago 4) y pago registrado antes por la consulta de respaldo (pagos 1, 2, 3 y 5). Tiempos medidos: en los pagos 1, 2 y 5, con la escucha armada, el evento «pago» llegó al canal en el mismo segundo del registro del pago y antes de que llegara el aviso o con él (menos de 1 s a 3 s según el caso; CE-002 mide desde el aviso, y la pantalla se actualizó antes). En el pago 4, que sí procesó el aviso, **no había escucha armada**: no hay hora medida del canal, solo lo que Hugo vio y oyó («inmediato»). T030 queda completa, a falta de que Hugo la apruebe.
+
+### T031 · Reenvío del aviso (2026-11-22, en curso)
+
+- **El portal de pey no ofrece reenviar un aviso** (Hugo lo comprobó en el portal). La documentación de pey tampoco describe un reenvío ni un endpoint para eso; solo hay «Webhook Logs» en Desarrollador para ver cada entrega, su payload y la respuesta. Se registró como TK-8 del plan.
+- **Repetición del aviso hecha por Claude, con la aprobación de Hugo:** un script lee el secreto de `backend/.env.demo` dentro de su proceso (sin imprimirlo ni guardarlo), arma un aviso igual al del cobro `_YvkqhViwF6g` (mismo `codiQrId` y misma transacción), lo firma con Standard Webhooks y lo manda al servidor de la demo, en local.
+  - Con otro `webhook-id` y la misma transacción: `200`, `{"recibido": true, "procesado": false}`. El cobro siguió con **1 pago**.
+  - El mismo aviso otra vez, con el mismo `webhook-id`: `200`, `procesado: false`. Seguía con **1 pago**.
+  - El registro muestra los dos `POST /webhooks/pey` con `200`, sin «Aviso rechazado» y sin una línea nueva de pago. La firma se verificó. Se cubren las dos defensas de RF-007: por `webhook-id` y por transacción.
+  - Hugo: en el iPhone que cobró **no volvió a sonar** ni mostró otro pago.
+- **Prueba de Leonel (N-17):** Hugo dijo que Leonel no podrá probar ese día ni esa noche. Pasa al [issue #105](https://github.com/team-complexity/Hackton-2026/issues/105), asignado a él (TK-9), con los pasos y sin necesidad de `.env`: solo el enlace y la demo encendida por Hugo. Falta su resultado, que Hugo anotará aquí. T031 queda completa en lo demás, a falta de que Hugo la apruebe.
+
+### T032 · README
+
+Se agregaron a `README.md` las secciones «La demo», «Correr en local» y «Equipo y tecnologías», con el enlace `https://pago-facil.tail8d44cb.ts.net`.
+
+### Resultado de F3 (2026-11-22)
+
+| Qué | Resultado |
+|---|---|
+| Pruebas del backend | 116 pasan |
+| Pruebas de la web | 266 pasan y 32 se omiten (solo marcadas para webkit) |
+| `ruff check` y `ruff format --check` (backend y web) | Sin avisos, todo formateado |
+| T029 QR en 5 s o menos (CE-003) | 10 cobros de 3 a 5 s; la meta pasó de 3 s a 5 s con **C-10** (TK-10) |
+| T030 pagos reales de $0.01 (CE-002, CE-004) | 5 pagos con aviso de firma válida; pantalla en Android (cobros 1 a 4) y en iPhone (cobro 5); caso tardío a los 20 min 11 s |
+| T031 reenvío del aviso (RF-007) | Sin reenvío en el portal de pey (TK-8): repetición del aviso por script, `200` y un solo pago |
+| T031 prueba de Leonel (N-17) | Pasa al [issue #105](https://github.com/team-complexity/Hackton-2026/issues/105), asignado a él (TK-9) |
+| T032 README (#66) | Secciones «La demo», «Correr en local» y «Equipo y tecnologías», revisadas por Claude |
+
+- **Qué queda para Hugo:** aprobar el cierre de F3 y del corte 1, y cerrar #66, #27 y #64 con el PR o con un comentario que cite los tiempos de T030.
+- **Lo que sigue abierto, sin resolver en F3:**
+  - Picos de 8 y 9 s de pey al crear el QR (T030); la meta de CE-003 tolera uno de cada diez.
+  - RF-058: la pantalla del celular de Hugo no se mantuvo encendida con el bloqueo automático activo (F2).
+  - Un `POST /api/cobros` desde otra página crea un QR de monto libre aunque CORS bloquee la lectura (F2); cerrarlo sería un cambio `C-n` a la 001.
+  - La prueba de Leonel desde su red (#105).
+- **Commit sugerido:** `docs(003): enlace de la demo y pago real desde el túnel (F3)`.
