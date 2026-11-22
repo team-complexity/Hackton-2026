@@ -200,5 +200,41 @@ Demo encendida con `docs/operacion-demo.md`, con una excepción: se omitió `git
 - **Paso 4 (reinicios):** servidor reiniciado por su PID exacto y túnel con `tailscale funnel reset` y `--bg`: la misma dirección responde `"estado": "ok"` en los dos casos. Falta reiniciar la computadora.
 - **Extra A (wifi de la Mac apagado un minuto con un cobro en pantalla):** el celular reabrió el canal del cobro a los ~80 s (23:13:40) y la pantalla volvió continua al QR con la cuenta regresiva del tiempo restante. En el celular no se llegó a ver «Reconectando…»: la reconexión fue tan rápida que no se notó. El resultado cumple: vuelve sola al cobro, sin recargar.
 - **Extra B (demo apagada, sección 7 de la guía):** con `tailscale funnel reset` y el servidor parado, `tailscale funnel status` dice `No serve config` y el enlace, abierto en una pestaña nueva del celular con datos móviles, no carga: no aparece ninguna página propia. Una pestaña que ya estaba abierta con un cobro en pantalla sí mostró «Reconectando…», que es la página ya cargada intentando reconectar su canal, no una página servida por la demo.
-- **Pendiente de T026:** reinicio de la computadora, con el encendido por la guía (Hugo, desde su terminal) y la misma dirección.
+- **Paso 4, reinicio de la computadora (2026-11-21):** tras reiniciar la Mac, Hugo siguió la guía (secciones 3 y 4) desde su terminal: `open -a Tailscale`, el servidor sin `--host` (escucha solo en `127.0.0.1:8000`), `tailscale funnel --bg 8000` y `caffeinate -is -w <PID>`. `/salud` por internet respondió `"estado": "ok"` y `GET /` entregó la web con HTTPS válido, en **la misma dirección** de F0 (RF-030).
+- **Observación sobre la guía:** `caffeinate -is -w <PID>` se queda en primer plano mientras el servidor viva, y bloquea esa terminal. Falta aclararlo en `docs/operacion-demo.md` sección 3.
+- **T026 completa**, a falta de que Hugo la apruebe.
 - **Nota de operación:** a las 23:15 el servidor se detuvo solo porque terminó la sesión del agente que lo había arrancado. Para las pruebas de T026 la demo debe arrancarse desde la terminal de Hugo (guía, sección 3), no desde una sesión del agente.
+
+### T027 · CORS y red local (2026-11-22)
+
+- **Paso 5 (CORS):** desde la consola de Safari en `https://example.com`, `fetch("https://pago-facil.tail8d44cb.ts.net/api/cobros", {method: "POST"})` quedó bloqueado: «Origin https://example.com is not allowed by Access-Control-Allow-Origin», `bloqueado: "Load failed"`. Con `curl` y un origen ajeno, el servidor contesta `400 Disallowed CORS origin` al preflight y no manda `access-control-allow-origin`; con el origen de la demo contesta `200` y lo permite (RF-027). Cumple.
+- **Observación del paso 5, sin resolver:** el navegador bloquea que la página **lea** la respuesta, pero la petición sí salió. El servidor la recibió, respondió `201` y creó un QR de monto libre en pey (sin pagar, vence solo). Un `POST` sin cabeceras especiales no lleva preflight, y un cobro sin monto es válido (RF-003). Queda acotado por el límite de 30 cobros por minuto por IP. Si el equipo quiere cerrarlo (por ejemplo, exigir `Content-Type: application/json` o validar `Origin` en los `POST`), sería un cambio `C-n` a la spec 001; no se toca aquí. La prueba del quickstart §3 paso 5 crea ese QR cada vez que se corre.
+- **Paso 6 (red local):** uvicorn escucha solo en `127.0.0.1:8000`. Desde la propia Mac, `curl` a la IP de la red local sale con código 7 (conexión rechazada). Desde un celular en la misma wifi, con los datos móviles apagados, `http://<IP local de la Mac>:8000/salud` no se pudo conectar (RF-056). Cumple. No se anota la IP.
+- **T027 completa**, a falta de que Hugo la apruebe.
+
+### T025 · Aviso de pey (2026-11-22)
+
+Hugo dio de alta el aviso de la llave de la demo en el portal de pey, con la dirección del túnel y `/webhooks/pey`, y puso el secreto en `backend/.env.demo` sin que pasara por el chat. Reinició el servidor por su terminal. `GET /salud`, tanto en local como por internet (con `curl --resolve` al relay), responde `{"estado":"ok","llave_pey":true,"secreto_aviso_pey":true}`. Cumple. La firma válida se comprueba con el primer pago real (T030).
+
+- **Observación sobre el túnel:** tras el reinicio del servidor, `tailscale funnel status` decía `No serve config` y la dirección pública no respondía. No se encontró qué quitó la configuración. Hugo la reabrió con `tailscale funnel --bg 8000` y volvió a responder. Si se repite, conviene comprobar `tailscale funnel status` después de cada reinicio del servidor y anotarlo en la sección 8 de `docs/operacion-demo.md`.
+- **T025 completa**, a falta de que Hugo la apruebe.
+
+### Resultado de F2 (2026-11-22)
+
+| Qué | Resultado |
+|---|---|
+| Pruebas del backend | 113 pasan |
+| Pruebas de la web | 266 pasan y 32 se omiten (son marcadas solo para un navegador distinto, `skipped for this browser: webkit`) |
+| `ruff check` y `ruff format --check` (backend y web) | Sin avisos, todo formateado |
+| T015 a T018, T020 a T022 | Hechas por Grok y revisadas (arriba) |
+| T023, T024 | Límites y `CARPETA_WEB` comprobados |
+| T025 | Aviso de pey dado de alta y `secreto_aviso_pey: true` |
+| T026 | Pasos 1 a 4 y extras A y B comprobados con la demo por el túnel |
+| T027 | CORS bloquea el origen ajeno; la red local rechaza la conexión |
+
+- **Qué queda para Hugo:** aprobar el cierre de F2. La firma válida del aviso de pey se comprueba con el primer pago real (T030).
+- **Hallazgos abiertos, sin resolver en F2:**
+  - RF-058 (pantalla encendida): la web no mantuvo la pantalla encendida en el celular de Hugo con el bloqueo automático activo (T026, paso 2). Falta saber modelo y navegador.
+  - Un `POST /api/cobros` de otra página sí llega al servidor y crea un QR de monto libre, aunque CORS bloquea la lectura (T027). Está acotado por el límite por IP. Cerrarlo sería un cambio `C-n`.
+  - El túnel desapareció una vez tras reiniciar el servidor (T025).
+- **Commit sugerido:** `feat(003): demo por el túnel con la web desde el servidor y C-7 (F2)`.

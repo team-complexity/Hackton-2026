@@ -45,7 +45,9 @@ tailscale funnel --bg 8000
 caffeinate -is -w <PID del servidor>
 ```
 
-`caffeinate` mantiene la Mac despierta mientras ese PID siga vivo.
+`caffeinate` mantiene la Mac despierta mientras ese PID siga vivo. Se queda en primer plano y ocupa esa terminal; para dejarla libre, ábrelo en su propia terminal o agrégale `&` al final.
+
+El PID del servidor lo da `lsof -nP -iTCP:8000 -sTCP:LISTEN -t`.
 
 ## 4. Comprobar desde fuera
 

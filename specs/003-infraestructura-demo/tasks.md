@@ -3,7 +3,7 @@
 - **Spec**: [spec.md](spec.md), estado: Aprobada el 2026-11-20 (QA-12 a QA-20)
 - **Plan**: [plan.md](plan.md), estado: Aprobado el 2026-11-21 (DP-38 Tailscale Funnel, QP-10 a QP-14, C-8 cumplido)
 - **Fecha**: 2026-11-21
-- **Estado**: `Aprobado` el 2026-11-21 por Hugo, con `/speckit-analyze` y la QA de tareas (QT-1 a QT-9) decididos y aplicados (ver «Revisión QA de tasks»). Estado anterior: `En QA`. Lo redactó Claude el 2026-11-21 con `/speckit-tasks`. Aprobar no autoriza empezar F1: se espera a que Hugo lo pida (F0 es suya y puede empezar cuando quiera). **F0 terminada (Hugo, con Claude, 2026-11-21): Tailscale Funnel cumple, sin plan B (TK-5).** **F1 terminada (2026-11-21): CI en `main` con `servidor` y `web` obligatorios, también para administradores (PR #102; prueba del error en el PR #103, TK-6).** **F2 en curso (Grok, 2026-11-21).**
+- **Estado**: `Aprobado` el 2026-11-21 por Hugo, con `/speckit-analyze` y la QA de tareas (QT-1 a QT-9) decididos y aplicados (ver «Revisión QA de tasks»). Estado anterior: `En QA`. Lo redactó Claude el 2026-11-21 con `/speckit-tasks`. Aprobar no autoriza empezar F1: se espera a que Hugo lo pida (F0 es suya y puede empezar cuando quiera). **F0 terminada (Hugo, con Claude, 2026-11-21): Tailscale Funnel cumple, sin plan B (TK-5).** **F1 terminada (2026-11-21): CI en `main` con `servidor` y `web` obligatorios, también para administradores (PR #102; prueba del error en el PR #103, TK-6).** **F2 terminada (Grok y Hugo, 2026-11-22): web servida por el servidor, C-7 aplicado, demo por el túnel comprobada en T026 y T027, aviso de pey con `secreto_aviso_pey: true` (T025).**
 - **Entrada**: los documentos de `specs/003-infraestructura-demo/`: plan.md, spec.md, research.md, data-model.md, contracts/ y quickstart.md
 
 > **Notas para los comandos de spec-kit.**
@@ -59,7 +59,7 @@
 | C-6 y C-7 aprobados (QP-11) | T021 (C-7, F2) y T064 (C-6, F5) | C-7 aplicado el 2026-11-21 (F2). C-6 aprobado el 2026-11-20 · sin aplicar (F5) |
 | Cuenta de Tailscale de Hugo con HTTPS, MagicDNS y el permiso `funnel` (DP-38) | F0 y todo lo demás de la demo | Pendiente (T001) |
 | Llave de pey de la demo y su secreto en `backend/.env.demo` (Hugo) | F0, F2, F3 y F6 | Pendiente (T002) |
-| Aviso de pey de la llave de la demo con la dirección del túnel (Hugo, en el portal) | El pago real de F3 (RF-025) | Pendiente (T025) |
+| Aviso de pey de la llave de la demo con la dirección del túnel (Hugo, en el portal) | El pago real de F3 (RF-025) | Dado de alta el 2026-11-22 (T025); la firma válida se comprueba con el primer pago (T030) |
 | Protección de `main` con los trabajos del CI como obligatorios (Hugo, administrador) | RF-037 y CE-006 (T013, T014, T044) | Aprobación obligatoria quitada el 2026-11-21; faltan los trabajos y `enforce_admins` (QT-3) |
 | CoDi activo en el banco de Hugo, un Android y un iPhone, y otro celular para pagar | F3 y F6 | CoDi activo desde el 15 nov; celulares por confirmar |
 | Leonel con su red y sus celulares (N-17) | T031 | Por confirmar |
@@ -295,17 +295,17 @@
   - **RF**: RF-028
   - **Dep.**: T007
   - **Hecho cuando**: el valor coincide con el TK de F0.
-- [ ] T024 [US4] Agregar `CARPETA_WEB=../web` a `backend/.env.demo`
+- [X] T024 [US4] Agregar `CARPETA_WEB=../web` a `backend/.env.demo`
   - **Quién**: Hugo. Grok agrega la misma línea, `CARPETA_WEB=../web`, a la plantilla `backend/.env.demo.example` (TK-4).
   - **RF**: RF-024
   - **Dep.**: T017
   - **Hecho cuando**: al encender con la guía, `https://<dirección>/` abre la pantalla de cobro.
-- [ ] T025 [US2] Dar de alta el aviso de pey de la llave de la demo con la dirección del túnel
+- [X] T025 [US2] Dar de alta el aviso de pey de la llave de la demo con la dirección del túnel
   - **Quién**: Hugo, en el portal de pey: `https://<dirección>/webhooks/pey`. El secreto que entrega el portal va solo a `backend/.env.demo`.
   - **RF**: RF-025, RF-030
   - **Dep.**: T006
   - **Hecho cuando**: el portal muestra la dirección del túnel en el aviso de esa llave, y `/salud` del servidor arrancado con `backend/.env.demo` dice `"secreto_aviso_pey": true` (pasó de T002, TK-2). La firma válida se comprueba con el primer pago (T030).
-- [ ] T026 [US2] Comprobar la demo con la web por el túnel (quickstart §3, pasos 1 a 4)
+- [X] T026 [US2] Comprobar la demo con la web por el túnel (quickstart §3, pasos 1 a 4)
   - **Quién**: Hugo, siguiendo **solo** `docs/operacion-demo.md`.
   - Paso 1: `/salud` y la pantalla desde un celular con datos móviles, con HTTPS y sin páginas intermedias.
   - Paso 2: cobro desde el celular y pantalla abierta 25 minutos; las señales de vida y *vencido* llegan en el momento, y el canal solo lo cierra el servidor al minuto 20.
@@ -317,14 +317,14 @@
   - **RF**: RF-024, RF-026, RF-028, RF-030, RF-057, RF-060
   - **Dep.**: T020, T022, T023, T024
   - **Hecho cuando**: los cuatro pasos y los dos extra salen como dicen el quickstart y la historia 4, y quedan anotados en la sección F2 de la guía de verificación. Lo que falte de la guía se corrige en `docs/operacion-demo.md`.
-- [ ] T027 [US2] Comprobar CORS y la red local (quickstart §3, pasos 5 y 6)
+- [X] T027 [US2] Comprobar CORS y la red local (quickstart §3, pasos 5 y 6)
   - **Quién**: Hugo.
   - Paso 5: desde la consola de una página de otro dominio, `fetch("https://<dirección>/api/cobros", {method: "POST"})`; el navegador lo bloquea por CORS.
   - Paso 6: desde otro equipo en la misma red, `curl --max-time 5 http://<IP local de la Mac>:8000/salud`; conexión rechazada o sin respuesta.
   - **RF**: RF-027, RF-056
   - **Dep.**: T026
   - **Hecho cuando**: los dos resultados quedan anotados en la sección F2 de la guía de verificación (CE-015).
-- [ ] T028 Cierre de F2: todo en verde, sección F2 en la guía de verificación y commit sugerido
+- [X] T028 Cierre de F2: todo en verde, sección F2 en la guía de verificación y commit sugerido
   - Commit sugerido: `feat(003): demo por el túnel con la web desde el servidor y C-7 (F2)`.
   - PR con la plantilla, `Closes #65` y el enlace a `specs/003-infraestructura-demo/`. Menciona que C-7 quedó aplicado y la comparativa del túnel (research R-1, DP-38).
   - `docs/plan-hackathon.md` §7: la línea "Base de datos y hosting: Supabase y AWS (15 nov)" pasa a "Base de datos y hosting: Supabase y la Mac de Hugo por Tailscale Funnel (21 nov, spec 003, DP-38)", como pide #65 (QT-5). No se toca nada más del archivo.
