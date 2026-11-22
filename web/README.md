@@ -36,13 +36,13 @@ Los comandos de abajo se corren desde la raíz del repositorio. El recorrido com
 
 ### Correr en local
 
-Con el servidor en el puerto 8000, como dice el quickstart de la spec 001, y `WEB_ORIGIN=http://localhost:5173` en `backend/.env`:
+El servidor entrega la web en el mismo origen (spec 003, DP-21). En `backend/.env`: `CARPETA_WEB=../web` y `WEB_ORIGIN=http://localhost:8000`. `web/config.js` se queda con `servidor: ""`.
 
 ```bash
-uv run --directory backend python -m http.server 5173 --directory ../web
+cd backend && uv run uvicorn app.main:app --port 8000
 ```
 
-Abre `http://localhost:5173`. Se ve "PAGO FÁCIL", el teclado y Cobrar desactivado. No abras el enlace `http://[::]:5173` que imprime el comando: el servidor lo rechaza por CORS (`WEB_ORIGIN`) y la pantalla dice que no hay conexión.
+Abre `http://localhost:8000`. Se ve "PAGO FÁCIL", el teclado y Cobrar desactivado.
 
 En `http://localhost` el celular no mantiene la pantalla encendida: el navegador solo lo permite con HTTPS, o en `localhost` de la propia máquina.
 
@@ -69,8 +69,8 @@ Lo publica el issue #65. Se suben los archivos de `web/` sin `tests/` ni este `R
 | Forma | `web/config.js` | En el servidor |
 |---|---|---|
 | Sitio estático aparte, con HTTPS | `servidor: "https://<dominio del servidor>"` | Agregar el dominio de la web a `WEB_ORIGIN` |
-| Servida por el backend | `servidor: ""` | Antes hay que proponer un cambio `C-n` a la spec 001 |
+| Servida por el backend | `servidor: ""` | Ya lo hace el servidor con `CARPETA_WEB` (spec 003, DP-21). No hace falta un cambio a la spec 001 |
 
-Antes de publicar, en `web/index.html`, cambia `https:` de `connect-src` (la política de seguridad de contenido) por el dominio exacto del servidor. Si la web la sirve el backend, basta `'self'`.
+La política de `web/index.html` ya tiene `connect-src 'self'` (spec 003, C-7): la web solo se conecta a su propio servidor.
 
 Después de publicar hay que comprobar tres cosas: la web abre con HTTPS, el navegador no muestra errores de CORS al crear un cobro, y el canal de avisos se mantiene abierto porque el proxy no retiene los eventos.

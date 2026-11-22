@@ -1,10 +1,47 @@
 """Arranque de la web: la marca y la política de seguridad (spec 002, RF-060, RF-077)."""
 
 import http.client
+from html.parser import HTMLParser
+from pathlib import Path
 
 from conftest import abrir, reloj, tocar
 from playwright.sync_api import ConsoleMessage, Page, expect
 from servidor_simulado import ServidorSimulado
+
+
+class _LectorDePolitica(HTMLParser):
+    """Saca el content de la política de seguridad de contenido."""
+
+    def __init__(self) -> None:
+        super().__init__()
+        self.content = ""
+
+    def handle_starttag(self, tag: str, attrs: list[tuple[str, str | None]]) -> None:
+        if tag != "meta":
+            return
+        datos = {nombre: valor or "" for nombre, valor in attrs}
+        if datos.get("http-equiv") == "Content-Security-Policy":
+            self.content = datos["content"]
+
+
+def test_la_politica_solo_permite_conectarse_al_mismo_origen() -> None:
+    """connect-src queda en 'self' y el resto de la política no cambia (spec 003, RF-029)."""
+    html = (Path(__file__).resolve().parents[1] / "index.html").read_text(encoding="utf-8")
+    lector = _LectorDePolitica()
+    lector.feed(html)
+    directivas = {}
+    for trozo in lector.content.split(";"):
+        parte = trozo.strip()
+        if not parte:
+            continue
+        nombre, _, valor = parte.partition(" ")
+        directivas[nombre] = valor
+    assert directivas["connect-src"] == "'self'"
+    assert directivas["default-src"] == "'self'"
+    assert directivas["script-src"] == "'self'"
+    assert directivas["style-src"] == "'self'"
+    assert directivas["img-src"] == "'self' data:"
+    assert directivas["media-src"] == "'self' blob:"
 
 
 def test_la_pagina_abre_y_muestra_pago_facil(pagina: Page, servidor: ServidorSimulado) -> None:

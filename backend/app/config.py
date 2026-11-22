@@ -26,6 +26,10 @@ class Configuracion(BaseSettings):
     # Origen de la web permitido por CORS. Varios orígenes separados por coma.
     web_origin: str = "http://localhost:5173"
 
+    # Carpeta de la web que el servidor entrega en `/`. Vacía en las pruebas:
+    # no entrega la web. En la demo, ../web (spec 003, DP-21, R-12).
+    carpeta_web: str = ""
+
     # Límites de la demo pública.
     monto_maximo: Decimal = Decimal("100")
     expiracion_segundos: int = 600  # pey exige 0 o al menos 360

@@ -319,7 +319,7 @@ Cada RF lleva su corte: **[C1]** o **[C2]** (§1.2).
 
 **Errores del cobro en pantalla**
 
-- **RF-057** (No deseado) [C1]: SI el servidor ya no conoce el cobro en pantalla (por ejemplo, porque se reinició), ENTONCES EL SISTEMA mostrará la vista Error con un mensaje que pide revisar la app del banco para confirmar si llegó el pago.
+- **RF-057** (No deseado) [C1]: SI el servidor ya no conoce el cobro en pantalla, ENTONCES EL SISTEMA mostrará la vista Error con un mensaje que pide revisar la app del banco para confirmar si llegó el pago.
 
 **Pantalla encendida**
 
@@ -385,8 +385,8 @@ La pantalla no crea datos de negocio: muestra los del servidor.
 | El cobro se paga justo antes de cancelarlo | El servidor rechaza la cancelación; la pantalla sigue mostrando el cobro con el mensaje, y el pago llega por el canal. | RF-050 |
 | Doble toque a Cancelar cobro | Se ve "Cancelando…" y el segundo toque se ignora. | RF-072, RF-073 |
 | El cobro en pantalla se cancela desde otra pantalla | Se trata como una cancelación propia confirmada: vuelve la vista Teclado y el cobro se sigue escuchando. | RF-074 |
-| Reinicio del servidor con un cobro en pantalla | Vista Error: el cobro ya no se puede seguir; se pide revisar la app del banco. | RF-057 |
-| Reinicio del servidor con cobros anteriores en escucha | Esos cobros dejan de escucharse. | RF-056 |
+| Reinicio del servidor con un cobro en pantalla | El cobro sigue guardado (spec 003, corte 2). La pantalla reconecta y lo sigue escuchando. | RF-057 |
+| Reinicio del servidor con cobros anteriores en escucha | Esos cobros siguen guardados (spec 003, corte 2). La pantalla reconecta y los sigue escuchando. | RF-056 |
 | Se recarga la página o se cierra el navegador | Desde el corte 2, se recuperan los cobros en escucha; los pagos que llegaron con la página cerrada se muestran sin sonar (el cobro en pantalla en su vista, los anteriores con su aviso), y se pide un toque para activar el sonido. En el corte 1, vuelve la vista Teclado vacía. | RF-051 a RF-055, RF-075 |
 | El celular no deja guardar datos (navegación privada) | La recarga vuelve a la vista Teclado vacía, como en el corte 1. | RF-076 |
 | El celular apaga la pantalla o el navegador pasa a segundo plano | Mientras haya un cobro en escucha, la pantalla pide no apagarse donde el navegador lo permite. Si aun así se pausa, al volver el canal o la consulta del estado traen el pago y se avisa. | RF-058, RF-029, RF-033 |

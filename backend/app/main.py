@@ -5,17 +5,19 @@ import logging
 from collections.abc import AsyncIterator
 from contextlib import asynccontextmanager
 from decimal import Decimal, InvalidOperation
+from pathlib import Path
 
 from fastapi import FastAPI, HTTPException, Request
 from fastapi.exceptions import RequestValidationError
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse, StreamingResponse
+from fastapi.staticfiles import StaticFiles
 from standardwebhooks.webhooks import Webhook, WebhookVerificationError
 from uvicorn.middleware.proxy_headers import ProxyHeadersMiddleware
 
 from app.canal import flujo_de_avisos
 from app.cobros import Cobro, NoSePuedeCancelar, RepositorioCobros
-from app.config import Configuracion, obtener_configuracion
+from app.config import RAIZ_BACKEND, Configuracion, obtener_configuracion
 from app.eventos import Difusor, LimiteDeCanales, LimitePorIp
 from app.pey import ClientePey, ErrorPey
 from app.reloj import Reloj
@@ -113,7 +115,11 @@ def crear_app(
     cliente_pey: ClientePey | None = None,
     reloj: Reloj | None = None,
 ) -> FastAPI:
-    """Crea la API con reloj, registros y el modelo de cobros (spec 001, RF-008, RF-039)."""
+    """Crea la API con reloj, registros y el modelo de cobros (spec 001, RF-008, RF-039).
+
+    Si `carpeta_web` tiene valor, entrega esa carpeta en `/` después de las rutas
+    del API (spec 003, RF-024, RF-029).
+    """
     config = config or obtener_configuracion()
     configurar_registros()
     reloj_de_la_app = reloj or Reloj()
@@ -323,6 +329,13 @@ def crear_app(
         )
         cobros.marcar_aviso(webhook_id)
         return {"recibido": True, "procesado": pago is not None}
+
+    if config.carpeta_web:
+        # Relativa a backend/, no a la carpeta desde la que arrancó uvicorn (DP-21).
+        ruta_web = Path(config.carpeta_web)
+        if not ruta_web.is_absolute():
+            ruta_web = RAIZ_BACKEND / ruta_web
+        app.mount("/", StaticFiles(directory=ruta_web, html=True), name="web")
 
     return app
 
