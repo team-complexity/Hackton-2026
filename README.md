@@ -6,6 +6,26 @@ Proyecto para el **Hackatón México 2026** (pey + AI Builders México + SpaceXA
 
 > PAGO FÁCIL no es un producto oficial de pey ni de Banco de México.
 
+## La demo
+
+[https://pago-facil.tail8d44cb.ts.net](https://pago-facil.tail8d44cb.ts.net)
+
+Está encendida solo en los momentos que el equipo acuerda: pruebas, grabación del video, demos con negocios piloto y las pruebas de Leonel antes de cada puerta. Sin interrupción, desde la entrega del 12 de diciembre hasta el anuncio del 14 de diciembre (RF-060). Si el enlace no abre, es porque está apagada: pídele a Hugo que la encienda.
+
+Para probarla, abre el enlace en el celular, escribe el monto, pulsa Cobrar y paga el QR con la app del banco (CoDi), no con la cámara. Al llegar el pago, suena y muestra «Pago recibido». Los pagos de prueba son de $0.01 y solo con cuentas propias.
+
+Quien la opera sigue [docs/operacion-demo.md](docs/operacion-demo.md).
+
+## Correr en local
+
+Los pasos del servidor están en [backend/README.md](backend/README.md) y los de la web en [web/README.md](web/README.md). Las variables de entorno se copian de [backend/.env.example](backend/.env.example) y nunca se suben.
+
+## Equipo y tecnologías
+
+Hugo (`HugoAI23`), Leonel (`mendiolaleonel2002-debug`), Juan (`Altairtm`) y Miguel (`Beer17`), como en [flujo-de-trabajo.md](flujo-de-trabajo.md).
+
+Python con FastAPI, web PWA (HTML, CSS y JS), Supabase y el API de pey (CoDi).
+
 ## Cómo funciona
 
 1. El negocio escribe el monto y el concepto en la web de PAGO FÁCIL.

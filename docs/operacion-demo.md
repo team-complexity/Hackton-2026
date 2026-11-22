@@ -103,3 +103,13 @@ Cada variable que la demo necesita va en `backend/.env.demo`, aunque el valor es
 ## 10. Pruebas de Leonel
 
 Leonel abre `https://pago-facil.tail8d44cb.ts.net` desde su red y sus celulares (N-17). Si algo falla, se lo dice a Hugo.
+
+Leonel **no necesita** `backend/.env` ni `backend/.env.demo` para esto: solo el enlace. Esos archivos, y las llaves de pey que guardan, solo viven en la Mac de Hugo (sección 9). Quien quiera correr el proyecto en local usa `backend/.env.example` y `docs/` según [backend/README.md](../backend/README.md).
+
+La demo solo está encendida cuando Hugo la enciende (sección 1), así que Leonel le avisa cuándo quiere probar, y Hugo la enciende y se la deja lista. La prueba, sin pagar nada:
+
+1. **Abre el enlace con HTTPS.** Desde su red (wifi) y desde datos móviles. Debe cargar la pantalla de cobro, con «PAGO FÁCIL» y el teclado, sin advertencias del navegador ni páginas intermedias.
+2. **Crea un cobro de `0.01`** y mide de «Cobrar» a que se ve el QR. La meta es 5 segundos o menos (C-10). Hazlo 10 veces, anota los tiempos y no pagues ninguno.
+3. **Reporta** en el [issue #105](https://github.com/team-complexity/Hackton-2026/issues/105): sistema y navegador de cada celular, los tiempos y lo que falle.
+
+La medición de Hugo del 22 de nov dio entre 3 y 5 segundos (spec 003, guía de verificación, T029), y es lo que llevó a poner la meta en 5 segundos. Esta prueba da un dato de otra red y de otros celulares.
