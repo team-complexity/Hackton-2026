@@ -87,3 +87,41 @@ Tailscale Funnel cumple lo que el plan da por hecho (QP-12, research R-1 y R-2):
 - Hugo dijo "seguimos" con Tailscale Funnel el 2026-11-21.
 - Demo apagada al terminar: servidor parado por su PID exacto y `tailscale funnel reset` (`tailscale funnel status` → `No serve config`). Para encenderla otra vez: abrir Tailscale, arrancar el servidor y `tailscale funnel --bg 8000`.
 - Commit sugerido: `docs(003): prueba del túnel con Tailscale Funnel (F0)`.
+
+## F1 CI en GitHub Actions
+
+Rama `feature/35-ci` (worktree aparte de `feature/90`). Grok escribió `.github/workflows/ci.yml` y `backend/tests/test_ci.py` (T008 y T009); Claude los revisó antes del commit.
+
+### T008 y T009 · Pruebas primero y flujo
+
+- Las 3 pruebas de `test_ci.py` fallan sin `ci.yml` y pasan con él.
+- En local: 112 pruebas del backend en verde, `ruff check` y `ruff format --check` limpios, también en `web/tests`.
+- Versiones: `actions/checkout@v7` y `astral-sh/setup-uv@v7`, las dos con Node 24. Desde la v8, setup-uv no publica etiqueta `@vN`, así que `@v7` es la mayor más reciente que la tiene.
+
+### T010 · PR y los dos trabajos en GitHub
+
+PR [#102](https://github.com/team-complexity/Hackton-2026/pull/102), `Closes #35`, un solo commit `feat(003): CI con los trabajos servidor y web (F1)`.
+
+| Trabajo | Resultado | Tiempo |
+|---|---|---|
+| `servidor` | 112 pruebas en verde, lint y formato limpios | 17 s |
+| `web` | 265 pruebas en verde y 32 saltadas, lint y formato limpios | 3 min 18 s |
+
+- Las 32 saltadas son las pruebas marcadas `only_browser("chromium")`, que en la pasada de WebKit se saltan a propósito. Ninguna prueba de WebKit falló en Linux, así que no hizo falta ningún `skip` nuevo ni TK.
+- Cada trabajo muestra un aviso de pytest por dependencias (`PytestRemovedIn10Warning` en `web`, `StarletteDeprecationWarning` en `servidor`). No son errores.
+
+### T011 · El flujo no ve secretos ni escribe
+
+```bash
+git grep -n "secrets\.\|pull_request_target\|permissions" .github/workflows/ci.yml
+```
+
+- Única coincidencia: `permissions:` con `contents: read` (línea 19). No usa `secrets.` ni `pull_request_target` (RF-038).
+- Revisado por Claude el 2026-11-21.
+
+### Pendiente de F1
+
+- T012: Hugo une el PR #102 a `main`.
+- T013: marcar `servidor` y `web` como obligatorios, activar `enforce_admins` y avisar al equipo.
+- T014: PR de prueba con `assert False` desde una rama nueva de `main`, y cierre de F1.
+

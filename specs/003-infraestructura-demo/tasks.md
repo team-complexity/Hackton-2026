@@ -168,14 +168,14 @@
   - **RF**: RF-036, RF-037, RF-038
   - **Dep.**: T008
   - **Hecho cuando**: T008 pasa y todo lo demás sigue en verde en local.
-- [ ] T010 [US5] Abrir el PR de `feature/35-ci` y comprobar los dos trabajos en GitHub
+- [X] T010 [US5] Abrir el PR de `feature/35-ci` y comprobar los dos trabajos en GitHub
   - **Quién**: Hugo (commit, push y PR); Grok arregla lo que falle.
   - Commit sugerido: `feat(003): CI con los trabajos servidor y web (F1)`. PR con la plantilla y `Closes #35`.
   - Si una prueba de WebKit falla solo en Linux: se arregla o se marca con `skip` y su motivo escrito, y se anota como TK en el plan §14 (research R-11, riesgo del plan §11).
   - **RF**: RF-036
   - **Dep.**: T009
   - **Hecho cuando**: el PR muestra `servidor` y `web` en verde.
-- [ ] T011 [US5] Revisar que el flujo no puede ver secretos ni escribir en el repositorio (quickstart §2, paso 4)
+- [X] T011 [US5] Revisar que el flujo no puede ver secretos ni escribir en el repositorio (quickstart §2, paso 4)
   - **Quién**: Claude, al revisar el PR.
   - `git grep -n "secrets\.\|pull_request_target\|permissions" .github/workflows/ci.yml`: solo `permissions` con `contents: read`.
   - **RF**: RF-038
