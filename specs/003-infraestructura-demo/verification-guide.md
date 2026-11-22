@@ -119,9 +119,38 @@ git grep -n "secrets\.\|pull_request_target\|permissions" .github/workflows/ci.y
 - Única coincidencia: `permissions:` con `contents: read` (línea 19). No usa `secrets.` ni `pull_request_target` (RF-038).
 - Revisado por Claude el 2026-11-21.
 
-### Pendiente de F1
+### T012 · PR unido a `main`
 
-- T012: Hugo une el PR #102 a `main`.
-- T013: marcar `servidor` y `web` como obligatorios, activar `enforce_admins` y avisar al equipo.
-- T014: PR de prueba con `assert False` desde una rama nueva de `main`, y cierre de F1.
+- Hugo unió el PR #102 con *merge commit* (`be5adc3`) el 2026-11-21; #35 se cerró solo. La rama `feature/35-ci` se conserva por el worktree.
+- El push a `main` disparó el CI otra vez, ya con `ci.yml` en `main`.
 
+### T013 · Checks obligatorios y `enforce_admins`
+
+- En *Settings → Branches → main*, Hugo marcó *Require status checks to pass* con `servidor` y `web`, los dos de GitHub Actions. *Require branches to be up to date* queda desactivado: un PR no tiene que actualizarse con `main` para unirse.
+- `gh api -X POST repos/team-complexity/Hackton-2026/branches/main/protection/enforce_admins` → `"enabled": true`.
+- Comprobado con la API: `required_status_checks .contexts` → `["servidor","web"]` y `enforce_admins .enabled` → `true`. El resto de la regla no cambió: 0 aprobaciones, sin force push y sin borrar `main`.
+- El CI de `main` después del merge (`be5adc3`) salió en verde.
+- Hugo avisó a Juan, Miguel y Leonel que traigan `main` a sus ramas. Al momento de activarlo había tres PR abiertos sin `ci.yml`: #101, #99 y #98.
+
+### T014 · Prueba del error a propósito
+
+Desde la rama `prueba/ci-assert-false`, creada de `main` en el worktree, el archivo `backend/tests/test_prueba_ci.py` con una prueba que siempre falla. Se usó `assert 1 + 1 == 3` y no `assert False`: ruff rechaza `assert False` (B011), y el CI habría fallado en el lint en vez de en pytest (TK-6).
+
+PR [#103](https://github.com/team-complexity/Hackton-2026/pull/103) `[NO UNIR]`, abierto como PR normal (un borrador nunca se puede unir y no se sabría qué lo bloquea):
+
+| Comprobación | Resultado |
+|---|---|
+| `servidor` | ❌ en 12 s. `ruff check` y `ruff format` en verde, falló `pytest -q`: `1 failed, 112 passed`, solo `test_el_ci_bloquea_un_pr_con_una_prueba_que_falla` |
+| `web` | ✅ `265 passed, 32 skipped` en 3 min 24 s |
+| Estado del PR | `BLOCKED` |
+| `gh pr merge 103 --merge` (Hugo, administrador) | Rechazado: *the base branch policy prohibits the merge* |
+
+- No se intentó `--admin`: `enforce_admins` está en `true` (T013), y si funcionara metería una prueba rota en `main`.
+- Sin la prueba rota, los dos trabajos salieron en verde en el PR #102 y en `main` (`be5adc3`).
+- El PR #103 se cerró **sin unir** (`mergedAt: null`) y se borró la rama en GitHub.
+
+### Resultado de F1
+
+`main` solo acepta PR con `servidor` y `web` en verde, también para los administradores (RF-036, RF-037, RF-038, CE-006). El flujo solo lee el repositorio y no usa secretos.
+
+- Commit sugerido: `docs(003): CI obligatorio en main y prueba del error (F1)`.

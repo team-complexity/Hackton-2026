@@ -3,7 +3,7 @@
 - **Spec**: [spec.md](spec.md), estado: Aprobada el 2026-11-20 (QA-12 a QA-20)
 - **Plan**: [plan.md](plan.md), estado: Aprobado el 2026-11-21 (DP-38 Tailscale Funnel, QP-10 a QP-14, C-8 cumplido)
 - **Fecha**: 2026-11-21
-- **Estado**: `Aprobado` el 2026-11-21 por Hugo, con `/speckit-analyze` y la QA de tareas (QT-1 a QT-9) decididos y aplicados (ver «Revisión QA de tasks»). Estado anterior: `En QA`. Lo redactó Claude el 2026-11-21 con `/speckit-tasks`. Aprobar no autoriza empezar F1: se espera a que Hugo lo pida (F0 es suya y puede empezar cuando quiera). **F0 terminada (Hugo, con Claude, 2026-11-21): Tailscale Funnel cumple, sin plan B (TK-5).**
+- **Estado**: `Aprobado` el 2026-11-21 por Hugo, con `/speckit-analyze` y la QA de tareas (QT-1 a QT-9) decididos y aplicados (ver «Revisión QA de tasks»). Estado anterior: `En QA`. Lo redactó Claude el 2026-11-21 con `/speckit-tasks`. Aprobar no autoriza empezar F1: se espera a que Hugo lo pida (F0 es suya y puede empezar cuando quiera). **F0 terminada (Hugo, con Claude, 2026-11-21): Tailscale Funnel cumple, sin plan B (TK-5).** **F1 terminada (2026-11-21): CI en `main` con `servidor` y `web` obligatorios, también para administradores (PR #102; prueba del error en el PR #103, TK-6).**
 - **Entrada**: los documentos de `specs/003-infraestructura-demo/`: plan.md, spec.md, research.md, data-model.md, contracts/ y quickstart.md
 
 > **Notas para los comandos de spec-kit.**
@@ -181,12 +181,12 @@
   - **RF**: RF-038
   - **Dep.**: T010
   - **Hecho cuando**: la revisión queda anotada en la sección F1 de la guía de verificación.
-- [ ] T012 [US5] Unir el PR de `feature/35-ci` a `main` con el CI en verde (QT-1)
+- [X] T012 [US5] Unir el PR de `feature/35-ci` a `main` con el CI en verde (QT-1)
   - **Quién**: Hugo. Se une **antes** de marcar los trabajos como obligatorios: si se marcan antes, los PR abiertos del equipo sin `ci.yml` quedan esperando unos trabajos que nunca corren.
   - **RF**: RF-036, RF-038
   - **Dep.**: T011
   - **Hecho cuando**: el PR está unido a `main` y #35 se cerró.
-- [ ] T013 [US5] Marcar `servidor` y `web` como obligatorios, activar `enforce_admins` y avisar al equipo (QT-1, QT-3)
+- [X] T013 [US5] Marcar `servidor` y `web` como obligatorios, activar `enforce_admins` y avisar al equipo (QT-1, QT-3)
   - **Quién**: Hugo (administrador).
   - En *Settings → Branches → main*, *Require status checks to pass*, con `servidor` y `web`. La aprobación obligatoria ya se quitó el 2026-11-21 (constitución 3.0.0).
   - `gh api -X POST repos/team-complexity/Hackton-2026/branches/main/protection/enforce_admins`: la regla del CI también vale para los administradores (CE-006). Desde la 3.0.0 ya no hace falta `--admin` para unir.
@@ -194,7 +194,7 @@
   - **RF**: RF-037
   - **Dep.**: T012 (GitHub solo ofrece los trabajos que ya corrieron)
   - **Hecho cuando**: `gh api repos/team-complexity/Hackton-2026/branches/main/protection/required_status_checks -q .contexts` muestra `servidor` y `web`, y `gh api repos/team-complexity/Hackton-2026/branches/main/protection/enforce_admins -q .enabled` dice `true`.
-- [ ] T014 [US5] Prueba del error a propósito y cierre de F1 (quickstart §2, CE-006)
+- [X] T014 [US5] Prueba del error a propósito y cierre de F1 (quickstart §2, CE-006)
   - **Quién**: Hugo.
   - Desde una rama nueva de `main`, un `assert False` en una prueba del backend y su PR hacia `main`. Después de verlo, se cierra **sin unir** y se borra la rama.
   - Sección F1 de la guía de verificación con los resultados de T010 a T014.
