@@ -3,7 +3,7 @@
 - **Spec**: [spec.md](spec.md), estado: Aprobada el 2026-11-20 (QA-12 a QA-20)
 - **Plan**: [plan.md](plan.md), estado: Aprobado el 2026-11-21 (DP-38 Tailscale Funnel, QP-10 a QP-14, C-8 cumplido)
 - **Fecha**: 2026-11-21
-- **Estado**: `Aprobado` el 2026-11-21 por Hugo, con `/speckit-analyze` y la QA de tareas (QT-1 a QT-9) decididos y aplicados (ver «Revisión QA de tasks»). Estado anterior: `En QA`. Lo redactó Claude el 2026-11-21 con `/speckit-tasks`. Aprobar no autoriza empezar F1: se espera a que Hugo lo pida (F0 es suya y puede empezar cuando quiera). **F0 en curso (Hugo, con Claude), desde el 2026-11-21.**
+- **Estado**: `Aprobado` el 2026-11-21 por Hugo, con `/speckit-analyze` y la QA de tareas (QT-1 a QT-9) decididos y aplicados (ver «Revisión QA de tasks»). Estado anterior: `En QA`. Lo redactó Claude el 2026-11-21 con `/speckit-tasks`. Aprobar no autoriza empezar F1: se espera a que Hugo lo pida (F0 es suya y puede empezar cuando quiera). **F0 terminada (Hugo, con Claude, 2026-11-21): Tailscale Funnel cumple, sin plan B (TK-5).**
 - **Entrada**: los documentos de `specs/003-infraestructura-demo/`: plan.md, spec.md, research.md, data-model.md, contracts/ y quickstart.md
 
 > **Notas para los comandos de spec-kit.**
@@ -85,47 +85,47 @@
 
 **Prueba independiente**: el quickstart §3.0, pasos 1 a 7.
 
-- [ ] T001 [US2] Preparar Tailscale en la Mac de Hugo (quickstart §0)
+- [X] T001 [US2] Preparar Tailscale en la Mac de Hugo (quickstart §0)
   - **Quién**: Hugo.
   - Crear la cuenta, instalar la app de Tailscale y entrar. En la consola del tailnet: activar HTTPS y MagicDNS, y dar el permiso `funnel` en la política del tailnet ([funnel](https://tailscale.com/kb/1223/funnel)).
   - La sesión de Tailscale vive en su app, fuera del repositorio (RF-059). No se copia ninguna llave de Tailscale a ningún archivo del repositorio.
   - **RF**: RF-024, RF-059
   - **Dep.**: ninguna
   - **Hecho cuando**: `tailscale status` muestra la Mac conectada y `tailscale funnel status` responde sin error de permisos.
-- [ ] T002 [US2] Crear `backend/.env.demo` en la Mac de Hugo (QP-14, DP-36)
+- [X] T002 [US2] Crear `backend/.env.demo` en la Mac de Hugo (QP-14, DP-36)
   - **Quién**: Hugo. Nadie más lo abre ni lo lee.
   - Variables: `PEY_API_KEY` y `PEY_WEBHOOK_SECRET` de la llave de la demo, `WEB_ORIGIN=https://<nombre>.<tailnet>.ts.net`, `LIMITE_COBROS_POR_MINUTO=30`, `CANALES_POR_IP=30` y `DATABASE_URL=` **vacía a propósito** hasta T071. `CARPETA_WEB` llega en F2 (T024).
   - Por qué la línea vacía (DP-44): `Configuracion` también lee `backend/.env`, y lo que falta en `backend/.env.demo` se toma de ahí. Sin esa línea, desde T045 la demo usaría la base de desarrollo; vacía, el servidor guarda en memoria y la salud dice `"sin configurar"` (una variable vacía manda sobre `backend/.env`). Lo mismo vale para cualquier variable de la demo.
   - **RF**: RF-020, RF-027, RF-049, RF-053
   - **Dep.**: T001
   - **Hecho cuando**: `git check-ignore -v backend/.env.demo` dice que lo ignora la regla `.env.*`; `grep -c '^DATABASE_URL=$' backend/.env.demo` dice `1` (cuenta la línea sin mostrar valores); y `/salud` del servidor arrancado con ese archivo (T003) dice `"llave_pey": true` y `"secreto_aviso_pey": true`.
-- [ ] T003 [US2] Arrancar el servidor actual solo en `127.0.0.1` y abrir Funnel hacia el puerto 8000 (quickstart §3.0, paso 1)
+- [X] T003 [US2] Arrancar el servidor actual solo en `127.0.0.1` y abrir Funnel hacia el puerto 8000 (quickstart §3.0, paso 1)
   - **Quién**: Hugo.
   - Servidor: `cd backend && uv run uvicorn app.main:app --env-file .env.demo --workers 1 --port 8000`, **sin `--host`** (RF-056, DP-42). Túnel: `tailscale funnel --bg 8000`. Anotar la dirección `https://<nombre>.<tailnet>.ts.net`.
   - Desde **otra red** (celular con datos móviles como punto de acceso, o Leonel): `curl https://<dirección>/salud`.
   - **RF**: RF-024, RF-056
   - **Dep.**: T002
   - **Hecho cuando**: la respuesta trae `"estado": "ok"` y `curl` no se queja del certificado (HTTPS válido).
-- [ ] T004 [US2] Canal de 25 minutos con `curl` desde otra red (quickstart §3.0, pasos 3 y 4)
+- [X] T004 [US2] Canal de 25 minutos con `curl` desde otra red (quickstart §3.0, pasos 3 y 4)
   - **Quién**: Hugo, con su autorización para crear un QR real de $0.01 **sin pagarlo**.
   - `curl -X POST https://<dirección>/api/cobros -H 'Content-Type: application/json' -d '{"monto": 0.01, "concepto": "Prueba túnel"}'` (cuerpo de [crear-cobro](../001-backend-mvp/contracts/crear-cobro.md)). Anotar el `id`.
   - Desde la otra red: `curl -N https://<dirección>/api/cobros/<id>/eventos` durante 25 minutos, anotando la hora a la que aparece cada línea (por ejemplo, con `| while IFS= read -r l; do echo "$(date +%T) $l"; done`).
   - **RF**: RF-026, RF-057
   - **Dep.**: T003
   - **Hecho cuando**: hay una señal de vida cada ~15 s en el momento en que sale (no todas juntas al final), `vencido` cerca del minuto 10, y el servidor cierra el canal con `fin` cerca del minuto 20, sin cortes antes. Si falla, se para la fase (T007).
-- [ ] T005 [US2] IP real del celular por `X-Forwarded-For` (quickstart §3.0, paso 5; research R-2)
+- [X] T005 [US2] IP real del celular por `X-Forwarded-For` (quickstart §3.0, paso 5; research R-2)
   - **Quién**: Hugo.
   - Pedir `/salud` y crear un cobro desde dos redes distintas (wifi de otra casa o datos de dos compañías), y mirar en el registro del servidor la IP de cada petición.
   - **RF**: RF-028
   - **Dep.**: T003
   - **Hecho cuando**: el registro muestra dos IP distintas y ninguna es `127.0.0.1`. Si no, se aplica DP-40 (límites de 60 en `backend/.env.demo`) y se anota en T007.
-- [ ] T006 [US2] Misma dirección después de reiniciar (quickstart §3.0, paso 6)
+- [X] T006 [US2] Misma dirección después de reiniciar (quickstart §3.0, paso 6)
   - **Quién**: Hugo.
   - Reiniciar la computadora, volver a arrancar el servidor y Funnel como en T003, y pedir `/salud` desde la otra red.
   - **RF**: RF-030
   - **Dep.**: T004, T005
   - **Hecho cuando**: la dirección es exactamente la anotada en T003. Si cambia, se para la fase (T007).
-- [ ] T007 Cierre de F0: resultado como TK y decisión de seguir
+- [X] T007 Cierre de F0: resultado como TK y decisión de seguir
   - Anotar en el plan §14 un TK con: la dirección (sin datos de la cuenta), las horas de los eventos de T004, las IP de T005 (solo si son distintas, no los valores) y el resultado de T006.
   - Crear `specs/003-infraestructura-demo/verification-guide.md` con su sección F0 (pasos y resultado).
   - Si fallaron T004 o T006: no se sigue con F2; Hugo decide el plan B (Cloudflare Tunnel con dominio, research R-1) y se replanea con un TK.
@@ -149,7 +149,7 @@
 
 ### Pruebas de F1 (primero, deben fallar antes de implementar)
 
-- [ ] T008 [US5] Prueba del contrato del CI en `backend/tests/test_ci.py` (archivo nuevo)
+- [X] T008 [US5] Prueba del contrato del CI en `backend/tests/test_ci.py` (archivo nuevo)
   - Lee `.github/workflows/ci.yml` como texto (ruta: `Path(__file__).resolve().parents[2] / ".github/workflows/ci.yml"`), sin dependencias nuevas.
   - `test_el_ci_corre_en_cada_pull_request_hacia_main`: el archivo existe y tiene `pull_request:` y `push:` con la rama `main`.
   - `test_el_ci_solo_lee_el_repositorio_y_no_usa_secretos`: tiene `contents: read` bajo `permissions:`, y no contiene `secrets.` ni `pull_request_target`.
@@ -160,7 +160,7 @@
 
 ### Implementación de F1
 
-- [ ] T009 [US5] Escribir `.github/workflows/ci.yml` según el [contrato](contracts/ci.md)
+- [X] T009 [US5] Escribir `.github/workflows/ci.yml` según el [contrato](contracts/ci.md)
   - `on`: `pull_request` hacia `main` (`opened`, `synchronize`, `reopened`) y `push` a `main`. `permissions: contents: read`. Sin secretos ni variables de pey o de la base de datos (RF-038, DP-27).
   - Trabajo `servidor` en `ubuntu-latest`: `actions/checkout` y `astral-sh/setup-uv` con caché y Python 3.12; en `backend/`: `uv sync --locked`, `uv run ruff check .`, `uv run ruff format --check .` y `uv run pytest -q`.
   - Trabajo `web`: lo mismo hasta `uv sync --locked`, y después `uv run playwright install --with-deps chromium webkit`, `uv run ruff check --config pyproject.toml ../web`, `uv run ruff format --config pyproject.toml --check ../web` y `uv run pytest ../web -q`.
@@ -275,13 +275,13 @@
   - Secciones, en español y para Hugo:
     1. **Cuándo está encendida** (RF-060): solo en los momentos acordados (pruebas, video, negocios piloto y las pruebas de Leonel antes de cada puerta) y sin parar desde la entrega del 12 dic hasta el anuncio del 14 dic. Al menos una vez cada 5 días (RF-050; la parte de Supabase llega en F6). Esos días: corriente conectada y actualizaciones automáticas de macOS en pausa.
     2. **Antes de encender**: `main` al día y `uv sync --locked` en `backend/`.
-    3. **Encender**: `cd backend && uv run uvicorn app.main:app --env-file .env.demo --workers 1 --port 8000`, **nunca con `--host 0.0.0.0`** (solo `127.0.0.1`, RF-056); `tailscale funnel --bg 8000`; `caffeinate -is -w <PID del servidor>`.
+    3. **Encender**: si la Mac se acaba de prender, primero abrir la app de Tailscale (`open -a Tailscale`; Funnel vuelve solo por `--bg`, TK-5). Después `cd backend && uv run uvicorn app.main:app --env-file .env.demo --workers 1 --port 8000`, **nunca con `--host 0.0.0.0`** (solo `127.0.0.1`, RF-056); `tailscale funnel --bg 8000`; `caffeinate -is -w <PID del servidor>`.
     4. **Comprobar desde fuera**: `https://<dirección>/salud` desde un celular con datos móviles; qué debe decir.
     5. **Aviso de pey**: la dirección `https://<dirección>/webhooks/pey`, dada de alta una sola vez en el portal para la llave de la demo (RF-025). No cambia al reiniciar (RF-030).
     6. **Desarrollo a la vez**: el servidor de desarrollo usa `backend/.env` y el puerto 8001 (QP-14).
     7. **Apagar**: `tailscale funnel reset` y parar el servidor por su PID exacto; `caffeinate` termina solo con `-w`.
     8. **Si algo falla**: sin internet o suspendida (volver a encender; la dirección no cambia), el túnel no responde (`tailscale funnel status`), límites por IP (DP-36 y, si F0 lo pidió, DP-40).
-    9. **Secretos**: `backend/.env.demo` nunca se comparte ni se sube; la sesión de Tailscale vive en su app (RF-059). Cada variable que la demo necesita va en `backend/.env.demo`, aunque sea vacía: lo que falta se toma de `backend/.env` (desarrollo) (DP-44).
+    9. **Secretos**: `backend/.env.demo` nunca se comparte ni se sube; la sesión de Tailscale vive en su app (RF-059). Cada variable que la demo necesita va en `backend/.env.demo`, aunque sea vacía: lo que falta se toma de `backend/.env` (desarrollo) (DP-44). Para que el equipo vea la configuración sin recibir el archivo, la guía enlaza la plantilla `backend/.env.demo.example` (TK-4, sustituye a la tabla de TK-3), que se mantiene al día cuando se agregue una variable (`CARPETA_WEB` en T024); con la demo encendida, `GET /salud` dice si cada credencial está puesta.
     10. **Pruebas de Leonel** (N-17): abrir el enlace desde su red y avisar si algo falla.
   - **RF**: RF-050, RF-056, RF-058, RF-059, RF-060
   - **Dep.**: T017
@@ -296,7 +296,7 @@
   - **Dep.**: T007
   - **Hecho cuando**: el valor coincide con el TK de F0.
 - [ ] T024 [US4] Agregar `CARPETA_WEB=../web` a `backend/.env.demo`
-  - **Quién**: Hugo.
+  - **Quién**: Hugo. Grok agrega la misma línea, `CARPETA_WEB=../web`, a la plantilla `backend/.env.demo.example` (TK-4).
   - **RF**: RF-024
   - **Dep.**: T017
   - **Hecho cuando**: al encender con la guía, `https://<dirección>/` abre la pantalla de cobro.
@@ -304,7 +304,7 @@
   - **Quién**: Hugo, en el portal de pey: `https://<dirección>/webhooks/pey`. El secreto que entrega el portal va solo a `backend/.env.demo`.
   - **RF**: RF-025, RF-030
   - **Dep.**: T006
-  - **Hecho cuando**: el portal muestra la dirección del túnel en el aviso de esa llave. La firma válida se comprueba con el primer pago (T028).
+  - **Hecho cuando**: el portal muestra la dirección del túnel en el aviso de esa llave, y `/salud` del servidor arrancado con `backend/.env.demo` dice `"secreto_aviso_pey": true` (pasó de T002, TK-2). La firma válida se comprueba con el primer pago (T030).
 - [ ] T026 [US2] Comprobar la demo con la web por el túnel (quickstart §3, pasos 1 a 4)
   - **Quién**: Hugo, siguiendo **solo** `docs/operacion-demo.md`.
   - Paso 1: `/salud` y la pantalla desde un celular con datos móviles, con HTTPS y sin páginas intermedias.

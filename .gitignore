@@ -2,6 +2,8 @@
 .env
 .env.*
 !.env.example
+# Plantilla de la demo sin valores secretos (spec 003, TK-4). El .env.demo real sigue ignorado.
+!.env.demo.example
 *.pem
 *.key
 secrets/
