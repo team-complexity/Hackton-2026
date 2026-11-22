@@ -13,6 +13,8 @@ secrets/
 # La guía de Hugo (AGENTS.md) se le pide a él.
 AGENTS.md
 CLAUDE.md
+# Copia local de las skills para otros agentes (de Hugo, como AGENTS.md).
+.agents/
 
 # Python
 __pycache__/
