@@ -181,4 +181,24 @@ La fila C-7 de `specs/003-infraestructura-demo/spec.md` dice «aplicado el 2026-
 
 `docs/operacion-demo.md` tiene las 10 secciones del corte 1. `git grep -n "0.0.0.0" docs/operacion-demo.md` no encuentra nada. Hugo la valida al seguirla en T026.
 
-La plantilla `backend/.env.demo.example` ya tiene `CARPETA_WEB=../web` (parte de T024 que hace Grok). Falta que Hugo agregue la misma línea a `backend/.env.demo`.
+La plantilla `backend/.env.demo.example` ya tiene `CARPETA_WEB=../web` (parte de T024 que hace Grok). La misma línea se agregó a `backend/.env.demo` el 2026-11-21 (sin leer el archivo).
+
+### T023 · Límites
+
+`backend/.env.demo` tiene `LIMITE_COBROS_POR_MINUTO=30` y `CANALES_POR_IP=30`, como dice el TK-5 de F0 (la IP real llegó). Coincide.
+
+### T026 · Demo con la web por el túnel (en curso, 2026-11-21)
+
+Demo encendida con `docs/operacion-demo.md`, con una excepción: se omitió `git switch main` y `git pull` de la sección 2, porque el código de F2 solo está en `feature/90-infraestructura-demo` y AGENTS.md prohíbe cambiar de rama al agente. Se corrió `uv sync --locked`.
+
+- **Paso 1 (celular con datos móviles):** `/salud` y la pantalla abren con HTTPS válido y sin páginas intermedias. Al abrir se lee «$» y Cobrar está desactivado.
+- **Paso 2 (cobro de $0.01 sin pagar):**
+  - Intento 1, **descartado**: el celular se bloqueaba solo y la web reconectaba (reaperturas del canal a los 4, 7 y 9 minutos). No fue el túnel. Hallazgo: en ese celular la web no mantuvo la pantalla encendida (RF-058).
+  - Intento 2, con el bloqueo automático desactivado: QR en el minuto 0 (22:46:53), vencido a la vista en el minuto 10 (22:57:00) y un solo canal abierto, sin cortes ni reaperturas, hasta el cierre por el servidor en el minuto 20 (hacia las 23:07, observado en el celular). El registro de uvicorn no escribe las señales de vida ni el cierre; las señales se comprobaron con `curl` en F0 (T004).
+  - Se crearon además dos QR de $0.01 que se cancelaron enseguida. Ninguno se pagó.
+- **Paso 3 (dos redes):** el registro muestra las IP de dos celulares en redes distintas y de la Mac; ninguna petición que entró por el túnel llegó como `127.0.0.1`. Los límites se quedan en 30 (DP-40 no hace falta). No se anotan los valores de las IP.
+- **Paso 4 (reinicios):** servidor reiniciado por su PID exacto y túnel con `tailscale funnel reset` y `--bg`: la misma dirección responde `"estado": "ok"` en los dos casos. Falta reiniciar la computadora.
+- **Extra A (wifi de la Mac apagado un minuto con un cobro en pantalla):** el celular reabrió el canal del cobro a los ~80 s (23:13:40) y la pantalla volvió continua al QR con la cuenta regresiva del tiempo restante. En el celular no se llegó a ver «Reconectando…»: la reconexión fue tan rápida que no se notó. El resultado cumple: vuelve sola al cobro, sin recargar.
+- **Extra B (demo apagada, sección 7 de la guía):** con `tailscale funnel reset` y el servidor parado, `tailscale funnel status` dice `No serve config` y el enlace, abierto en una pestaña nueva del celular con datos móviles, no carga: no aparece ninguna página propia. Una pestaña que ya estaba abierta con un cobro en pantalla sí mostró «Reconectando…», que es la página ya cargada intentando reconectar su canal, no una página servida por la demo.
+- **Pendiente de T026:** reinicio de la computadora, con el encendido por la guía (Hugo, desde su terminal) y la misma dirección.
+- **Nota de operación:** a las 23:15 el servidor se detuvo solo porque terminó la sesión del agente que lo había arrancado. Para las pruebas de T026 la demo debe arrancarse desde la terminal de Hugo (guía, sección 3), no desde una sesión del agente.
