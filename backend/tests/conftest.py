@@ -6,7 +6,7 @@ lleva un transporte simulado y una base que no es la de pey.
 
 import base64
 import json
-from collections.abc import Callable
+from collections.abc import Callable, Iterator
 from datetime import UTC, datetime
 
 import httpx
@@ -19,6 +19,7 @@ from app.config import Configuracion
 from app.main import crear_app
 from app.pey import ClientePey
 from app.reloj import RelojFalso
+from tests.postgres_desechable import base_desechable
 
 CODI_QR_ID = "ab12cd34ef"
 LLAVE_FALSA = "llave-falsa-NO-DEBE-SALIR"
@@ -181,3 +182,12 @@ def cliente(app: FastAPI):
     """Cliente HTTP contra la app de prueba."""
     with TestClient(app) as cliente_http:
         yield cliente_http
+
+
+@pytest.fixture
+def base_vacia() -> Iterator[str]:
+    """Base vacía que se borra al terminar (spec 003, R-10, CE-011).
+
+    Sin ``PRUEBAS_DATABASE_URL`` la prueba se salta. No imprime la URL.
+    """
+    yield from base_desechable()

@@ -3,7 +3,7 @@
 - **Spec**: [spec.md](spec.md), estado: Aprobada el 2026-11-20 (QA-12 a QA-20)
 - **Plan**: [plan.md](plan.md), estado: Aprobado el 2026-11-21 (DP-38 Tailscale Funnel, QP-10 a QP-14, C-8 cumplido)
 - **Fecha**: 2026-11-21
-- **Estado**: `Aprobado` el 2026-11-21 por Hugo, con `/speckit-analyze` y la QA de tareas (QT-1 a QT-9) decididos y aplicados (ver «Revisión QA de tasks»). Estado anterior: `En QA`. Lo redactó Claude el 2026-11-21 con `/speckit-tasks`. Aprobar no autoriza empezar F1: se espera a que Hugo lo pida (F0 es suya y puede empezar cuando quiera). **F0 terminada (Hugo, con Claude, 2026-11-21): Tailscale Funnel cumple, sin plan B (TK-5).** **F1 terminada (2026-11-21): CI en `main` con `servidor` y `web` obligatorios, también para administradores (PR #102; prueba del error en el PR #103, TK-6).** **F2 terminada (Grok y Hugo, 2026-11-22): web servida por el servidor, C-7 aplicado, demo por el túnel comprobada en T026 y T027, aviso de pey con `secreto_aviso_pey: true` (T025).** **F3 terminada (Hugo, Grok y Claude, 2026-11-22): pagos reales de $0.01 con aviso de firma válida en Android y en iPhone, QR en 3 a 5 s con C-10 (meta de 5 s), reenvío comprobado por repetición del aviso (TK-8), README con la demo (T032) y la prueba de Leonel en el issue #105 (TK-9). Fin del corte 1.**
+- **Estado**: `Aprobado` el 2026-11-21 por Hugo, con `/speckit-analyze` y la QA de tareas (QT-1 a QT-9) decididos y aplicados (ver «Revisión QA de tasks»). Estado anterior: `En QA`. Lo redactó Claude el 2026-11-21 con `/speckit-tasks`. Aprobar no autoriza empezar F1: se espera a que Hugo lo pida (F0 es suya y puede empezar cuando quiera). **F0 terminada (Hugo, con Claude, 2026-11-21): Tailscale Funnel cumple, sin plan B (TK-5).** **F1 terminada (2026-11-21): CI en `main` con `servidor` y `web` obligatorios, también para administradores (PR #102; prueba del error en el PR #103, TK-6).** **F2 terminada (Grok y Hugo, 2026-11-22): web servida por el servidor, C-7 aplicado, demo por el túnel comprobada en T026 y T027, aviso de pey con `secreto_aviso_pey: true` (T025).** **F3 terminada (Hugo, Grok y Claude, 2026-11-22): pagos reales de $0.01 con aviso de firma válida en Android y en iPhone, QR en 3 a 5 s con C-10 (meta de 5 s), reenvío comprobado por repetición del aviso (TK-8), README con la demo (T032) y la prueba de Leonel en el issue #105 (TK-9). Fin del corte 1.** **F4 en curso (Grok, 2026-11-22): migraciones con un comando.**
 - **Entrada**: los documentos de `specs/003-infraestructura-demo/`: plan.md, spec.md, research.md, data-model.md, contracts/ y quickstart.md
 
 > **Notas para los comandos de spec-kit.**
@@ -372,7 +372,7 @@
   - **RF**: RF-024, RF-060
   - **Dep.**: T028
   - **Hecho cuando**: las tres secciones existen y el enlace abre la demo cuando está encendida.
-- [ ] T033 Cierre de F3 y del corte 1: sección F3 en la guía de verificación y commit sugerido
+- [X] T033 Cierre de F3 y del corte 1: sección F3 en la guía de verificación y commit sugerido
   - Commit sugerido: `docs(003): enlace de la demo y pago real desde el túnel (F3)`.
   - PR del README con la plantilla y `Closes #66`. Después del pago real, Hugo cierra #27 y #64 con un comentario que cita los tiempos de T030 (o los cierra el mismo PR).
   - **RF**: RF-024, RF-025, RF-060
@@ -391,12 +391,12 @@
 
 ### Preparación de F4
 
-- [ ] T034 [US6] Agregar `psycopg[binary]` 3 y `psycopg-pool` a `backend/pyproject.toml` y `backend/uv.lock` (DP-2, research R-6)
+- [X] T034 [US6] Agregar `psycopg[binary]` 3 y `psycopg-pool` a `backend/pyproject.toml` y `backend/uv.lock` (DP-2, research R-6)
   - `cd backend && uv add "psycopg[binary]==<versión>" "psycopg-pool==<versión>"`, cada una publicada hace al menos dos semanas (se comprueba la fecha en PyPI y se anota en la descripción del PR). Sin `pip install`.
   - **RF**: RF-017
   - **Dep.**: T033
   - **Hecho cuando**: `uv run --directory backend python -c "import psycopg, psycopg_pool"` no falla y las pruebas siguen en verde.
-- [ ] T035 [P] [US6] Ayuda del PostgreSQL desechable en `backend/tests/postgres_desechable.py` (archivo nuevo) y la fixture `base_vacia` en `backend/tests/conftest.py` (research R-10)
+- [X] T035 [P] [US6] Ayuda del PostgreSQL desechable en `backend/tests/postgres_desechable.py` (archivo nuevo) y la fixture `base_vacia` en `backend/tests/conftest.py` (research R-10)
   - Lee `PRUEBAS_DATABASE_URL`. Si no está, `pytest.skip("Sin PRUEBAS_DATABASE_URL: las pruebas de PostgreSQL corren en el CI (R-10)")`.
   - Crea los roles `anon` y `authenticated` si no existen (el `revoke` del PR #97 los necesita), crea una base `prueba_<hex aleatorio>`, entrega su URL y al terminar la borra con `drop database … with (force)`.
   - Nunca imprime la URL.
@@ -406,20 +406,20 @@
 
 ### Pruebas de F4 (primero, deben fallar antes de implementar)
 
-- [ ] T036 [P] [US6] Prueba de `DATABASE_URL` en la configuración, en `backend/tests/test_salud_y_registros.py`
+- [X] T036 [P] [US6] Prueba de `DATABASE_URL` en la configuración, en `backend/tests/test_salud_y_registros.py`
   - `test_database_url_se_lee_de_la_configuracion`: con `monkeypatch.setenv("DATABASE_URL", "postgresql://usuario-falso:clave-falsa@base.prueba/x")`, `Configuracion(_env_file=None).database_url.get_secret_value()` es ese valor, y `repr()` de la configuración no lo contiene.
   - El plan pone `database_url` en F5 (§4); se adelanta aquí porque el comando de migraciones la lee. Se anota como TK en el plan §14.
   - **RF**: RF-020, RF-021
   - **Dep.**: T034
   - **Hecho cuando**: la prueba existe y falla porque el campo no existe.
-- [ ] T037 [P] [US6] Pruebas del comando sin PostgreSQL en `backend/tests/test_migraciones.py` (archivo nuevo)
+- [X] T037 [P] [US6] Pruebas del comando sin PostgreSQL en `backend/tests/test_migraciones.py` (archivo nuevo)
   - `test_sin_database_url_el_comando_avisa_y_sale_con_1`: sale con 1 y escribe "Falta DATABASE_URL en backend/.env.".
   - `test_si_no_se_puede_conectar_no_muestra_la_direccion`: con `DATABASE_URL=postgresql://usuario-falso:clave-falsa@127.0.0.1:1/x`, sale con 1, escribe "No se pudo conectar con la base de datos (" seguido del nombre de una clase, y la salida no contiene `usuario-falso`, `clave-falsa` ni `127.0.0.1:1`.
   - Mensajes del [contrato](contracts/comando-migraciones.md) §4.
   - **RF**: RF-017, RF-021
   - **Dep.**: T034
   - **Hecho cuando**: las dos pruebas existen y fallan porque no existe `app.migraciones`.
-- [ ] T038 [US6] Pruebas del comando con PostgreSQL en `backend/tests/test_migraciones_postgres.py` (archivo nuevo)
+- [X] T038 [US6] Pruebas del comando con PostgreSQL en `backend/tests/test_migraciones_postgres.py` (archivo nuevo)
   - Todas usan `base_vacia` (T035) y una función interna del comando que recibe la URL y la carpeta de migraciones.
   - `test_aplicar_en_una_base_vacia_crea_el_esquema_la_imagen_y_el_estado`: con `--entorno local`, existen `negocios`, `cupones`, `cobros`, `pagos`, `avisos_webhook`, la vista `cobros_con_estado`, la columna `cobros.qr_imagen` y `estado_del_servidor`; `cambios_de_estructura` tiene 0001, 0002 y 0003, y `entorno_de_la_base` dice `local`.
   - `test_aplicar_dos_veces_no_cambia_nada`: la segunda vez sale con 0, dice "No había nada que aplicar." y una fila insertada entre las dos sigue ahí (RF-019, CE-007).
@@ -439,12 +439,12 @@
 
 ### Implementación de F4
 
-- [ ] T039 [US6] Agregar `database_url: SecretStr = SecretStr("")` a `backend/app/config.py`
+- [X] T039 [US6] Agregar `database_url: SecretStr = SecretStr("")` a `backend/app/config.py`
   - Con su comentario: URL del *pooler* de Supabase en modo sesión (R-9), solo en `backend/.env` o `backend/.env.demo` (RF-020).
   - **RF**: RF-020, RF-021
   - **Dep.**: T036
   - **Hecho cuando**: T036 pasa.
-- [ ] T040 [US6] Crear los archivos de `supabase/migraciones/` y los de datos (data-model §5)
+- [X] T040 [US6] Crear los archivos de `supabase/migraciones/` y los de datos (data-model §5)
   - `supabase/migraciones/0001_esquema_inicial.sql`: el contenido de `supabase/001_esquema_inicial.sql` **sin** `begin;` ni `commit;` (DP-17); el resto igual.
   - `supabase/migraciones/0002_imagen_del_qr.sql`: `alter table cobros add column qr_imagen text;` y el comentario de `cobros.qr` al día ("la imagen es la que manda pey"). No recrea la vista (DP-20).
   - `supabase/migraciones/0003_estado_del_servidor.sql`: `estado_del_servidor` con `unico boolean primary key default true check (unico)` y `conciliado_hasta timestamptz not null`; `enable row level security`; `revoke all … from anon, authenticated`.
@@ -454,7 +454,7 @@
   - **RF**: RF-018, RF-022, RF-054, RF-061
   - **Dep.**: T038
   - **Hecho cuando**: `git grep -n "001_esquema_inicial\|002_datos_de_prueba" -- ':!specs'` no encuentra referencias rotas y los archivos nuevos existen.
-- [ ] T041 [US6] Implementar el comando en `backend/app/migraciones.py` (archivo nuevo, DP-3, DP-17 a DP-19)
+- [X] T041 [US6] Implementar el comando en `backend/app/migraciones.py` (archivo nuevo, DP-3, DP-17 a DP-19)
   - `python -m app.migraciones estado|aplicar [--entorno local|demo] [--ya-aplicada 0001] [--datos-de-prueba]`, con `argparse` y mensajes del [contrato](contracts/comando-migraciones.md) §4 y §5.
   - Lee `DATABASE_URL` con `Configuracion` (variable de entorno o `backend/.env`; con `uv run --env-file …` manda el archivo indicado). Conexión síncrona de psycopg con `connect_timeout=5`.
   - Antes de migrar crea, con `if not exists`, `cambios_de_estructura` y `entorno_de_la_base` (data-model §5.1), con RLS y sin acceso para `anon` ni `authenticated`.
@@ -466,12 +466,12 @@
   - **RF**: RF-017, RF-018, RF-019, RF-021, RF-049, RF-054
   - **Dep.**: T037, T039, T040
   - **Hecho cuando**: T037 pasa en local, y T038 pasa con `PRUEBAS_DATABASE_URL` (en el CI con T043).
-- [ ] T042 [US6] Agregar el trabajo `base-de-datos` a la prueba del CI en `backend/tests/test_ci.py`
+- [X] T042 [US6] Agregar el trabajo `base-de-datos` a la prueba del CI en `backend/tests/test_ci.py`
   - `test_el_ci_prueba_las_migraciones_contra_un_postgresql_desechable`: hay un trabajo `base-de-datos:` con el servicio `postgres:17`, `PRUEBAS_DATABASE_URL`, y `python -m app.migraciones aplicar --entorno local` dos veces.
   - **RF**: RF-036, RF-038
   - **Dep.**: T041
   - **Hecho cuando**: la prueba existe y falla porque el trabajo no está en `ci.yml`.
-- [ ] T043 [US6] Agregar el trabajo `base-de-datos` a `.github/workflows/ci.yml` (contrato [ci](contracts/ci.md) §4)
+- [X] T043 [US6] Agregar el trabajo `base-de-datos` a `.github/workflows/ci.yml` (contrato [ci](contracts/ci.md) §4)
   - Servicio `postgres:17` con `POSTGRES_PASSWORD: prueba` (contraseña fija de prueba, no un secreto) y su comprobación de salud.
   - Pasos: `uv sync --locked`; crear los roles `anon` y `authenticated`; `DATABASE_URL=<servicio> uv run python -m app.migraciones aplicar --entorno local` dos veces, comprobando que la segunda dice "No había nada que aplicar."; `PRUEBAS_DATABASE_URL=<servicio> uv run pytest -q`.
   - **RF**: RF-036, RF-038

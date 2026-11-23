@@ -52,3 +52,44 @@ jobs:
       - run: uv run ruff check --config pyproject.toml ../web
       - run: uv run ruff format --config pyproject.toml --check ../web
       - run: uv run pytest ../web -q
+
+  base-de-datos:
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: backend
+    services:
+      postgres:
+        image: postgres:17
+        env:
+          POSTGRES_PASSWORD: prueba
+        ports:
+          - "5432:5432"
+        options: >-
+          --health-cmd "pg_isready -U postgres"
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+    steps:
+      - uses: actions/checkout@v7
+      - uses: astral-sh/setup-uv@v7
+        with:
+          python-version: "3.12"
+          enable-cache: true
+      - run: uv sync --locked
+      - run: |
+          psql "postgresql://postgres:prueba@localhost:5432/postgres" -c "create role anon"
+          psql "postgresql://postgres:prueba@localhost:5432/postgres" -c "create role authenticated"
+      - env:
+          DATABASE_URL: postgresql://postgres:prueba@localhost:5432/postgres
+        run: |
+          uv run python -m app.migraciones aplicar --entorno local
+          uv run python -m app.migraciones aplicar --entorno local | tee salida-migracion.txt
+          grep -q "No había nada que aplicar." salida-migracion.txt
+      - env:
+          PRUEBAS_DATABASE_URL: postgresql://postgres:prueba@localhost:5432/postgres
+        run: |
+          uv run pytest -q -rs | tee salida-pytest.txt
+          if grep -q "Sin PRUEBAS_DATABASE_URL" salida-pytest.txt; then
+            exit 1
+          fi
