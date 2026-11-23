@@ -94,7 +94,7 @@ def test_una_ip_no_puede_abrir_mas_de_10_canales(cliente) -> None:
 
 
 def test_cors_solo_permite_los_origenes_configurados(cliente, configuracion) -> None:
-    """Solo WEB_ORIGIN, y solo los métodos GET y POST (RF-035)."""
+    """Solo WEB_ORIGIN, y solo los métodos GET, POST y DELETE necesarios para la web."""
     origen = configuracion.origenes_web[0]
     permitido = cliente.options(
         "/salud",
@@ -104,7 +104,7 @@ def test_cors_solo_permite_los_origenes_configurados(cliente, configuracion) -> 
     metodos = {
         parte.strip() for parte in permitido.headers["access-control-allow-methods"].split(",")
     }
-    assert metodos == {"GET", "POST"}
+    assert metodos == {"GET", "POST", "DELETE"}
 
     ajeno = cliente.options(
         "/salud",

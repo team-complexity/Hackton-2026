@@ -1,0 +1,19 @@
+{
+  "name": "PAGO FÁCIL",
+  "short_name": "PAGO FÁCIL",
+  "description": "Cobra con QR CoDi, sin comisiones y con aviso inmediato.",
+  "lang": "es",
+  "start_url": "./",
+  "scope": "./",
+  "display": "standalone",
+  "background_color": "#f4f7f5",
+  "theme_color": "#128a3e",
+  "icons": [
+    {
+      "src": "icono.svg",
+      "sizes": "any",
+      "type": "image/svg+xml",
+      "purpose": "any maskable"
+    }
+  ]
+}

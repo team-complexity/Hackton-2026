@@ -227,3 +227,8 @@ class RepositorioCobros:
         if cobro.estado(ahora) != PENDIENTE:
             raise NoSePuedeCancelar
         cobro.cancelado_en = int(ahora)
+
+    def listar(self) -> list[dict]:
+        """Lista cobros del más reciente al más antiguo, para historial de la demo."""
+        ordenados = sorted(self._por_id.values(), key=lambda cobro: cobro.creado_en, reverse=True)
+        return [cobro.publico() for cobro in ordenados]

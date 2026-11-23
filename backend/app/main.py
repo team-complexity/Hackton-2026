@@ -2,6 +2,7 @@
 
 import json
 import logging
+import secrets
 from collections.abc import AsyncIterator
 from contextlib import asynccontextmanager
 from decimal import Decimal, InvalidOperation
@@ -133,8 +134,8 @@ def crear_app(
     app.add_middleware(
         CORSMiddleware,
         allow_origins=config.origenes_web,
-        allow_methods=["GET", "POST"],
-        allow_headers=["Content-Type"],
+        allow_methods=["GET", "POST", "DELETE"],
+        allow_headers=["Content-Type", "Authorization"],
     )
     # La IP del límite es la del cliente, no la del proxy del hosting (RF-034, R-5).
     app.add_middleware(ProxyHeadersMiddleware, trusted_hosts=config.proxies_confiables)
@@ -145,6 +146,20 @@ def crear_app(
     limite = LimitePorIp(config.limite_cobros_por_minuto, reloj_de_la_app)
     limite_canales = LimiteDeCanales(config.canales_por_ip)
     app.state.limite_canales = limite_canales
+    sesiones: dict[str, str] = {}
+
+    def correo_autenticado(request: Request) -> str | None:
+        cabecera = request.headers.get("authorization", "")
+        if not cabecera.startswith("Bearer "):
+            return None
+        token = cabecera.removeprefix("Bearer ").strip()
+        return sesiones.get(token)
+
+    def exigir_sesion(request: Request) -> str:
+        correo = correo_autenticado(request)
+        if correo is None:
+            raise HTTPException(401, "Inicia sesión para continuar.")
+        return correo
 
     def buscar(cobro_id: str) -> Cobro:
         cobro = cobros.obtener(cobro_id)
@@ -159,6 +174,41 @@ def crear_app(
             "llave_pey": bool(config.pey_api_key.get_secret_value()),
             "secreto_aviso_pey": bool(config.pey_webhook_secret.get_secret_value()),
         }
+
+    @app.post("/api/sesion")
+    async def iniciar_sesion(request: Request) -> dict:
+        try:
+            cuerpo = json.loads((await request.body()) or b"{}")
+        except json.JSONDecodeError:
+            raise HTTPException(422, "Los datos de acceso no son válidos.") from None
+        if not isinstance(cuerpo, dict):
+            raise HTTPException(422, "Los datos de acceso no son válidos.")
+        correo = str(cuerpo.get("correo", "")).strip().lower()
+        clave = str(cuerpo.get("clave", ""))
+        esperado = config.usuario_correo.strip().lower()
+        clave_esperada = config.usuario_clave.get_secret_value()
+        if not correo or not clave or correo != esperado or clave != clave_esperada:
+            raise HTTPException(401, "Correo o contraseña incorrectos.")
+        token = secrets.token_urlsafe(32)
+        sesiones[token] = esperado
+        return {"token": token, "correo": esperado, "plan": "demo"}
+
+    @app.get("/api/sesion")
+    async def ver_sesion(request: Request) -> dict:
+        correo = exigir_sesion(request)
+        return {"correo": correo, "plan": "demo"}
+
+    @app.delete("/api/sesion")
+    async def cerrar_sesion(request: Request) -> dict:
+        cabecera = request.headers.get("authorization", "")
+        if cabecera.startswith("Bearer "):
+            sesiones.pop(cabecera.removeprefix("Bearer ").strip(), None)
+        return {"cerrada": True}
+
+    @app.get("/api/cobros")
+    async def listar_cobros(request: Request) -> list[dict]:
+        exigir_sesion(request)
+        return cobros.listar()
 
     @app.exception_handler(RequestValidationError)
     async def errores_de_validacion(

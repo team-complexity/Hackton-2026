@@ -37,6 +37,10 @@ class Configuracion(BaseSettings):
     gracia_segundos: int = 600
     canales_por_ip: int = 10
 
+    # Acceso de la demo. En producción se configuran por entorno.
+    usuario_correo: str = "demo@pagofacil.mx"
+    usuario_clave: SecretStr = SecretStr("pagofacil123")
+
     @property
     def origenes_web(self) -> list[str]:
         return [o.strip() for o in self.web_origin.split(",") if o.strip()]
