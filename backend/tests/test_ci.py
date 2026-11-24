@@ -62,3 +62,15 @@ def test_el_ci_tiene_los_trabajos_servidor_y_web() -> None:
         "pytest ../web -q",
     ):
         assert comando in texto
+
+
+def test_el_ci_prueba_las_migraciones_contra_un_postgresql_desechable() -> None:
+    """base-de-datos prueba las migraciones en un PostgreSQL 17 (spec 003, RF-036, RF-038)."""
+    trabajos = _bloque(_flujo(), "jobs")
+    assert "base-de-datos:" in trabajos
+    cuerpo = _bloque(trabajos, "base-de-datos")
+    assert "postgres:17" in cuerpo
+    assert "PRUEBAS_DATABASE_URL" in cuerpo
+    assert cuerpo.count("python -m app.migraciones aplicar --entorno local") == 2
+    assert "pytest -q" in cuerpo
+    assert "uv sync --locked" in cuerpo

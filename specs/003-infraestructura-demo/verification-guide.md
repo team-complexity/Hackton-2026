@@ -309,3 +309,49 @@ Se agregaron a `README.md` las secciones «La demo», «Correr en local» y «Eq
   - Un `POST /api/cobros` desde otra página crea un QR de monto libre aunque CORS bloquee la lectura (F2); cerrarlo sería un cambio `C-n` a la 001.
   - La prueba de Leonel desde su red (#105).
 - **Commit sugerido:** `docs(003): enlace de la demo y pago real desde el túnel (F3)`.
+
+## F4 Migraciones con un comando
+
+### T045 a T047 · Base de desarrollo en Supabase (2026-11-24)
+
+La base es el proyecto de Supabase de desarrollo de Juan, con la `DATABASE_URL` del *pooler* en modo sesión en `backend/.env` de Hugo. Hugo confirmó que es la de desarrollo y no la de la demo. La contraseña no se anota aquí.
+
+- **`estado` antes de aplicar** (T045): `Entorno: sin marcar.`, `Aplicadas: ninguna.`, `Pendientes: 0001, 0002, 0003.`
+- **Hallazgo:** la base ya tenía el esquema del PR #97 creado a mano, con sus cinco tablas y los mismos datos de prueba de `supabase/datos_de_prueba.sql` (1 negocio, 1 cupón, 4 cobros, 1 pago; se comprobó por ids y por el código del cupón, en solo lectura). Por eso `aplicar --entorno local --datos-de-prueba` se negó, como pide la spec: «Esta base ya tiene el esquema del PR #97 sin registro. Revísalo y corre: aplicar --ya-aplicada 0001.» Es el caso de la demo creada a mano (DP-3, R-7), probado por primera vez contra Supabase.
+- **T046**, tras revisar el esquema:
+
+  ```text
+  aplicar --ya-aplicada 0001 --entorno local --datos-de-prueba
+  Base marcada como local.
+  Anotada 0001 esquema_inicial sin correrla.
+  Aplicada 0002 imagen_del_qr.
+  Aplicada 0003 estado_del_servidor.
+  Datos de prueba cargados.
+
+  aplicar
+  No había nada que aplicar.
+  ```
+
+- **T047**: `estado` dice `Entorno: local.`, `Aplicadas: 0001, 0002, 0003.`, `Pendientes: ninguna.`
+- **Primera prueba real de 0002 y 0003 en Supabase:** corrieron sin errores. La 0001 no se corrió ahí: ya estaba hecha a mano y solo se anotó.
+- **Para Juan:** la contraseña de la base pasó por el chat del equipo mientras se resolvía la conexión; conviene cambiarla.
+
+### T048 · Segunda llave de pey (2026-11-24)
+
+- La comparación de `PEY_API_KEY` entre `backend/.env` y `backend/.env.demo` dice `DISTINTAS`. No se anota ningún valor.
+- `GET /salud` del servidor de desarrollo: `{"estado":"ok","llave_pey":true,"secreto_aviso_pey":false}`. `secreto_aviso_pey` queda en `false` porque quien prueba sin túnel no da de alta aviso y usa la consulta de respaldo.
+
+### Resultado de F4 (2026-11-24)
+
+| Qué | Resultado |
+|---|---|
+| Pruebas del backend | 134 pasan con un PostgreSQL 17 desechable; 119 pasan y 14 se saltan sin él |
+| `ruff check` y `ruff format --check` | Sin avisos, todo formateado |
+| CI del PR #107 | `servidor`, `web` y `base-de-datos` en verde |
+| T044 protección de `main` | `servidor`, `web` y `base-de-datos` obligatorios |
+| T045 a T047 base de desarrollo | 0001 anotada, 0002 y 0003 aplicadas; segunda corrida sin cambios; `Entorno: local.` |
+| T048 segunda llave de pey | `DISTINTAS` y `llave_pey: true` |
+
+- **Qué queda para Hugo:** revisar el diff, unir el PR #107 y avisar a Juan de que cambie la contraseña de la base.
+- **Lo que sigue abierto, sin resolver en F4:** el servidor todavía no usa la base (F5) y la base de la demo se crea en F6.
+- **Commit sugerido:** `feat(003): comando de migraciones y trabajo base-de-datos del CI (F4)`.

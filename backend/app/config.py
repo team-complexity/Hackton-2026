@@ -11,7 +11,7 @@ RAIZ_BACKEND = Path(__file__).resolve().parent.parent
 
 
 class Configuracion(BaseSettings):
-    """Variables de entorno del servidor (spec 001, RF-022, RF-034, RF-041)."""
+    """Variables de entorno del servidor (spec 001, RF-022, RF-034, RF-041; spec 003, RF-020)."""
 
     model_config = SettingsConfigDict(
         env_file=RAIZ_BACKEND / ".env",
@@ -22,6 +22,10 @@ class Configuracion(BaseSettings):
     pey_api_base_url: str = "https://api.pey.mx"
     pey_api_key: SecretStr = SecretStr("")
     pey_webhook_secret: SecretStr = SecretStr("")
+
+    # URL del pooler de Supabase en modo sesión (R-9).
+    # Solo en backend/.env o backend/.env.demo (spec 003, RF-020).
+    database_url: SecretStr = SecretStr("")
 
     # Origen de la web permitido por CORS. Varios orígenes separados por coma.
     web_origin: str = "http://localhost:5173"

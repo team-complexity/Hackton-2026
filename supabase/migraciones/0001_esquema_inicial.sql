@@ -7,7 +7,6 @@
 -- bloque "BORRAR TODO" al final (comentado).
 -- =====================================================================
 
-begin;
 
 -- ---------------------------------------------------------------------
 -- 1. NEGOCIOS: quién cobra (#24)
@@ -152,7 +151,6 @@ alter table avisos_webhook enable row level security;
 revoke all on negocios, cupones, cobros, pagos, avisos_webhook, cobros_con_estado
   from anon, authenticated;
 
-commit;
 
 -- =====================================================================
 -- BORRAR TODO (solo si hay que empezar de cero; quita los "--" y corre)

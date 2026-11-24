@@ -4,6 +4,7 @@ import logging
 import sys
 
 import httpx
+import pytest
 from fastapi.testclient import TestClient
 from pydantic import SecretStr
 
@@ -17,6 +18,15 @@ from tests.conftest import (
     enviar_aviso,
     pago,
 )
+
+
+def test_database_url_se_lee_de_la_configuracion(monkeypatch: pytest.MonkeyPatch) -> None:
+    """DATABASE_URL se lee como secreto y no aparece en repr (spec 003, RF-020, RF-021)."""
+    valor = "postgresql://usuario-falso:clave-falsa@base.prueba/x"
+    monkeypatch.setenv("DATABASE_URL", valor)
+    configuracion = Configuracion(_env_file=None)
+    assert configuracion.database_url.get_secret_value() == valor
+    assert valor not in repr(configuracion)
 
 
 def test_la_configuracion_tiene_los_valores_por_defecto_del_plan() -> None:
