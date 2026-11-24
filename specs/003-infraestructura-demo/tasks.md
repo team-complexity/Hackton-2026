@@ -477,7 +477,7 @@
   - **RF**: RF-036, RF-038
   - **Dep.**: T042
   - **Hecho cuando**: T042 pasa y, en el PR, `base-de-datos` sale en verde sin pruebas saltadas por falta de `PRUEBAS_DATABASE_URL`.
-- [ ] T044 [US6] Marcar `base-de-datos` como obligatorio en la protección de `main`
+- [X] T044 [US6] Marcar `base-de-datos` como obligatorio en la protección de `main`
   - **Quién**: Hugo, cuando el trabajo ya corrió en un PR (como T013).
   - **RF**: RF-037
   - **Dep.**: T043
@@ -485,29 +485,29 @@
 
 ### Base de desarrollo (Hugo y Juan)
 
-- [ ] T045 [US6] Recibir el proyecto de Supabase de desarrollo y poner su `DATABASE_URL` en `backend/.env`
+- [X] T045 [US6] Recibir el proyecto de Supabase de desarrollo y poner su `DATABASE_URL` en `backend/.env`
   - **Quién**: Juan crea el proyecto (RF-049) y comparte el acceso con Hugo; Hugo pone la URL del *pooler* en modo sesión en su `backend/.env` (desarrollo). Nadie la pega en un chat.
   - **RF**: RF-020, RF-049
   - **Dep.**: ninguna (puede hacerse antes de F4)
   - **Hecho cuando**: `uv run --directory backend python -m app.migraciones estado` conecta y muestra que la base no tiene entorno.
-- [ ] T046 [US6] Aplicar las migraciones en la base de desarrollo (quickstart §6, paso 1; CE-007)
+- [X] T046 [US6] Aplicar las migraciones en la base de desarrollo (quickstart §6, paso 1; CE-007)
   - **Quién**: Hugo.
   - `uv run --directory backend python -m app.migraciones aplicar --entorno local --datos-de-prueba` y después `uv run --directory backend python -m app.migraciones aplicar`.
   - **RF**: RF-017, RF-018, RF-019, RF-054
   - **Dep.**: T041, T045
   - **Hecho cuando**: la primera aplica 0001, 0002 y 0003 y carga los datos de prueba; la segunda dice "No había nada que aplicar."
-- [ ] T047 [US6] Comprobar que la base de desarrollo no es la de la demo
+- [X] T047 [US6] Comprobar que la base de desarrollo no es la de la demo
   - **Quién**: Hugo. El comando `estado` en la base de desarrollo dice `local`. La de la demo se marca `demo` en F6 (T072).
   - **RF**: RF-049
   - **Dep.**: T046
   - **Hecho cuando**: `estado` sin `--env-file` dice `local`.
-- [ ] T048 [US6] Poner la segunda llave de producción en `backend/.env` y comprobar que es distinta de la de la demo (RF-053, QP-14)
+- [X] T048 [US6] Poner la segunda llave de producción en `backend/.env` y comprobar que es distinta de la de la demo (RF-053, QP-14)
   - **Quién**: Hugo crea la segunda llave en el portal de pey y la liga a su cuenta CoDi; quien prueba sin túnel no da de alta aviso (usa la consulta de respaldo).
   - Comparación sin ver los valores: `diff -q <(grep '^PEY_API_KEY=' backend/.env) <(grep '^PEY_API_KEY=' backend/.env.demo) >/dev/null && echo IGUALES || echo DISTINTAS`, y lo mismo con `DATABASE_URL` cuando la demo la tenga (F6).
   - **RF**: RF-049, RF-053
   - **Dep.**: T045
   - **Hecho cuando**: el comando dice `DISTINTAS` y `/salud` del servidor de desarrollo dice `"llave_pey": true`.
-- [ ] T049 Cierre de F4: todo en verde, sección F4 en la guía de verificación y commit sugerido
+- [X] T049 Cierre de F4: todo en verde, sección F4 en la guía de verificación y commit sugerido
   - Commit sugerido: `feat(003): comando de migraciones y trabajo base-de-datos del CI (F4)`.
   - **RF**: RF-017 a RF-019, RF-022, RF-049, RF-053, RF-054
   - **Dep.**: T043, T044, T046, T047, T048
