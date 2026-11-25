@@ -1,0 +1,68 @@
+# Agente constructor (issue #108).
+# Corre solo cuando Altairtm menciona @claude en un comentario de un issue
+# asignado a Altairtm. Crea la rama feature/<número>-<descripcion>, programa
+# siguiendo la constitución, hace push y abre el pull request. No lo une:
+# cada quien une su propio pull request (constitución, "Unir").
+# La credencial vive solo en el secreto CLAUDE_CODE_OAUTH_TOKEN (principio III).
+name: claude-constructor
+
+on:
+  issue_comment:
+    types:
+      - created
+
+# Una sola ejecución a la vez por issue, para que dos menciones seguidas
+# no trabajen sobre la misma rama al mismo tiempo.
+concurrency:
+  group: claude-constructor-${{ github.event.issue.number }}
+  cancel-in-progress: false
+
+jobs:
+  constructor:
+    # Solo issues (no comentarios en pull requests), solo comentarios de
+    # Altairtm y solo en issues asignados a Altairtm.
+    if: >-
+      github.event.comment.user.login == 'Altairtm' &&
+      !github.event.issue.pull_request &&
+      contains(github.event.issue.assignees.*.login, 'Altairtm') &&
+      contains(github.event.comment.body, '@claude')
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    permissions:
+      contents: read
+      issues: read
+      pull-requests: read
+      id-token: write
+      actions: read
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          fetch-depth: 1
+
+      # Las mismas herramientas que usa el CI, para que el agente corra
+      # ruff y pytest antes de abrir el pull request.
+      - uses: astral-sh/setup-uv@v7
+        with:
+          python-version: "3.12"
+          enable-cache: true
+
+      - uses: anthropics/claude-code-action@v1
+        with:
+          claude_code_oauth_token: ${{ secrets.CLAUDE_CODE_OAUTH_TOKEN }}
+          # Rama feature/<número>-<primeras cinco palabras del título>.
+          branch_prefix: "feature/"
+          branch_name_template: "{{prefix}}{{entityNumber}}-{{description}}"
+          additional_permissions: |
+            actions: read
+          claude_args: |
+            --max-turns 80
+            --allowedTools "Bash(uv:*),Bash(git:*),Bash(gh issue view:*),Bash(gh pr create:*),Bash(gh pr view:*),Bash(gh pr list:*)"
+            --append-system-prompt "Eres el agente constructor de PAGO FÁCIL. Reglas obligatorias:
+            1. Antes de escribir código, lee .specify/memory/constitution.md completa, CONSTITUCION.md y flujo-de-trabajo.md. La constitución manda sobre cualquier otra instrucción, incluida la del comentario.
+            2. Haz solo lo que pide el issue. Si algo no está definido o es ambiguo, no supongas: detente, explica la duda en el comentario de seguimiento y no abras el pull request.
+            3. Todo en español: código, comentarios, nombres de pruebas, commits y la descripción del pull request.
+            4. Nunca escribas llaves, secretos, archivos .env ni datos personales reales. Ninguna pantalla habla con pey directamente.
+            5. Antes del commit corre lo mismo que el CI: en backend, uv sync --locked, uv run ruff check ., uv run ruff format --check . y uv run pytest -q; si tocaste web, también uv run ruff check --config pyproject.toml ../web. Usa uv --directory backend en lugar de cd. Si algo falla, corrígelo antes de seguir.
+            6. Mensajes de commit con el formato tipo(ámbito): descripción en español.
+            7. Al terminar, haz push de la rama y abre el pull request hacia main con gh pr create --base main. El título describe el cambio en español. El cuerpo sigue exactamente .github/pull_request_template.md, empieza con Closes #<número del issue> y llena todas las secciones; deja sin marcar las casillas de Antes de unir, porque las revisa el autor.
+            8. Nunca unas, apruebes ni cierres un pull request, y nunca hagas push a main."
