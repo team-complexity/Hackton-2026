@@ -15,6 +15,7 @@ from fastapi import FastAPI
 from fastapi.testclient import TestClient
 from standardwebhooks.webhooks import Webhook
 
+from app.almacen import AlmacenEnMemoria
 from app.config import Configuracion
 from app.main import crear_app
 from app.pey import ClientePey
@@ -45,6 +46,10 @@ class PeySimulado:
         self.tiempo_agotado = False
         # Se llama al responder POST /codi/qr; sirve para simular que pey tarda (C-2).
         self.al_crear: Callable[[], None] | None = None
+        # El almacén rechaza un codi_qr_id repetido. Varias pruebas de la 001 crean
+        # más de un cobro sin cambiar id_qr: el primero usa ese id y los siguientes, otro.
+        self._base_entregada: str | None = None
+        self._repeticiones = 0
 
     def __call__(self, solicitud: httpx.Request) -> httpx.Response:
         self.solicitudes.append(solicitud)
@@ -63,10 +68,17 @@ class PeySimulado:
             self.al_crear()
         if self.estado_crear != 201:
             return self._error(self.estado_crear)
+        identificador = self.id_qr
+        if identificador == self._base_entregada:
+            self._repeticiones += 1
+            identificador = f"{self.id_qr}-{self._repeticiones}"
+        else:
+            self._base_entregada = self.id_qr
+            self._repeticiones = 0
         return httpx.Response(
             201,
             json={
-                "id": self.id_qr,
+                "id": identificador,
                 "qrString": self.qr_string,
                 "qrImage": self.qr_imagen,
                 "requestId": self.request_id,
@@ -174,7 +186,13 @@ def app(configuracion: Configuracion, pey: PeySimulado, reloj: RelojFalso) -> Fa
         configuracion.pey_api_key.get_secret_value(),
         http,
     )
-    return crear_app(configuracion, cliente_pey, reloj)
+    return crear_app(
+        configuracion,
+        cliente_pey,
+        reloj,
+        almacen=AlmacenEnMemoria(reloj=reloj),
+        tareas_en_segundo_plano=False,
+    )
 
 
 @pytest.fixture

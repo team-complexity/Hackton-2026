@@ -525,7 +525,7 @@
 
 ### Pruebas de F5 (primero, deben fallar antes de implementar)
 
-- [ ] T050 [P] [US1] Ayudas de prueba del almacén en `backend/tests/almacen_de_prueba.py` (archivo nuevo) y en `backend/tests/conftest.py`
+- [x] T050 [P] [US1] Ayudas de prueba del almacén en `backend/tests/almacen_de_prueba.py` (archivo nuevo) y en `backend/tests/conftest.py`
   - `AlmacenQueFalla`: envuelve un `AlmacenEnMemoria`, dice `configurado = True` y permite `fallar(operacion, veces=None)` (lanza `ErrorDeAlmacen`), `fallar_datos(operacion)` (lanza `ErrorDeDatos`), `no_responde()` (la salud) y `pausar(operacion)` (un `asyncio.Event` que la prueba suelta, para simular dos peticiones a la vez sin tiempo real). Guarda cada llamada con su operación y su `espera`.
   - `reiniciar(app)`: una app nueva con un almacén nuevo sobre los **mismos** datos en memoria, el mismo `RelojFalso` y el mismo `PeySimulado` (plan §7).
   - `RelojDetenido`: `RelojFalso` cuyo `dormir` espera para siempre (para arrancar la tarea de fondo una sola vuelta en T060).
@@ -534,7 +534,7 @@
   - **RF**: — (principio V, DP-6)
   - **Dep.**: T049
   - **Hecho cuando**: el archivo existe; las pruebas nuevas que lo usan fallan porque `app.almacen` no existe, y las de la 001 siguen en verde.
-- [ ] T051 [P] [US1] Pruebas del contrato del almacén en `backend/tests/test_almacen.py` (archivo nuevo)
+- [x] T051 [P] [US1] Pruebas del contrato del almacén en `backend/tests/test_almacen.py` (archivo nuevo)
   - Una fixture `almacen` parametrizada: `memoria` siempre, y `postgres` con `base_vacia` (T035), las migraciones aplicadas con la función interna del comando y `AlmacenPostgres` con un `RelojFalso` (se salta sin `PRUEBAS_DATABASE_URL`).
   - Pruebas para los dos:
     - `test_un_cobro_guardado_se_carga_igual`: `guardar_cobro` y `cargar_por_id` devuelven los mismos campos; monto `Decimal`, monto libre `None`, `codi_qr_id` y `qr` vacíos (`""` en memoria, `null` en la base), sin pagos.
@@ -552,7 +552,7 @@
   - **RF**: RF-001 a RF-008, RF-010, RF-011, RF-021, RF-052, RF-061
   - **Dep.**: T050
   - **Hecho cuando**: las pruebas existen y fallan porque no existe `app.almacen`.
-- [ ] T052 [P] [US1] Pruebas de guardar y de reinicio por la API en `backend/tests/test_guardar_cobros.py` (archivo nuevo)
+- [x] T052 [P] [US1] Pruebas de guardar y de reinicio por la API en `backend/tests/test_guardar_cobros.py` (archivo nuevo)
   - Nombres del plan §7, con el almacén en memoria y `reiniciar(app)`:
     - `test_un_cobro_creado_queda_guardado_con_su_imagen_del_qr` (RF-001, RF-010).
     - `test_el_pago_se_guarda_antes_de_emitirse_por_el_canal`: con `registrar_pago` en falla no se emite nada; sin falla, cuando llega el evento `pago` el almacén ya lo tiene (RF-002).
@@ -570,7 +570,7 @@
   - **RF**: RF-001 a RF-011
   - **Dep.**: T050
   - **Hecho cuando**: las pruebas existen y fallan por la razón esperada.
-- [ ] T053 [P] [US1] Pruebas de fallas de la base de datos en `backend/tests/test_fallas_base_de_datos.py` (archivo nuevo)
+- [x] T053 [P] [US1] Pruebas de fallas de la base de datos en `backend/tests/test_fallas_base_de_datos.py` (archivo nuevo)
   - Con `AlmacenQueFalla`; códigos y textos `detail` del [contrato de fallas](contracts/fallas-base-de-datos.md):
     - `test_si_la_base_no_responde_al_crear_no_se_llama_a_pey`: 503 "No se pudo guardar el cobro. Intenta de nuevo en un momento." y `pey.solicitudes` vacío (RF-012, escenario 7).
     - `test_si_pey_falla_el_cobro_guardado_se_borra`: con `pey.estado_crear = 500`, el almacén ya no tiene el cobro y la respuesta es la de la 001; si el borrado también falla, se registra y la respuesta no cambia (RF-052, RF-016).
@@ -588,7 +588,7 @@
   - **RF**: RF-004, RF-012 a RF-016, RF-021, RF-048, RF-052
   - **Dep.**: T050
   - **Hecho cuando**: las pruebas existen y fallan por la razón esperada.
-- [ ] T054 [P] [US1] Pruebas de la salud con la base de datos en `backend/tests/test_salud_y_registros.py`
+- [x] T054 [P] [US1] Pruebas de la salud con la base de datos en `backend/tests/test_salud_y_registros.py`
   - `test_la_salud_dice_si_la_base_responde_sin_mostrar_valores`: tres casos, `"responde"`, `"no responde"` (`AlmacenQueFalla.no_responde()`) y `"sin configurar"` (almacén en memoria sin `DATABASE_URL`); los otros tres campos no cambian ([contrato de salud](contracts/salud.md)).
   - `test_la_salud_guarda_la_respuesta_de_la_base_10_segundos`: dos peticiones seguidas consultan la base una vez; después de avanzar el `RelojFalso` 10 s, otra vez (DP-31).
   - **RF**: RF-023, RF-021
@@ -615,7 +615,7 @@
   - **RF**: RF-001 a RF-009, RF-020, RF-021, RF-022
   - **Dep.**: T055
   - **Hecho cuando**: las pruebas de T051 con `postgres` pasan (en el CI o con `PRUEBAS_DATABASE_URL`).
-- [ ] T057 [US1] `RepositorioCobros` como caché de escritura directa en `backend/app/cobros.py` (DP-7, DP-8, DP-11, DP-13, DP-33)
+- [X] T057 [US1] `RepositorioCobros` como caché de escritura directa en `backend/app/cobros.py` (DP-7, DP-8, DP-11, DP-13, DP-33)
   - El constructor recibe el almacén. `nuevo` sigue armando el `Cobro` en memoria; métodos asíncronos nuevos o cambiados: `guardar_nuevo(cobro, espera=2)`, `vincular_qr(…, espera=2)`, `descartar`, `obtener(id)` y `por_codi_qr(codi_qr_id)` (primero memoria, después almacén; si otra petición lo cargó mientras tanto, se usa el que ya está, sin `await` entre comprobar y guardar), `aviso_ya_visto` (memoria, después almacén), `marcar_aviso(webhook_id, tipo)`, `registrar_pago(…, webhook_id=None, tipo_aviso="")` y `cancelar`.
   - `registrar_pago` corre dentro de un `asyncio.Lock` por cobro: comprueba si la transacción ya está en `cobro.pagos`, calcula `numero = len(cobro.pagos) + 1`, guarda en el almacén y solo si el almacén dijo "nuevo" lo agrega a la memoria.
   - Se quita el conjunto global `vistas`; las transacciones de un cobro salen de sus pagos (DP-13).
@@ -627,7 +627,7 @@
   - **RF**: RF-002, RF-005 a RF-008
   - **Dep.**: T055
   - **Hecho cuando**: las pruebas de T052 de numeración y carga a la vez pasan. Las que pasan por la consulta de respaldo (y la deduplicación aviso-consulta) pueden fallar hasta T058, porque `respaldo.py` todavía usa `vistas` y llamadas síncronas; T057 y T058 se hacen seguidas.
-- [ ] T058 [US1] Consulta de respaldo con `await` y las transacciones del cobro en `backend/app/respaldo.py`
+- [X] T058 [US1] Consulta de respaldo con `await` y las transacciones del cobro en `backend/app/respaldo.py`
   - `registrar_y_avisar` pasa a `async`, publica el evento `pago` solo si el pago es nuevo y guardado (RF-002).
   - `consultar` pasa a `pagos_del_qr` las transacciones **de ese cobro** (DP-13). Si el almacén falla al registrar, deja la línea del contrato (operación `registrar pago`) y sigue; se reintenta en la próxima consulta (RF-016).
   - `backend/app/canal.py` solo cambia si hace falta un `await` nuevo.

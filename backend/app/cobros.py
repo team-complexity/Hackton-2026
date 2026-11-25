@@ -1,11 +1,18 @@
-"""Cobros del MVP, guardados en memoria. La base de datos definitiva llega en el issue #23."""
+"""Cobros y la caché en memoria sobre el almacén (spec 001, RF-008; spec 003, DP-7)."""
 
+from __future__ import annotations
+
+import asyncio
 import logging
 import secrets
-from dataclasses import dataclass, field
+from dataclasses import dataclass, field, replace
 from decimal import Decimal
+from typing import TYPE_CHECKING
 
 from app.reloj import Reloj
+
+if TYPE_CHECKING:
+    from app.almacen import Almacen
 
 registro = logging.getLogger("pago_facil")
 
@@ -132,28 +139,33 @@ class Cobro:
 
 
 class RepositorioCobros:
-    """Índices en memoria de cobros, transacciones y avisos (spec 001, data-model §5)."""
+    """Caché de escritura directa: primero el almacén, después la memoria (spec 003, DP-7).
 
-    def __init__(self, reloj: Reloj | None = None, gracia_segundos: int = 0) -> None:
+    Si el almacén falla, la memoria no cambia. ``ErrorDeAlmacen`` y ``ErrorDeDatos``
+    salen hacia quien llama. La excepción es ``descartar``, que suelta el cobro igual.
+    """
+
+    def __init__(
+        self,
+        almacen: Almacen,
+        reloj: Reloj | None = None,
+        gracia_segundos: int = 0,
+    ) -> None:
+        self._almacen = almacen
         self._reloj = reloj or Reloj()
         self._gracia = gracia_segundos
         self._por_id: dict[str, Cobro] = {}
         self._por_codi_qr: dict[str, str] = {}
-        self._transacciones: set[str] = set()
         self._avisos: set[str] = set()
-
-    @property
-    def vistas(self) -> set[str]:
-        """Transacciones ya registradas, para no volver a contarlas (spec 001, RF-014)."""
-        return self._transacciones
+        self._candados: dict[str, asyncio.Lock] = {}
 
     def nuevo(self, monto: Decimal | None, concepto: str, expiracion: int, ahora: float) -> Cobro:
-        """Crea un cobro con la hora del reloj (spec 001, RF-003, RF-006, RF-008, RF-022).
+        """Arma el cobro con la hora del reloj, sin guardarlo (spec 001, RF-008; spec 003, TK-16).
 
-        `monto` None es un cobro de monto libre: no hay cantidad pedida.
+        ``monto`` None es un cobro de monto libre: no hay cantidad pedida.
         """
         creado_en = int(ahora)
-        cobro = Cobro(
+        return Cobro(
             id=secrets.token_urlsafe(9),
             monto=monto,
             concepto=concepto,
@@ -164,35 +176,93 @@ class RepositorioCobros:
             fin_ventana=creado_en + expiracion + self._gracia,
             reloj=self._reloj,
         )
-        self._por_id[cobro.id] = cobro
-        return cobro
 
-    def vincular_qr(self, cobro: Cobro, codi_qr_id: str, qr: str, qr_imagen: str | None) -> None:
-        """Guarda el QR de pey y el índice para relacionar el aviso (spec 001, RF-012)."""
+    async def guardar_nuevo(self, cobro: Cobro, espera: float = 2) -> None:
+        """Escribe el cobro y, si respondió, lo deja en memoria (spec 003, RF-001, DP-35)."""
+        await self._almacen.guardar_cobro(cobro, espera=espera)
+        self._por_id[cobro.id] = cobro
+
+    async def vincular_qr(
+        self,
+        cobro: Cobro,
+        codi_qr_id: str,
+        qr: str,
+        qr_imagen: str | None,
+        espera: float = 2,
+    ) -> None:
+        """Guarda una copia con el QR; el cobro original cambia solo si el almacén respondió.
+
+        (spec 003, RF-010, DP-7, DP-35).
+        """
+        copia = replace(cobro, codi_qr_id=codi_qr_id, qr=qr, qr_imagen=qr_imagen)
+        await self._almacen.guardar_qr(copia, espera=espera)
+        anterior = cobro.codi_qr_id
         cobro.codi_qr_id = codi_qr_id
         cobro.qr = qr
         cobro.qr_imagen = qr_imagen
+        if anterior and anterior != codi_qr_id and self._por_codi_qr.get(anterior) == cobro.id:
+            self._por_codi_qr.pop(anterior, None)
         self._por_codi_qr[codi_qr_id] = cobro.id
 
-    def descartar(self, cobro: Cobro) -> None:
-        """Quita un cobro que pey no llegó a crear (spec 001, RF-009)."""
+    def olvidar(self, cobro: Cobro) -> None:
+        """Quita el cobro de la memoria, sin tocar el almacén (spec 003, RF-013, TK-16)."""
         self._por_id.pop(cobro.id, None)
+        if cobro.codi_qr_id and self._por_codi_qr.get(cobro.codi_qr_id) == cobro.id:
+            self._por_codi_qr.pop(cobro.codi_qr_id, None)
 
-    def obtener(self, cobro_id: str) -> Cobro | None:
-        return self._por_id.get(cobro_id)
+    async def descartar(self, cobro: Cobro, espera: float = 2) -> None:
+        """Borra el cobro del almacén y lo suelta de la memoria aunque el borrado falle.
 
-    def por_codi_qr(self, codi_qr_id: str) -> Cobro | None:
-        return self._por_id.get(self._por_codi_qr.get(codi_qr_id, ""))
+        (spec 003, RF-052, DP-35). La excepción del almacén sigue hacia quien llama.
+        """
+        try:
+            await self._almacen.borrar_cobro(cobro.id, espera=espera)
+        finally:
+            self.olvidar(cobro)
 
-    def aviso_ya_visto(self, webhook_id: str) -> bool:
-        """Primera barrera contra un aviso reenviado (spec 001, principio II)."""
-        return webhook_id in self._avisos
+    async def obtener(self, cobro_id: str) -> Cobro | None:
+        """El de memoria, o el del almacén: un solo objeto por id (spec 003, RF-005, DP-33)."""
+        encontrado = self._por_id.get(cobro_id)
+        if encontrado is not None:
+            return encontrado
+        cargado = await self._almacen.cargar_por_id(cobro_id)
+        encontrado = self._por_id.get(cobro_id)
+        if encontrado is not None:
+            return encontrado
+        if cargado is None:
+            return None
+        self._indexar(cargado)
+        return cargado
 
-    def marcar_aviso(self, webhook_id: str) -> None:
-        """Recuerda el webhook-id. El prototipo lo marca antes de procesar, hasta F4."""
+    async def por_codi_qr(self, codi_qr_id: str) -> Cobro | None:
+        """Busca por el id de pey: memoria y, si no está, el almacén (spec 003, RF-005, DP-33)."""
+        cobro_id = self._por_codi_qr.get(codi_qr_id)
+        if cobro_id is not None:
+            return self._por_id.get(cobro_id)
+        cargado = await self._almacen.cargar_por_codi_qr(codi_qr_id)
+        if cargado is None:
+            return None
+        encontrado = self._por_id.get(cargado.id)
+        if encontrado is not None:
+            return encontrado
+        self._indexar(cargado)
+        return cargado
+
+    async def aviso_ya_visto(self, webhook_id: str) -> bool:
+        """Verdadero si el aviso está en memoria o en el almacén (spec 003, RF-003)."""
+        if webhook_id in self._avisos:
+            return True
+        visto = await self._almacen.aviso_visto(webhook_id)
+        if visto:
+            self._avisos.add(webhook_id)
+        return visto
+
+    async def marcar_aviso(self, webhook_id: str, tipo: str) -> None:
+        """Guarda el aviso en el almacén y después lo recuerda (spec 003, RF-003, DP-7)."""
+        await self._almacen.guardar_aviso(webhook_id, tipo)
         self._avisos.add(webhook_id)
 
-    def registrar_pago(
+    async def registrar_pago(
         self,
         cobro: Cobro,
         transaccion_id: str,
@@ -200,34 +270,70 @@ class RepositorioCobros:
         monto_base: Decimal | None,
         pagado_en: int | None,
         fuente: str,
+        webhook_id: str | None = None,
+        tipo_aviso: str = "",
     ) -> Pago | None:
-        """Agrega el pago o nada si esa transacción ya se vio (spec 001, RF-014 a RF-020)."""
-        if transaccion_id in self._transacciones:
-            return None
-        hora = int(pagado_en if pagado_en is not None else self._reloj.ahora())
-        pago = Pago(
-            transaccion_id=transaccion_id,
-            numero=len(cobro.pagos) + 1,
-            monto_recibido=monto_recibido,
-            monto_base=monto_base,
-            pagado_en=hora,
-            fuente=fuente,
-            monto_del_cobro=cobro.monto,
-        )
-        cobro.pagos.append(pago)
-        self._transacciones.add(transaccion_id)
-        if pago.monto_distinto:
-            comparado = pago.monto_base if pago.monto_base is not None else pago.monto_recibido
-            registro.warning(
-                "Cobro %s: se pidió %s y se recibió %s",
-                cobro.id,
-                cobro.monto,
-                comparado,
-            )
-        return pago
+        """Registra el pago una sola vez, con el candado del cobro (spec 003, RF-007, RF-008, DP-8).
 
-    def cancelar(self, cobro: Cobro, ahora: float) -> None:
-        """Guarda la cancelación solo si el cobro sigue pendiente (spec 001, RF-023, RF-024)."""
+        Si la transacción ya está en el cobro, no llama al almacén. El pago entra a la
+        memoria solo cuando el almacén dice que es nuevo.
+        """
+        async with self._candado_de(cobro.id):
+            if any(pago.transaccion_id == transaccion_id for pago in cobro.pagos):
+                return None
+            numero = len(cobro.pagos) + 1
+            hora = int(self._reloj.ahora() if pagado_en is None else pagado_en)
+            nuevo = await self._almacen.registrar_pago(
+                cobro.id,
+                transaccion_id=transaccion_id,
+                numero=numero,
+                monto_recibido=monto_recibido,
+                monto_base=monto_base,
+                pagado_en=hora,
+                fuente=fuente,
+                webhook_id=webhook_id,
+                tipo_aviso=tipo_aviso,
+            )
+            if not nuevo:
+                return None
+            pago = Pago(
+                transaccion_id=transaccion_id,
+                numero=numero,
+                monto_recibido=monto_recibido,
+                monto_base=monto_base,
+                pagado_en=hora,
+                fuente=fuente,
+                monto_del_cobro=cobro.monto,
+            )
+            cobro.pagos.append(pago)
+            if pago.monto_distinto:
+                comparado = pago.monto_base if pago.monto_base is not None else pago.monto_recibido
+                registro.warning(
+                    "Cobro %s: se pidió %s y se recibió %s",
+                    cobro.id,
+                    cobro.monto,
+                    comparado,
+                )
+            return pago
+
+    async def cancelar(self, cobro: Cobro, ahora: float) -> None:
+        """Guarda la cancelación si el cobro sigue pendiente (spec 003, RF-004)."""
         if cobro.estado(ahora) != PENDIENTE:
             raise NoSePuedeCancelar
-        cobro.cancelado_en = int(ahora)
+        hora = int(ahora)
+        await self._almacen.cancelar(cobro.id, hora)
+        cobro.cancelado_en = hora
+
+    def _indexar(self, cobro: Cobro) -> None:
+        """Lo deja en los dos índices, sin await entre medio (spec 003, DP-33)."""
+        self._por_id[cobro.id] = cobro
+        if cobro.codi_qr_id:
+            self._por_codi_qr[cobro.codi_qr_id] = cobro.id
+
+    def _candado_de(self, cobro_id: str) -> asyncio.Lock:
+        """Un candado por cobro, creado sin await para que las dos peticiones compartan el mismo."""
+        candado = self._candados.get(cobro_id)
+        if candado is None:
+            candado = asyncio.Lock()
+            self._candados[cobro_id] = candado
+        return candado

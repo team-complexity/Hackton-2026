@@ -15,6 +15,7 @@ from fastapi.staticfiles import StaticFiles
 from standardwebhooks.webhooks import Webhook, WebhookVerificationError
 from uvicorn.middleware.proxy_headers import ProxyHeadersMiddleware
 
+from app.almacen import Almacen, AlmacenEnMemoria
 from app.canal import flujo_de_avisos
 from app.cobros import Cobro, NoSePuedeCancelar, RepositorioCobros
 from app.config import RAIZ_BACKEND, Configuracion, obtener_configuracion
@@ -114,12 +115,16 @@ def crear_app(
     config: Configuracion | None = None,
     cliente_pey: ClientePey | None = None,
     reloj: Reloj | None = None,
+    almacen: Almacen | None = None,
+    tareas_en_segundo_plano: bool = True,
 ) -> FastAPI:
-    """Crea la API con reloj, registros y el modelo de cobros (spec 001, RF-008, RF-039).
+    """Crea la API con reloj, registros y el almacén de cobros (spec 001, RF-008; spec 003, DP-6).
 
     Si `carpeta_web` tiene valor, entrega esa carpeta en `/` después de las rutas
-    del API (spec 003, RF-024, RF-029).
+    del API (spec 003, RF-024, RF-029). Sin `almacen`, los cobros se guardan en memoria.
+    `tareas_en_segundo_plano` se acepta para T060, que arrancará el trabajo de fondo.
     """
+    del tareas_en_segundo_plano
     config = config or obtener_configuracion()
     configurar_registros()
     reloj_de_la_app = reloj or Reloj()
@@ -145,15 +150,18 @@ def crear_app(
     # La IP del límite es la del cliente, no la del proxy del hosting (RF-034, R-5).
     app.add_middleware(ProxyHeadersMiddleware, trusted_hosts=config.proxies_confiables)
 
-    cobros = RepositorioCobros(reloj_de_la_app, config.gracia_segundos)
+    almacen_de_la_app = almacen or AlmacenEnMemoria(reloj=reloj_de_la_app)
+    cobros = RepositorioCobros(almacen_de_la_app, reloj_de_la_app, config.gracia_segundos)
+    app.state.almacen = almacen_de_la_app
+    app.state.cobros = cobros
     difusor = Difusor()
     consulta = ConsultaDeRespaldo(cliente_final, cobros, difusor, reloj_de_la_app)
     limite = LimitePorIp(config.limite_cobros_por_minuto, reloj_de_la_app)
     limite_canales = LimiteDeCanales(config.canales_por_ip)
     app.state.limite_canales = limite_canales
 
-    def buscar(cobro_id: str) -> Cobro:
-        cobro = cobros.obtener(cobro_id)
+    async def buscar(cobro_id: str) -> Cobro:
+        cobro = await cobros.obtener(cobro_id)
         if cobro is None:
             raise HTTPException(404, "Ese cobro no existe")
         return cobro
@@ -190,6 +198,7 @@ def crear_app(
             config.expiracion_segundos,
             ahora=app.state.reloj.ahora(),
         )
+        await cobros.guardar_nuevo(cobro)
         try:
             # pey usa amount 0 cuando el cliente escribe la cantidad (RF-003).
             qr = await app.state.pey.crear_qr(
@@ -200,7 +209,7 @@ def crear_app(
                 metadata={"cobroId": cobro.id},
             )
         except ErrorPey as error:
-            cobros.descartar(cobro)
+            await cobros.descartar(cobro)
             registro.error(
                 "pey no creó el cobro %s (requestId=%s)",
                 cobro.id,
@@ -216,7 +225,7 @@ def crear_app(
                 )
             raise HTTPException(502, "No se pudo crear el cobro con pey. Intenta de nuevo.")
 
-        cobros.vincular_qr(cobro, qr.id, qr.qr_string, qr.qr_image)
+        await cobros.vincular_qr(cobro, qr.id, qr.qr_string, qr.qr_image)
         if qr.request_id:
             registro.info(
                 "QR creado cobro=%s codi_qr_id=%s requestId=%s",
@@ -230,16 +239,16 @@ def crear_app(
 
     @app.get("/api/cobros/{cobro_id}")
     async def ver_cobro(cobro_id: str) -> dict:
-        cobro = buscar(cobro_id)
+        cobro = await buscar(cobro_id)
         await consulta.consultar(cobro, intervalo_minimo=3)
         return cobro.publico()
 
     @app.post("/api/cobros/{cobro_id}/cancelar")
     async def cancelar_cobro(cobro_id: str) -> dict:
         """Cancela un cobro pendiente y avisa por el canal (spec 001, RF-023, RF-024, RF-030)."""
-        cobro = buscar(cobro_id)
+        cobro = await buscar(cobro_id)
         try:
-            cobros.cancelar(cobro, app.state.reloj.ahora())
+            await cobros.cancelar(cobro, app.state.reloj.ahora())
         except NoSePuedeCancelar:
             raise HTTPException(
                 409, "Solo se puede cancelar un cobro que todavía no se paga ni vence"
@@ -251,7 +260,7 @@ def crear_app(
     @app.get("/api/cobros/{cobro_id}/eventos")
     async def eventos_cobro(cobro_id: str, request: Request) -> StreamingResponse:
         """Sirve el canal si la IP todavía tiene lugar (spec 001, RF-028, RF-041)."""
-        cobro = buscar(cobro_id)
+        cobro = await buscar(cobro_id)
         ip = request.client.host if request.client else "desconocida"
         if not limite_canales.ocupar(ip):
             raise HTTPException(
@@ -289,7 +298,7 @@ def crear_app(
             raise HTTPException(400, "Aviso con datos no válidos")
 
         webhook_id = request.headers.get("webhook-id", "")
-        if cobros.aviso_ya_visto(webhook_id):
+        if await cobros.aviso_ya_visto(webhook_id):
             return {"recibido": True, "procesado": False}
         try:
             datos = json.loads(cuerpo)
@@ -299,9 +308,10 @@ def crear_app(
         if not isinstance(datos, dict):
             registro.warning("Aviso rechazado")
             raise HTTPException(400, "Aviso con datos no válidos")
+        tipo = str(datos.get("type") or "")
         if datos.get("type") != EVENTO_QR_PAGADO:
             registro.info("Aviso ignorado")
-            cobros.marcar_aviso(webhook_id)
+            await cobros.marcar_aviso(webhook_id, tipo)
             return {"recibido": True, "procesado": False}
         try:
             monto = Decimal(str(datos["amount"]))
@@ -314,20 +324,22 @@ def crear_app(
 
         codi_qr_id = str(datos.get("codiQrId", ""))
         transaccion_id = datos.get("transactionId")
-        cobro = cobros.por_codi_qr(codi_qr_id)
+        cobro = await cobros.por_codi_qr(codi_qr_id)
         if cobro is None or not transaccion_id:
             registro.warning("Aviso ignorado codi_qr_id=%s", codi_qr_id)
-            cobros.marcar_aviso(webhook_id)
+            await cobros.marcar_aviso(webhook_id, tipo)
             return {"recibido": True, "procesado": False}
-        pago = consulta.registrar_y_avisar(
+        pago = await consulta.registrar_y_avisar(
             cobro,
             str(transaccion_id),
             monto,
             None,
             datos.get("datePaid"),
             "aviso",
+            webhook_id=webhook_id,
+            tipo_aviso=tipo,
         )
-        cobros.marcar_aviso(webhook_id)
+        await cobros.marcar_aviso(webhook_id, tipo)
         return {"recibido": True, "procesado": pago is not None}
 
     if config.carpeta_web:
