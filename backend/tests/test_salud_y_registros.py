@@ -64,7 +64,9 @@ def test_salud_dice_que_credenciales_faltan_sin_mostrarlas(configuracion, pey, r
     sin_secreto = configuracion.model_copy(update={"pey_webhook_secret": SecretStr("")})
     http = httpx.AsyncClient(transport=httpx.MockTransport(pey))
     cliente_pey = ClientePey(BASE_PEY_DE_PRUEBA, LLAVE_FALSA, http)
-    with TestClient(crear_app(sin_secreto, cliente_pey, reloj)) as cliente_http:
+    with TestClient(
+        crear_app(sin_secreto, cliente_pey, reloj, tareas_en_segundo_plano=False)
+    ) as cliente_http:
         respuesta = cliente_http.get("/salud")
     assert respuesta.status_code == 200
     assert respuesta.json() == {
@@ -160,7 +162,9 @@ def test_la_salud_dice_si_la_base_responde_sin_mostrar_valores(configuracion, pe
     config = configuracion.model_copy(update={"database_url": SecretStr("")})
     http = httpx.AsyncClient(transport=httpx.MockTransport(pey))
     cliente_pey = ClientePey(BASE_PEY_DE_PRUEBA, LLAVE_FALSA, http)
-    with TestClient(crear_app(config, cliente_pey, reloj)) as cliente_http:
+    with TestClient(
+        crear_app(config, cliente_pey, reloj, tareas_en_segundo_plano=False)
+    ) as cliente_http:
         sin_configurar = cliente_http.get("/salud").json()
     assert sin_configurar == {
         "estado": "ok",
@@ -195,7 +199,9 @@ def test_la_salud_guarda_la_respuesta_de_la_base_10_segundos(configuracion, pey,
     config = configuracion.model_copy(update={"database_url": SecretStr("")})
     http = httpx.AsyncClient(transport=httpx.MockTransport(pey))
     cliente_pey = ClientePey(BASE_PEY_DE_PRUEBA, LLAVE_FALSA, http)
-    with TestClient(crear_app(config, cliente_pey, reloj)) as cliente_http:
+    with TestClient(
+        crear_app(config, cliente_pey, reloj, tareas_en_segundo_plano=False)
+    ) as cliente_http:
         assert "base_de_datos" in cliente_http.get("/salud").json()
 
     from tests.almacen_de_prueba import AlmacenQueFalla, armar_app

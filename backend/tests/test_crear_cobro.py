@@ -198,7 +198,7 @@ def _cliente_sin_llave(configuracion, pey, reloj) -> TestClient:
     sin_llave = configuracion.model_copy(update={"pey_api_key": ""})
     http = httpx.AsyncClient(transport=httpx.MockTransport(pey))
     cliente_pey = ClientePey(BASE_PEY_DE_PRUEBA, "", http)
-    return TestClient(crear_app(sin_llave, cliente_pey, reloj))
+    return TestClient(crear_app(sin_llave, cliente_pey, reloj, tareas_en_segundo_plano=False))
 
 
 def _id_intentado(cliente_http, pey, caplog) -> str:
