@@ -688,7 +688,7 @@
   - **RF**: RF-020, RF-021 (CE-010)
   - **Dep.**: T060
   - **Hecho cuando**: la búsqueda queda anotada en la sección F5 de la guía.
-- [ ] T066 [US1] Comprobar en desarrollo el guardado y el reinicio
+- [X] T066 [US1] Comprobar en desarrollo el guardado y el reinicio
   - **Quién**: Hugo, con `backend/.env` (base de desarrollo y segunda llave), en el puerto 8001 si la demo está encendida.
   - `/salud` dice `"base_de_datos": "responde"`. Crear un cobro de $0.01 (QR real **sin pagar**, con su autorización), parar el servidor por su PID, arrancarlo y pedir `GET /api/cobros/<id>`: vuelve con su QR, su imagen y su tiempo restante.
   - **RF**: RF-001, RF-005, RF-010, RF-023

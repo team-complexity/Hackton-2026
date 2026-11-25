@@ -435,9 +435,9 @@ En `backend/tests` hay cinco líneas (`test_almacen.py:23`, `test_ciclo_de_vida.
 
 `git status --short` no muestra `backend/.env` ni `backend/.env.demo`. Están ignorados. No se leyeron.
 
-### T066 — pendiente de Hugo
+### T066 · Reinicio en desarrollo (2026-11-25)
 
-Hugo, con `backend/.env` (base de desarrollo y segunda llave), en el puerto 8001 si la demo está encendida:
+Hugo, con `backend/.env` (base de desarrollo y segunda llave), en el puerto 8001:
 
 1. `GET /salud` dice `"base_de_datos": "responde"`.
 2. Crear un cobro de $0.01. QR real, sin pagar, con su autorización en ese momento.
@@ -445,7 +445,13 @@ Hugo, con `backend/.env` (base de desarrollo y segunda llave), en el puerto 8001
 4. Arrancarlo otra vez.
 5. `GET /api/cobros/<id>` vuelve con su QR, su imagen y su tiempo restante.
 
-Resultado: pendiente.
+Resultado: **pasó**.
+
+- `GET /salud` dijo `"base_de_datos": "responde"`.
+- Cobro de $0.01 creado sin pagar (`0mlfQTGx-EhQ`, QR real de pey): 201.
+- Servidor parado por su PID (76471) y arrancado otra vez (PID nuevo, 77632).
+- `GET /api/cobros/0mlfQTGx-EhQ` volvió con el mismo `id`, `codi_qr_id`, `qr`, `qr_imagen`, `creado_en` y `expira_en`, en `pendiente`, con 290 s de vida. El servidor nuevo consultó a pey una vez (`pagos_nuevos=0`).
+- Antes de la prueba la base dijo `no responde`: la contraseña de la base de desarrollo había cambiado y `DATABASE_URL` guardaba la vieja. El error era `password authentication failed`. Se restableció la contraseña en Supabase, se actualizó `backend/.env` y se reinició el servidor. Si `/salud` dice `no responde`, `uv run --directory backend python -m app.migraciones estado` da el motivo sin mostrar la URL.
 
 ### Resultado de F5 (2026-11-24)
 
@@ -458,9 +464,9 @@ Resultado: pendiente.
 | T063 datos de quien paga | No se leen ni se registran |
 | T064 C-6 | Aplicado el 2026-11-24 |
 | T065 credenciales | Solo valores falsos; el host del *pooler* no aparece |
-| T066 reinicio en desarrollo | Pendiente de Hugo |
-| T067 cierre de F5 | Sin marcar: espera T066 |
+| T066 reinicio en desarrollo | Pasó: el cobro volvió con QR, imagen y tiempo restante |
+| T067 cierre de F5 | Sin marcar: espera el trabajo `base-de-datos` del CI y tu aprobación |
 
-- **Qué queda para Hugo:** T066, con la base de desarrollo, y después el cierre de T067.
+- **Qué queda para Hugo:** el PR de F5, ver el CI en verde y aprobar el cierre de T067.
 - **Lo que sigue abierto:** F6 (conciliación y demo con base de datos).
 - **Commit sugerido:** `docs(003): revisión de pruebas, DATABASE_URL, revisión de credenciales y cambio C-6 aplicado (F5, T061 a T065)`.
