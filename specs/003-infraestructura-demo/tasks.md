@@ -56,7 +56,7 @@
 | Dependencia | Qué bloquea | Estado |
 |---|---|---|
 | PR #72 y PR #96 unidos a `main` (C-8) y rama de la 003 rebasada sobre `main` (QP-10) | F1 y F2 | Listo el 2026-11-21 (`f01f732`; rama en `2d73373` y después `17bdbf0`) |
-| C-6 y C-7 aprobados (QP-11) | T021 (C-7, F2) y T064 (C-6, F5) | C-7 aplicado el 2026-11-21 (F2). C-6 aprobado el 2026-11-20 · sin aplicar (F5) |
+| C-6 y C-7 aprobados (QP-11) | T021 (C-7, F2) y T064 (C-6, F5) | C-7 aplicado el 2026-11-21 (F2). C-6 aplicado el 2026-11-24 (F5) |
 | Cuenta de Tailscale de Hugo con HTTPS, MagicDNS y el permiso `funnel` (DP-38) | F0 y todo lo demás de la demo | Pendiente (T001) |
 | Llave de pey de la demo y su secreto en `backend/.env.demo` (Hugo) | F0, F2, F3 y F6 | Pendiente (T002) |
 | Aviso de pey de la llave de la demo con la dirección del túnel (Hugo, en el portal) | El pago real de F3 (RF-025) | Dado de alta el 2026-11-22 (T025); la firma válida se comprueba con el primer pago (T030) |
@@ -652,23 +652,23 @@
   - **RF**: RF-001, RF-003 a RF-005, RF-012 a RF-016, RF-023, RF-048, RF-052
   - **Dep.**: T056, T058, T059
   - **Hecho cuando**: T052, T053 y T054 pasan.
-- [ ] T061 [US1] Revisar el diff de las pruebas que ya existían en `backend/tests/` (ajustadas en T057 y T058)
+- [X] T061 [US1] Revisar el diff de las pruebas que ya existían en `backend/tests/` (ajustadas en T057 y T058)
   - `backend/tests/test_modelo.py` y las demás que llaman directo a `RepositorioCobros` o `ConsultaDeRespaldo`: el diff solo agrega `await`, `async` o la fixture del almacén. No se cambia ninguna comprobación de comportamiento (plan §7).
   - **RF**: — (CE-011)
   - **Dep.**: T060
   - **Hecho cuando**: las pruebas que ya existían pasan y la revisión del diff queda anotada en la sección F5 de la guía.
-- [ ] T062 [P] [US1] Documentar `DATABASE_URL` en la tabla de variables de `backend/README.md` y en `backend/.env.example`
+- [X] T062 [P] [US1] Documentar `DATABASE_URL` en la tabla de variables de `backend/README.md` y en `backend/.env.example`
   - README: fila `DATABASE_URL` · "URL del *pooler* de Supabase en modo sesión. Sin ella, el servidor guarda en memoria y la salud dice `sin configurar`" · vacío.
   - `.env.example`: el comentario de `DATABASE_URL` dice lo mismo y "nunca en el repositorio".
   - **RF**: RF-020, RF-023
   - **Dep.**: T060
   - **Hecho cuando**: las dos líneas están y no se tocó nada más de esos archivos (C-6 toca otras líneas de `backend/README.md` en T064).
-- [ ] T063 [US1] Revisar los registros y respuestas contra los datos de quien paga
+- [X] T063 [US1] Revisar los registros y respuestas contra los datos de quien paga
   - `git grep -n "metadata" backend/app` solo muestra que no se leen (`pey.py`) y la lista de reintentos no los guarda.
   - **RF**: RF-009
   - **Dep.**: T060
   - **Hecho cuando**: la revisión queda anotada en la sección F5 de la guía.
-- [ ] T064 [US1] Aplicar el cambio C-6 a la spec 001 (QP-11)
+- [X] T064 [US1] Aplicar el cambio C-6 a la spec 001 (QP-11)
   - Las líneas citadas en C-6 (spec 003 §8.2) pudieron moverse: se busca el texto.
   - (a) `specs/001-backend-mvp/spec.md` §4, fila "Reinicio del servidor": se conservan (spec 003).
   - (b) §4, fila "Aviso de pago de un cobro desconocido": quitar "por ejemplo, tras reiniciar el servidor".
@@ -683,7 +683,7 @@
   - **RF**: RF-023, RF-061 (C-6)
   - **Dep.**: T060
   - **Hecho cuando**: `git grep -n "se perdió al reiniciar\|0.0.0.0" specs/001-backend-mvp backend/README.md` no encuentra nada vigente y la fila C-6 dice "aplicado".
-- [ ] T065 [US1] Comprobar `git grep` de credenciales después de los cambios de F5
+- [X] T065 [US1] Comprobar `git grep` de credenciales después de los cambios de F5
   - `git grep -nE "postgres(ql)?://[^ ]+:[^ ]+@" -- ':!backend/tests'` no encuentra nada, y en `backend/tests` solo valores falsos (`usuario-falso`, `clave-falsa`, `prueba`).
   - **RF**: RF-020, RF-021 (CE-010)
   - **Dep.**: T060

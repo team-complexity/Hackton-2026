@@ -77,7 +77,7 @@ for i in $(seq 1 11); do curl -s -o /dev/null -w "%{http_code}\n" -X POST http:/
 
 Lo que el hosting necesita para que el backend cumpla la spec:
 
-1. **Un solo proceso**: arranca con `uvicorn app.main:app --host 0.0.0.0 --port $PORT`, **sin** `--workers`. Los cobros, los límites y los canales viven en memoria; con varios procesos, el aviso de pey podría llegar a uno que no conoce el cobro.
+1. **Un solo proceso**: arranca con `uvicorn app.main:app --port $PORT`, **sin** `--workers`. El servidor solo escucha en `127.0.0.1` (spec 003, RF-056). Los cobros, pagos y avisos se guardan en la base de datos; los límites por IP y los canales siguen en memoria.
 2. **Variables de entorno** (en el panel del hosting, nunca en el repo):
 
    | Variable | Valor |

@@ -17,10 +17,10 @@ Antes, una vez: [uv](https://docs.astral.sh/uv/) instalado, `uv sync` y un `back
 `GET http://localhost:8000/salud` responde sin mostrar credenciales:
 
 ```json
-{ "estado": "ok", "llave_pey": true, "secreto_aviso_pey": false }
+{ "estado": "ok", "llave_pey": true, "secreto_aviso_pey": false, "base_de_datos": "responde" }
 ```
 
-`llave_pey` y `secreto_aviso_pey` son booleanos: dicen si el valor está configurado, no cuál es.
+`llave_pey` y `secreto_aviso_pey` son booleanos: dicen si el valor está configurado, no cuál es. `base_de_datos` es `responde`, `no responde` o `sin configurar` (sin `DATABASE_URL`).
 
 ## Variables de entorno
 
@@ -30,6 +30,7 @@ Sin valores de secretos. Los nombres y los valores por defecto del corte 2:
 |---|---|---|
 | `PEY_API_KEY` | Llave de pey. Solo en `.env` o en el hosting | vacío |
 | `PEY_WEBHOOK_SECRET` | Secreto con el que se firma el aviso de pey | vacío |
+| `DATABASE_URL` | URL del *pooler* de Supabase en modo sesión. Sin ella, el servidor guarda en memoria y la salud dice `sin configurar` | vacío |
 | `WEB_ORIGIN` | Orígenes CORS, separados por coma | `http://localhost:5173` |
 | `CARPETA_WEB` | Carpeta de la web que entrega el servidor en `/` | vacío |
 | `PROXIES_CONFIABLES` | De quién se acepta `X-Forwarded-For` | `127.0.0.1` |
@@ -39,7 +40,7 @@ Sin valores de secretos. Los nombres y los valores por defecto del corte 2:
 | `EXPIRACION_SEGUNDOS` | Vigencia del QR | `600` |
 | `GRACIA_SEGUNDOS` | Escucha después del vencimiento (corte 2, F6). Con `0` el canal cierra al vencer, como en el corte M0 | `600` |
 
-En el hosting, `PROXIES_CONFIABLES` es la IP del proxy, o `*` solo si el hosting no deja conexiones directas al proceso. El arranque no usa varios workers: los cobros, los límites y los canales viven en memoria.
+Con el túnel, `PROXIES_CONFIABLES` es `127.0.0.1`. El arranque no usa varios workers: los cobros, pagos y avisos se guardan en la base de datos; los límites por IP y los canales siguen en memoria.
 
 ## Probar la conexión con pey
 
@@ -116,7 +117,7 @@ Con `GRACIA_SEGUNDOS` en 600, `vencido` no cierra el canal: sigue abierto hasta 
 
 ## Límites
 
-- Los cobros viven **en memoria**: se pierden al reiniciar el servidor.
+- Los cobros, pagos y avisos se guardan en la base de datos (spec 003). Los límites por IP y los canales siguen en memoria.
 - Un solo negocio de demo, sin inicio de sesión.
 - Un solo proceso. No arrancar con `--workers`.
 

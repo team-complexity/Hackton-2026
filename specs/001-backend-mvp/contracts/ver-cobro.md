@@ -19,7 +19,7 @@ RF-008, RF-014, RF-025, RF-026, RF-027.
 | Código | Cuándo | Cuerpo |
 |---|---|---|
 | 200 | El cobro existe | [Objeto cobro](crear-cobro.md#objeto-cobro) |
-| 404 | No existe (o se perdió al reiniciar el servidor) | `{"detail": "Ese cobro no existe"}` |
+| 404 | No existe | `{"detail": "Ese cobro no existe"}` |
 
 **Consulta de respaldo:**
 
