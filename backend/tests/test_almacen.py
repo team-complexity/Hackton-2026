@@ -5,7 +5,7 @@ no el proceso) y se salta sin ``PRUEBAS_DATABASE_URL``.
 """
 
 import secrets
-from collections.abc import AsyncIterator
+from collections.abc import AsyncIterator, Coroutine
 from datetime import UTC, datetime
 from decimal import Decimal
 
@@ -14,6 +14,8 @@ import pytest
 import pytest_asyncio
 from pydantic import SecretStr
 
+from app.almacen import AlmacenEnMemoria, ErrorDeAlmacen, ErrorDeDatos
+from app.almacen_postgres import AlmacenPostgres
 from app.cobros import Cobro
 from app.migraciones import CARPETA_MIGRACIONES, ejecutar
 from app.reloj import RelojFalso
@@ -46,13 +48,8 @@ def _nuevo(
 async def almacen(request: pytest.FixtureRequest, reloj: RelojFalso) -> AsyncIterator[object]:
     """Almacén en memoria, o PostgreSQL vacío con las migraciones aplicadas (spec 003, T051)."""
     if request.param == "memoria":
-        from app.almacen import AlmacenEnMemoria
-
         objeto = AlmacenEnMemoria(reloj=reloj)
     else:
-        import app.almacen  # noqa: F401
-        from app.almacen_postgres import AlmacenPostgres
-
         url = request.getfixturevalue("base_vacia")
         codigo, texto = ejecutar(url, CARPETA_MIGRACIONES, "aplicar", entorno="local")
         assert codigo == 0, texto
@@ -221,15 +218,101 @@ async def test_conciliado_hasta_empieza_vacio_y_se_guarda(almacen) -> None:
     assert await almacen.leer_conciliado_hasta() == 1_794_700_000
 
 
+async def _rechazo(operacion: Coroutine[object, object, object]) -> ErrorDeDatos:
+    """Espera la operación y devuelve el ``ErrorDeDatos`` que lanza."""
+    with pytest.raises(ErrorDeDatos) as error:
+        await operacion
+    return error.value
+
+
+@pytest.mark.asyncio
+async def test_guardar_el_mismo_cobro_dos_veces_lanza_error_de_datos(almacen) -> None:
+    """Un id repetido lo rechaza la llave primaria, en memoria igual que en la base.
+
+    (spec 003, DP-34, RF-021).
+    """
+    cobro = _nuevo(RelojFalso(inicio=1_794_700_000))
+    await almacen.guardar_cobro(cobro)
+    error = await _rechazo(almacen.guardar_cobro(cobro))
+    assert (error.operacion, error.clase) == ("guardar cobro", "UniqueViolation")
+
+
+@pytest.mark.asyncio
+async def test_un_codi_qr_id_de_otro_cobro_lanza_error_de_datos(almacen) -> None:
+    """El id de pey es único: el segundo cobro con el mismo se rechaza (spec 003, DP-34)."""
+    reloj = RelojFalso(inicio=1_794_700_000)
+    uno, otro = _nuevo(reloj), _nuevo(reloj)
+    await almacen.guardar_cobro(uno)
+    await almacen.guardar_cobro(otro)
+    uno.codi_qr_id = otro.codi_qr_id = "qr-repetido"
+    uno.qr = otro.qr = "{}"
+    await almacen.guardar_qr(uno)
+    error = await _rechazo(almacen.guardar_qr(otro))
+    assert (error.operacion, error.clase) == ("guardar QR", "UniqueViolation")
+
+
+@pytest.mark.asyncio
+async def test_un_numero_de_pago_repetido_lanza_error_de_datos(almacen) -> None:
+    """Dos transacciones distintas no pueden llevar el mismo número (spec 003, DP-8, DP-34)."""
+    cobro = _nuevo(RelojFalso(inicio=1_794_700_000))
+    await almacen.guardar_cobro(cobro)
+    await almacen.registrar_pago(cobro.id, **_pago(transaccion_id="tx-1", numero=1))
+    error = await _rechazo(
+        almacen.registrar_pago(cobro.id, **_pago(transaccion_id="tx-2", numero=1))
+    )
+    assert (error.operacion, error.clase) == ("registrar pago", "UniqueViolation")
+
+
+@pytest.mark.asyncio
+async def test_un_pago_de_un_cobro_que_no_existe_lanza_error_de_datos(almacen) -> None:
+    """Un pago sin cobro se rechaza, como la llave ajena de la base (spec 003, DP-34)."""
+    error = await _rechazo(almacen.registrar_pago("no-existe-00", **_pago()))
+    assert (error.operacion, error.clase) == ("registrar pago", "ForeignKeyViolation")
+
+
+@pytest.mark.asyncio
+async def test_un_cobro_con_pagos_no_se_borra(almacen) -> None:
+    """Borrar un cobro con pagos se rechaza y el cobro conserva sus pagos.
+
+    (spec 003, RF-052, DP-34).
+    """
+    cobro = _nuevo(RelojFalso(inicio=1_794_700_000))
+    await almacen.guardar_cobro(cobro)
+    await almacen.registrar_pago(cobro.id, **_pago())
+    error = await _rechazo(almacen.borrar_cobro(cobro.id))
+    assert (error.operacion, error.clase) == ("borrar cobro", "ForeignKeyViolation")
+    cargado = await almacen.cargar_por_id(cobro.id)
+    assert cargado is not None
+    assert len(cargado.pagos) == 1
+
+
+@pytest.mark.asyncio
+async def test_los_registros_del_pool_no_traen_el_usuario_ni_el_host(
+    caplog: pytest.LogCaptureFixture,
+) -> None:
+    """psycopg_pool registra usuario, host y puerto al fallar la conexión.
+
+    El almacén los calla: la URL no puede salir en los registros (spec 003, RF-021, CE-010).
+    """
+    caplog.set_level("DEBUG")
+    reloj = RelojFalso(inicio=INICIO_2020)
+    cerrado = AlmacenPostgres(SecretStr(URL_CERRADA), reloj)
+    await cerrado.abrir()
+    try:
+        with pytest.raises(ErrorDeAlmacen):
+            await cerrado.guardar_cobro(_nuevo(reloj), espera=0.5)
+    finally:
+        await cerrado.cerrar()
+    for fragmento in ("usuario-falso", "clave-falsa", "127.0.0.1"):
+        assert fragmento not in caplog.text
+
+
 @pytest.mark.asyncio
 async def test_las_horas_guardadas_son_las_del_reloj_del_servidor(base_vacia: str) -> None:
     """creado_en, registrado_en y recibido_en son la hora del reloj, no la de la base.
 
     (spec 003, RF-006).
     """
-    import app.almacen  # noqa: F401
-    from app.almacen_postgres import AlmacenPostgres
-
     reloj = RelojFalso(inicio=INICIO_2020)
     codigo, texto = ejecutar(base_vacia, CARPETA_MIGRACIONES, "aplicar", entorno="local")
     assert codigo == 0, texto
@@ -265,9 +348,6 @@ async def test_las_horas_guardadas_son_las_del_reloj_del_servidor(base_vacia: st
 @pytest.mark.asyncio
 async def test_sin_respuesta_lanza_error_de_almacen_sin_datos_de_conexion() -> None:
     """Una base cerrada lanza ErrorDeAlmacen sin la URL (spec 003, RF-021, DP-15)."""
-    from app.almacen import ErrorDeAlmacen
-    from app.almacen_postgres import AlmacenPostgres
-
     reloj = RelojFalso(inicio=INICIO_2020)
     cerrado = AlmacenPostgres(SecretStr(URL_CERRADA), reloj)
     await cerrado.abrir()

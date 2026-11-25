@@ -597,7 +597,7 @@
 
 ### Implementación de F5
 
-- [ ] T055 [US1] Interfaz y almacén en memoria en `backend/app/almacen.py` (archivo nuevo, DP-6, plan §4)
+- [X] T055 [US1] Interfaz y almacén en memoria en `backend/app/almacen.py` (archivo nuevo, DP-6, plan §4)
   - `ErrorDeAlmacen(operacion: str, clase: str)`: la base de datos no responde; su texto es "Base de datos sin respuesta al <operacion> (<clase>)", nunca el texto del error original (DP-15).
   - `ErrorDeDatos(operacion, clase)`: PostgreSQL rechazó el valor (DP-34).
   - `Almacen` (clase abstracta) con operaciones asíncronas, cada una con `espera: float = 5`: `guardar_cobro`, `guardar_qr`, `borrar_cobro`, `cancelar`, `registrar_pago` (devuelve si el pago es nuevo y guarda el `webhook_id` en la misma transacción), `guardar_aviso`, `aviso_visto`, `cargar_por_id`, `cargar_por_codi_qr`, `cobros_con_ventana_terminada(desde, hasta)`, `leer_conciliado_hasta`, `guardar_conciliado_hasta`, `responde`; y `configurado: bool`, `abrir()` y `cerrar()`.
@@ -605,7 +605,7 @@
   - **RF**: RF-001 a RF-005, RF-007, RF-061
   - **Dep.**: T051
   - **Hecho cuando**: las pruebas de T051 con `memoria` pasan.
-- [ ] T056 [US1] Almacén de PostgreSQL en `backend/app/almacen_postgres.py` (archivo nuevo, data-model §2 y §3)
+- [X] T056 [US1] Almacén de PostgreSQL en `backend/app/almacen_postgres.py` (archivo nuevo, data-model §2 y §3)
   - `AlmacenPostgres(url: SecretStr, reloj: Reloj)`: `psycopg_pool.AsyncConnectionPool` de 1 a 3 conexiones, creado con `open=False`; `abrir()` lo abre sin esperar a la base de datos (`wait=False`), para que el servidor arranque aunque no responda; `cerrar()`.
   - El constructor **no hace I/O** (QT-8): `backend/app/main.py:330` arma la app al importarse y las pruebas importan `app.main`; si el constructor se conectara, en una computadora con `DATABASE_URL` en `backend/.env` las pruebas tocarían la base real (CE-011).
   - SQL de data-model §3, siempre con parámetros de psycopg. Traduce Unix ↔ `timestamptz` en UTC y `""` ↔ `null`. Escribe **todas** las horas con el `Reloj` (`creado_en`, `expira_en`, `fin_ventana`, `cancelado_en`, `registrado_en`, `recibido_en`, `conciliado_hasta`), nunca con `default now()` (DP-10, RF-006). `ultima_consulta_pey` no se escribe (DP-12).
