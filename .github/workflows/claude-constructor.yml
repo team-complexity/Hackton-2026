@@ -35,9 +35,12 @@ jobs:
       id-token: write
       actions: read
     steps:
+      # Sin persist-credentials, checkout no deja guardado el token de solo
+      # lectura y git hace push con el de la GitHub App (issue #111).
       - uses: actions/checkout@v7
         with:
           fetch-depth: 1
+          persist-credentials: false
 
       # Las mismas herramientas que usa el CI, para que el agente corra
       # ruff y pytest antes de abrir el pull request.
