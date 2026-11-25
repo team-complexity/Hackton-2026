@@ -6,6 +6,7 @@ lleva un transporte simulado y una base que no es la de pey.
 
 import base64
 import json
+from collections.abc import Callable, Iterator
 from datetime import UTC, datetime
 
 import httpx
@@ -18,6 +19,7 @@ from app.config import Configuracion
 from app.main import crear_app
 from app.pey import ClientePey
 from app.reloj import RelojFalso
+from tests.postgres_desechable import base_desechable
 
 CODI_QR_ID = "ab12cd34ef"
 LLAVE_FALSA = "llave-falsa-NO-DEBE-SALIR"
@@ -41,6 +43,8 @@ class PeySimulado:
         self.request_id = "r1"
         self.sin_conexion = False
         self.tiempo_agotado = False
+        # Se llama al responder POST /codi/qr; sirve para simular que pey tarda (C-2).
+        self.al_crear: Callable[[], None] | None = None
 
     def __call__(self, solicitud: httpx.Request) -> httpx.Response:
         self.solicitudes.append(solicitud)
@@ -55,6 +59,8 @@ class PeySimulado:
         return self._error(404)
 
     def _respuesta_crear(self) -> httpx.Response:
+        if self.al_crear is not None:
+            self.al_crear()
         if self.estado_crear != 201:
             return self._error(self.estado_crear)
         return httpx.Response(
@@ -176,3 +182,12 @@ def cliente(app: FastAPI):
     """Cliente HTTP contra la app de prueba."""
     with TestClient(app) as cliente_http:
         yield cliente_http
+
+
+@pytest.fixture
+def base_vacia() -> Iterator[str]:
+    """Base vacía que se borra al terminar (spec 003, R-10, CE-011).
+
+    Sin ``PRUEBAS_DATABASE_URL`` la prueba se salta. No imprime la URL.
+    """
+    yield from base_desechable()

@@ -2,7 +2,7 @@
 
 Reglas para trabajar en este repositorio. **El repo es público**: todo lo que se sube, incluido el historial de commits, lo puede ver cualquiera para siempre.
 
-Responsable: Seguridad (Altairtm). Issue: #16.
+Responsable: Hugo coordina la seguridad; cada quien une su propio pull request, y Juan y Leonel revisan lo que entra a `main`. Issue: #16. Roles y calendario: [flujo-de-trabajo.md](../flujo-de-trabajo.md).
 
 ## 1. Regla de oro: los secretos nunca van al repositorio
 
@@ -57,12 +57,10 @@ git push -u origin feature/62-endpoint-qr
 ## 5. Pull requests
 
 1. Abre el pull request hacia `main` y escribe `Closes #<número>` en la descripción para que el issue se cierre solo.
-2. Pide revisión a la persona indicada en la revisión cruzada:
-   - Backend del Profesor → lo revisa Altairtm.
-   - Bot y corte del día de Hugo → lo revisa el Profesor.
-   - Pantallas de Miguel → las revisa Hugo.
-3. Antes de pedir revisión, revisa tu propio diff y busca llaves, `.env` o datos personales.
-4. Se une a `main` cuando cumple los criterios de aceptación del issue.
+2. Llena la descripción con la [plantilla de pull request](../.github/pull_request_template.md): qué pedía el issue, qué se hizo, qué se decidió y por qué, cómo probarlo, qué quedó pendiente y la revisión de seguridad. No hay otro documento aparte.
+3. Antes de unir, revisa tu propio diff y busca llaves, `.env` o datos personales.
+4. Únelo tú a `main` cuando el CI esté en verde y cumpla los criterios de aceptación del issue. No hace falta aprobación previa.
+5. Juan y Leonel revisan lo que entra a `main`. Si algo salió mal, lo comentan en el pull request o abren un issue `tipo: bug`. Si rompe la demo, se corrige o se revierte con otro pull request.
 
 ## 6. Si GitHub bloquea tu `git push`
 
@@ -99,7 +97,7 @@ git push
 
 (Si tu rama ya existía en GitHub, usa `origin/<tu-rama>` en lugar de `origin/main`, y si te lo pide, `git push --force-with-lease`.)
 
-**No uses el enlace "allow secret"** que ofrece GitHub, salvo que estés seguro de que es un falso positivo (un texto que parece llave pero no lo es). Si tienes dudas, pregunta a Seguridad.
+**No uses el enlace "allow secret"** que ofrece GitHub, salvo que estés seguro de que es un falso positivo (un texto que parece llave pero no lo es). Si tienes dudas, pregunta a Hugo, que coordina la seguridad.
 
 ## 7. Si una llave se filtra
 
@@ -108,7 +106,7 @@ Una llave está filtrada si llegó a GitHub, a un chat, a una captura o a cualqu
 1. **Rótala de inmediato:** en https://portal.mipey.mx → Desarrollador, genera una llave nueva o rota el secreto del webhook y borra la vieja.
 2. **Avisa a pey en menos de 24 horas.** Las reglas del hackathon lo exigen.
 3. Actualiza la llave nueva en el `.env` de quien la use y en las variables del hosting.
-4. Avisa al equipo y a Seguridad.
+4. Avisa al equipo y a Hugo, que coordina la seguridad.
 
 Borrar el archivo o el commit **no basta**: el historial de Git, los forks y las copias en caché pueden conservarla.
 

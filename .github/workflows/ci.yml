@@ -1,0 +1,95 @@
+# Versión mayor publicada hace más de dos semanas (T009).
+# actions/checkout@v7 es v7.0.1 (2026-07-20).
+# astral-sh/setup-uv solo tiene tag mayor hasta @v7 (v7.6.0, 2026-03-16):
+# v8, v9 y v10 se publican como versión completa, sin @vN.
+name: ci
+
+on:
+  pull_request:
+    branches:
+      - main
+    types:
+      - opened
+      - synchronize
+      - reopened
+  push:
+    branches:
+      - main
+
+permissions:
+  contents: read
+
+jobs:
+  servidor:
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: backend
+    steps:
+      - uses: actions/checkout@v7
+      - uses: astral-sh/setup-uv@v7
+        with:
+          python-version: "3.12"
+          enable-cache: true
+      - run: uv sync --locked
+      - run: uv run ruff check .
+      - run: uv run ruff format --check .
+      - run: uv run pytest -q
+
+  web:
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: backend
+    steps:
+      - uses: actions/checkout@v7
+      - uses: astral-sh/setup-uv@v7
+        with:
+          python-version: "3.12"
+          enable-cache: true
+      - run: uv sync --locked
+      - run: uv run playwright install --with-deps chromium webkit
+      - run: uv run ruff check --config pyproject.toml ../web
+      - run: uv run ruff format --config pyproject.toml --check ../web
+      - run: uv run pytest ../web -q
+
+  base-de-datos:
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: backend
+    services:
+      postgres:
+        image: postgres:17
+        env:
+          POSTGRES_PASSWORD: prueba
+        ports:
+          - "5432:5432"
+        options: >-
+          --health-cmd "pg_isready -U postgres"
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+    steps:
+      - uses: actions/checkout@v7
+      - uses: astral-sh/setup-uv@v7
+        with:
+          python-version: "3.12"
+          enable-cache: true
+      - run: uv sync --locked
+      - run: |
+          psql "postgresql://postgres:prueba@localhost:5432/postgres" -c "create role anon"
+          psql "postgresql://postgres:prueba@localhost:5432/postgres" -c "create role authenticated"
+      - env:
+          DATABASE_URL: postgresql://postgres:prueba@localhost:5432/postgres
+        run: |
+          uv run python -m app.migraciones aplicar --entorno local
+          uv run python -m app.migraciones aplicar --entorno local | tee salida-migracion.txt
+          grep -q "No había nada que aplicar." salida-migracion.txt
+      - env:
+          PRUEBAS_DATABASE_URL: postgresql://postgres:prueba@localhost:5432/postgres
+        run: |
+          uv run pytest -q -rs | tee salida-pytest.txt
+          if grep -q "Sin PRUEBAS_DATABASE_URL" salida-pytest.txt; then
+            exit 1
+          fi

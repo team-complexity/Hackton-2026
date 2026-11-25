@@ -1,0 +1,138 @@
+/* Desde 320 px: la caja incluye el borde y no hay anchos fijos (spec 002, RF-061). */
+*,
+*::before,
+*::after {
+  box-sizing: border-box;
+}
+
+body {
+  margin: 0;
+}
+
+[data-prueba="monto"] {
+  margin: 0.5rem 0;
+  font-size: 2.5rem;
+  line-height: 1.1;
+  overflow-wrap: anywhere;
+}
+
+[data-prueba="vista-teclado"],
+[data-prueba="vista-generando"] {
+  max-width: 100%;
+  padding: 0.75rem;
+}
+
+[data-prueba="vista-qr"],
+[data-prueba="vista-vencido"],
+[data-prueba="vista-error"] {
+  max-width: 100%;
+  padding: 0.75rem 0;
+  overflow-wrap: anywhere;
+}
+
+button {
+  min-height: 44px;
+}
+
+[data-prueba="qr"] {
+  display: block;
+  width: 70vw;
+  max-width: 100%;
+  height: auto;
+  margin-inline: auto;
+  image-rendering: pixelated;
+}
+
+body:has([data-prueba="vista-pagado"]:not([hidden])) {
+  background: #128a3e;
+}
+
+[data-prueba="vista-pagado"] {
+  background: #128a3e;
+  color: #fff;
+  min-height: calc(100vh - 4rem);
+  padding: 0.75rem;
+  overflow-wrap: anywhere;
+}
+
+[data-prueba="pagado-monto"] {
+  margin: 0.5rem 0;
+  font-size: 2.5rem;
+  line-height: 1.1;
+}
+
+[data-prueba="reconectando"] {
+  margin: 0.5rem 0.75rem;
+}
+
+/* Fijo arriba: cada pago anterior se apila, sin desplazar (spec 002, RF-045, RF-075). */
+[data-prueba="avisos-anteriores"] {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  z-index: 10;
+}
+
+[data-prueba="aviso-anterior"] {
+  display: block;
+  width: 100%;
+  padding: 0.5rem 0.75rem;
+  font: inherit;
+  font-weight: bold;
+  text-align: left;
+  color: #000;
+  background: #fff3b0;
+  border: 2px solid #000;
+  overflow-wrap: anywhere;
+}
+
+[data-prueba="aviso-anterior"][hidden] {
+  display: none;
+}
+
+[data-prueba="activar-sonido"] {
+  position: fixed;
+  right: 0;
+  bottom: 0;
+  left: 0;
+  z-index: 11;
+  margin: 0;
+  padding: 0.75rem;
+  text-align: center;
+  font-weight: bold;
+  color: #000;
+  background: #fff3b0;
+  border-top: 2px solid #000;
+}
+
+.teclas {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 0.25rem;
+  width: 100%;
+}
+
+.teclas button,
+[data-prueba="cobrar"],
+[data-prueba="concepto"] {
+  width: 100%;
+  max-width: 100%;
+  font: inherit;
+}
+
+.cargando {
+  display: inline-block;
+  width: 1.25rem;
+  height: 1.25rem;
+  border: 3px solid currentColor;
+  border-right-color: transparent;
+  border-radius: 50%;
+  animation: giro 0.8s linear infinite;
+}
+
+@keyframes giro {
+  to {
+    transform: rotate(360deg);
+  }
+}

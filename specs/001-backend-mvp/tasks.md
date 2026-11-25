@@ -1,9 +1,9 @@
 # Tasks: Backend del MVP: cobrar con CoDi y saber que me pagaron
 
-- **Spec**: [spec.md](spec.md), estado: Aprobada el 2026-11-14, con el cambio C-1 aplicado el mismo día
+- **Spec**: [spec.md](spec.md), estado: Aprobada el 2026-11-14, con el cambio C-1 aplicado el mismo día, y el cambio C-2 aplicado el 2026-11-15
 - **Plan**: [plan.md](plan.md), estado: Aprobado el 2026-11-14, ajustado por TK-1 y TK-2 (§14)
 - **Fecha**: 2026-11-14
-- **Estado**: `Aprobado`. Hugo lo aprobó el 2026-11-14, después de `/speckit-analyze` y de la QA (QT-1 a QT-7, aplicadas, con el cambio C-1 a la spec). F1 terminada (Grok, 2026-11-14). F2 terminada (Grok, 2026-11-14). F3 terminada (Grok, 2026-11-14). F4 terminada (Grok, 2026-11-14). F5 terminada en código (Grok, 2026-11-14). F4 y F5 revisadas por Claude el 2026-11-14, con una corrección (400 para un `amount` que no es un número finito): 95 passed y ruff limpio. Los dos pagos reales de $0.01 quedan pendientes de la autorización de Hugo y de CoDi (se activa el 15 nov). Si a las 10:00 del 15 nov no están hechos, se sigue el riesgo de §11 del plan: desplegar este cierre en verde y avisarlo en el formulario. F6 terminada en código (Grok, 2026-11-14): 97 passed y ruff limpio. El pago real tardío de $0.01 queda pendiente de la autorización de Hugo. Si el banco no deja pagar un QR vencido, se anota la pregunta abierta de la spec §8.5. F7 terminada en código (Grok, 2026-11-14): 96 passed y ruff limpio. El pago real de monto libre de $0.01 queda pendiente de la autorización de Hugo. F8 terminada en código (Grok, 2026-11-14). F6, F7 y F8 revisadas por Claude el 2026-11-14: 104 passed y ruff limpio. El pago real a un QR cancelado queda pendiente de la autorización de Hugo. FN terminada (Grok, 2026-11-15): 104 passed y ruff limpio. El README y el quickstart quedan al día con el corte 2. Los pagos reales de $0.01 siguen pendientes de la autorización de Hugo.
+- **Estado**: `Aprobado`. Hugo lo aprobó el 2026-11-14, después de `/speckit-analyze` y de la QA (QT-1 a QT-7, aplicadas, con el cambio C-1 a la spec). F1 terminada (Grok, 2026-11-14). F2 terminada (Grok, 2026-11-14). F3 terminada (Grok, 2026-11-14). F4 terminada (Grok, 2026-11-14). F5 terminada en código (Grok, 2026-11-14). F4 y F5 revisadas por Claude el 2026-11-14, con una corrección (400 para un `amount` que no es un número finito): 95 passed y ruff limpio. Los dos pagos reales de $0.01 quedan pendientes de la autorización de Hugo y de CoDi (se activa el 15 nov). Si a las 10:00 del 15 nov no están hechos, se sigue el riesgo de §11 del plan: desplegar este cierre en verde y avisarlo en el formulario. F6 terminada en código (Grok, 2026-11-14): 97 passed y ruff limpio. El pago real tardío de $0.01 queda pendiente de la autorización de Hugo. Si el banco no deja pagar un QR vencido, se anota la pregunta abierta de la spec §8.5. F7 terminada en código (Grok, 2026-11-14): 96 passed y ruff limpio. El pago real de monto libre de $0.01 queda pendiente de la autorización de Hugo. F8 terminada en código (Grok, 2026-11-14). F6, F7 y F8 revisadas por Claude el 2026-11-14: 104 passed y ruff limpio. El pago real a un QR cancelado queda pendiente de la autorización de Hugo. FN terminada (Grok, 2026-11-15): 104 passed y ruff limpio. El README y el quickstart quedan al día con el corte 2. Los pagos reales de $0.01 siguen pendientes de la autorización de Hugo. F9 terminada (Claude, 2026-11-15): cambio C-2, `hora_servidor` en cada objeto cobro; 109 passed y ruff limpio.
 - **Entrada**: los documentos de `specs/001-backend-mvp/`: plan.md, spec.md, research.md, data-model.md, contracts/ y quickstart.md
 
 > **Notas para los comandos de spec-kit.**
@@ -498,6 +498,34 @@
 
 ---
 
+## Fase 9 (F9): Cambio C-2 — Hora actual del servidor en cada cobro · 15 nov
+
+**Objetivo**: cada objeto cobro (crear, ver, cancelar y los eventos del canal) trae `hora_servidor`, para que la pantalla de la spec 002 calcule la cuenta regresiva sin depender del reloj del celular (spec 002, RF-019 y CE-016). Es la fase F0 del plan de la 002.
+
+**Prueba independiente**: con el reloj falso, un cobro cuya creación tardó 9 s devuelve `creado_en = T` y `hora_servidor = T + 9`.
+
+- [X] T055 [P] Escribir las pruebas de `hora_servidor` en `backend/tests/test_modelo.py`, `backend/tests/test_crear_cobro.py`, `backend/tests/test_canal.py` y `backend/tests/test_cancelar_cobro.py`
+  - `test_modelo.py`: `CAMPOS_COBRO` suma `hora_servidor` (16 campos) en `test_el_objeto_publico_del_cobro_tiene_los_campos_del_contrato`; nueva `test_el_objeto_publico_trae_la_hora_actual_del_servidor_como_entero`: con `RelojFalso(1_794_700_009)`, `hora_servidor == 1_794_700_009`; tras `avanzar(5.7)`, `1_794_700_014`.
+  - `test_crear_cobro.py`: `CAMPOS_COBRO` suma `hora_servidor`; nueva `test_crear_cobro_descuenta_lo_que_tardo_pey_en_la_hora_del_servidor`: el `PeySimulado` adelanta el reloj 9 s al responder `POST /codi/qr` (nuevo atributo `al_crear` en `backend/tests/conftest.py`) → `creado_en = T` y `hora_servidor = T + 9`; nueva `test_ver_cobro_trae_la_hora_actual_del_servidor`: tras `reloj.avanzar(30)`, `GET /api/cobros/{id}` trae `hora_servidor = T + 30`.
+  - `test_canal.py`: nueva `test_los_eventos_del_canal_traen_la_hora_del_servidor`: el `estado` al abrir y el `fin` traen `hora_servidor` igual a la hora del reloj al emitirlos.
+  - `test_cancelar_cobro.py`: nueva `test_cancelar_devuelve_la_hora_del_servidor`.
+  - **RF**: RF-008 (C-2)
+  - **Dep.**: T054
+  - **Hecho cuando**: las pruebas existen y fallan porque el objeto cobro no trae `hora_servidor`.
+- [X] T056 Agregar `hora_servidor` a `Cobro.publico()` en `backend/app/cobros.py` y al ejemplo del objeto cobro en `backend/README.md`
+  - `"hora_servidor": int(self.reloj.ahora())`, con el docstring citando el C-2. Las rutas y el canal no cambian: todos usan `publico()` (TK-6 del plan).
+  - **RF**: RF-008 (C-2)
+  - **Dep.**: T055
+  - **Hecho cuando**: las pruebas de T055 pasan y `uv run --directory backend pytest -q` queda en verde.
+- [X] T057 Cierre de F9: pruebas en verde, sección F9 en `verification-guide.md` y commit sugerido
+  - La guía dice cómo ver `hora_servidor` con `curl` en `POST /api/cobros`, `GET /api/cobros/{id}` y el canal, sin crear cobros reales (servidor en local sin llave, o con el pey simulado de las pruebas).
+  - Commit sugerido: `feat(001): hora actual del servidor en cada cobro (C-2, F9)`.
+  - **RF**: RF-008
+  - **Dep.**: T056
+  - **Hecho cuando**: los comandos de la regla 5 dan verde y la sección F9 existe.
+
+---
+
 ## Dependencias y orden de ejecución
 
 ```text
@@ -538,7 +566,7 @@ F1 → F2 → F3 (H1, MVP) → F4 (H2 y H3) → F5 (H5 y H6) ═ corte M0
 | RF-005 | T018, T020 |
 | RF-006 | T018, T020 |
 | RF-007 | T018, T020 |
-| RF-008 | T009, T012, T014, T016, T018, T020, T037 |
+| RF-008 | T009, T012, T014, T016, T018, T020, T037, T055, T056, T057 |
 | RF-009 | T019, T020 |
 | RF-010 | T015, T019, T020 |
 | RF-011 | T006, T022, T027, T038, T052 |
