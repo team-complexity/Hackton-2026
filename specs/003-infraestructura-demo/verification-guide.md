@@ -355,3 +355,118 @@ La base es el proyecto de Supabase de desarrollo de Juan, con la `DATABASE_URL` 
 - **Qué queda para Hugo:** revisar el diff, unir el PR #107 y avisar a Juan de que cambie la contraseña de la base.
 - **Lo que sigue abierto, sin resolver en F4:** el servidor todavía no usa la base (F5) y la base de la demo se crea en F6.
 - **Commit sugerido:** `feat(003): comando de migraciones y trabajo base-de-datos del CI (F4)`.
+
+## F5 — Guardar los cobros en la base de datos
+
+### T050 a T060 · Código y pruebas
+
+- **T050 a T054.** Pruebas primero: ayudas del almacén, contrato del almacén, guardado y reinicio por la API, fallas de la base y la salud con `base_de_datos`.
+- **T055 y T056.** Interfaz, almacén en memoria y almacén de PostgreSQL. El *pool* no se abre al crear la app.
+- **T057 y T058.** El repositorio escribe primero en el almacén y la consulta de respaldo pasa a `await`.
+- **T059 y T060.** Lista de reintentos, respuestas cuando la base falla, salud con la base y ciclo de vida.
+
+### Cómo se comprueba
+
+Desde la raíz:
+
+```bash
+uv run --directory backend pytest -q
+```
+
+178 pasan y 29 se saltan: son las de PostgreSQL, porque no hay `PRUEBAS_DATABASE_URL`.
+
+Con el PostgreSQL local de pruebas (puerto 5434) la misma orden, con esa variable en el entorno del comando: 207 pasan. La URL no se anota aquí.
+
+```bash
+uv run --directory backend ruff check .
+uv run --directory backend ruff format --check .
+```
+
+Sin avisos, todo formateado. Esta revisión no tocó `backend/app` ni `backend/tests`.
+
+### T061 · Diff de las pruebas que ya existían (2026-11-24)
+
+Rango pedido: `git diff cfaedc3~1 HEAD -- backend/tests` (de T055 y T056 a T059 y T060). También se miró el diff desde antes de F5 (`ead45ed`). En los archivos que ya existían, lo único fuera de ese rango es el alta de dos pruebas en `test_salud_y_registros.py` (T054).
+
+| Archivo | Qué cambió |
+|---|---|
+| `test_crear_cobro.py`, `test_aviso_pey.py`, `test_cancelar_cobro.py`, `test_web_desde_el_servidor.py`, `test_ci.py`, `test_migraciones.py`, `test_migraciones_postgres.py`, `postgres_desechable.py` | Sin diff. No hay `test_ver_cobro.py`: ver un cobro vive en esos archivos y no se tocó |
+| `test_modelo.py`, `test_canal.py` | `await`, `async`, almacén en memoria y `guardar_nuevo` antes de vincular o registrar. Ninguna aserción cambia |
+| `test_respaldo.py` | Lo mismo, más dos pruebas nuevas (TK-17). Las aserciones de las pruebas viejas no cambian |
+| `conftest.py` | Fixture del almacén, `tareas_en_segundo_plano=False`, y el id distinto de `PeySimulado` ya anotado en TK-17. Ninguna aserción |
+| `test_proteccion.py` | Solo el flag `tareas_en_segundo_plano=False` (TK-19) |
+| `test_salud_y_registros.py` | La aserción conocida de TK-19: el cuerpo de la salud incluye `base_de_datos: "sin configurar"`. T054 agregó dos pruebas; no cambió las demás aserciones |
+| `test_fallas_base_de_datos.py` | Archivo de F5. El cambio de aserción es el de TK-18: la línea de «guardar aviso» ya no exige el id del cobro |
+
+Nombres `test_` de antes de F5: 110. Ninguno falta en HEAD. Entre `cfaedc3~1` (158) y HEAD (169) tampoco se quitó ninguno. El único `pytest.skip` sigue en `postgres_desechable.py`, igual que antes de F5. No hay `xfail` nuevo. Sin `PRUEBAS_DATABASE_URL` se saltan las pruebas de PostgreSQL, no las de la 001 ni la 002.
+
+No hay hallazgo nuevo. Los cambios de aserción son los de TK-17, TK-18 y TK-19.
+
+### T062 · `DATABASE_URL`
+
+Fila en la tabla de `backend/README.md` y comentario en `backend/.env.example`, con «nunca en el repositorio». La línea queda `DATABASE_URL=` sin valor.
+
+### T063 · Datos de quien paga (2026-11-24)
+
+`git grep -n "metadata" backend/app`:
+
+- `main.py:140`: el docstring de `_pago_para_reintento` dice que no lleva metadata.
+- `main.py:305`: al crear el QR se envía `{"cobroId": ...}`.
+- `pey.py:105` y `pey.py:119`: ese mismo cuerpo de salida. `_pago_de` lee `id`, `status`, `amount`, `amountBreakdown.base` y `datePaid`. El aviso lee `type`, `amount`, `codiQrId`, `transactionId` y `datePaid`. No se lee la metadata que trae pey.
+
+`AvisoPendiente` guarda `codi_qr_id`, `transaccion_id`, `monto_recibido`, `pagado_en` e `intentos`. Nada de metadata.
+
+Un `git grep` de CLABE, teléfono, banco o nombre de quien paga en `backend/app` no encuentra nada.
+
+`git grep -nE "str(error)|%s.*error)" backend/app` no encuentra `str(error)`. La única línea es `tareas.py:98`: `registro.error("%s", type(error).__name__)`, el nombre de la clase. `registrar_falla` y `_clasificar` usan `error.clase` o `type(error).__name__`.
+
+### T064 · C-6 aplicado
+
+La spec 001 quedó con el cambio y la fila C-6 de esta spec dice «aplicado el 2026-11-24». El detalle, archivo por archivo, está en TK-21 del plan. El ejemplo JSON de `GET /salud` en `backend/README.md` no estaba en C-6; Claude le agregó `base_de_datos` en la revisión.
+
+### T065 · Credenciales (2026-11-24)
+
+`git grep -nE "postgres(ql)?://[^ ]+:[^ ]+@" -- ':!backend/tests'` no sale vacío. Lo que encuentra son valores falsos. No hay usuario ni contraseña del *pooler*:
+
+- `.github/workflows/ci.yml`, líneas 81, 82, 84 y 90: usuario `postgres`, contraseña `prueba`, host local. Es la base desechable del CI.
+- `specs/003-infraestructura-demo/tasks.md`, líneas 410 y 417: `usuario-falso` y `clave-falsa`.
+
+En `backend/tests` hay cinco líneas (`test_almacen.py:23`, `test_ciclo_de_vida.py:23`, `test_fallas_base_de_datos.py:29`, `test_migraciones.py:15`, `test_salud_y_registros.py:25`), todas con `usuario-falso` y `clave-falsa`. El mismo patrón en `docs/` no encuentra nada. `git grep -nE "pooler\.supabase\.com"` no encuentra nada.
+
+`git status --short` no muestra `backend/.env` ni `backend/.env.demo`. Están ignorados. No se leyeron.
+
+### T066 · Reinicio en desarrollo (2026-11-25)
+
+Hugo, con `backend/.env` (base de desarrollo y segunda llave), en el puerto 8001:
+
+1. `GET /salud` dice `"base_de_datos": "responde"`.
+2. Crear un cobro de $0.01. QR real, sin pagar, con su autorización en ese momento.
+3. Parar el servidor por su PID.
+4. Arrancarlo otra vez.
+5. `GET /api/cobros/<id>` vuelve con su QR, su imagen y su tiempo restante.
+
+Resultado: **pasó**.
+
+- `GET /salud` dijo `"base_de_datos": "responde"`.
+- Cobro de $0.01 creado sin pagar (`0mlfQTGx-EhQ`, QR real de pey): 201.
+- Servidor parado por su PID (76471) y arrancado otra vez (PID nuevo, 77632).
+- `GET /api/cobros/0mlfQTGx-EhQ` volvió con el mismo `id`, `codi_qr_id`, `qr`, `qr_imagen`, `creado_en` y `expira_en`, en `pendiente`, con 290 s de vida. El servidor nuevo consultó a pey una vez (`pagos_nuevos=0`).
+- Antes de la prueba la base dijo `no responde`: la contraseña de la base de desarrollo había cambiado y `DATABASE_URL` guardaba la vieja. El error era `password authentication failed`. Se restableció la contraseña en Supabase, se actualizó `backend/.env` y se reinició el servidor. Si `/salud` dice `no responde`, `uv run --directory backend python -m app.migraciones estado` da el motivo sin mostrar la URL.
+
+### Resultado de F5 (2026-11-24)
+
+| Qué | Resultado |
+|---|---|
+| Pruebas del backend | 178 pasan y 29 se saltan sin PostgreSQL; 207 pasan con el PostgreSQL local |
+| `ruff check` y `ruff format --check` | Sin avisos, todo formateado |
+| T061 diff de pruebas previas | Sin hallazgo nuevo (TK-17, TK-18 y TK-19) |
+| T062 `DATABASE_URL` | README y `.env.example`, sin valor |
+| T063 datos de quien paga | No se leen ni se registran |
+| T064 C-6 | Aplicado el 2026-11-24 |
+| T065 credenciales | Solo valores falsos; el host del *pooler* no aparece |
+| T066 reinicio en desarrollo | Pasó: el cobro volvió con QR, imagen y tiempo restante |
+| T067 cierre de F5 | Cerrada el 2026-11-25: PR #142 con el CI en verde (`base-de-datos`, `servidor` y `web`) y aprobación de Hugo |
+
+- **Qué queda para Hugo:** unir el PR #142 con `main`.
+- **Lo que sigue abierto:** F6 (conciliación y demo con base de datos).
+- **Commit sugerido:** `docs(003): revisión de pruebas, DATABASE_URL, revisión de credenciales y cambio C-6 aplicado (F5, T061 a T065)`.

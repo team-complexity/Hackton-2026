@@ -2,7 +2,7 @@
 
 - **Fecha**: 2026-11-14
 - **Plan**: [plan.md](plan.md)
-- **Almacenamiento**: en memoria, en un solo proceso. Se pierde al reiniciar (limitación aceptada hasta #23).
+- **Almacenamiento**: los cobros, pagos y avisos se guardan en la base de datos (spec 003). Los límites por IP y los canales siguen en memoria, en un solo proceso.
 
 ---
 
@@ -85,7 +85,9 @@ pendiente ─────────────→ pagado ←─────�
 3. Si `monto_distinto`, se deja una advertencia (RF-020) y se publica en el pago (RF-019).
 4. Cada pago agregado publica el evento `pago` en el canal del cobro (RF-029).
 
-## 5. Repositorio en memoria
+## 5. Repositorio
+
+Los cobros, pagos y avisos se guardan en la base de datos (spec 003). El proceso guarda además esta copia en memoria:
 
 | Índice | Para qué |
 |---|---|
@@ -95,6 +97,8 @@ pendiente ─────────────→ pagado ←─────�
 | `webhook-id vistos` (conjunto) | Primera barrera contra reenvíos (principio II) |
 
 ## 6. Límites de la demo (en memoria)
+
+Los límites por IP y los canales siguen en memoria. Los cobros, pagos y avisos se guardan en la base de datos (spec 003).
 
 | Límite | Ventana | Valor | Requisitos |
 |---|---|---|---|

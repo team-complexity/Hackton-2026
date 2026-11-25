@@ -57,17 +57,23 @@ def _textos_de(respuesta) -> str:
 
 
 def test_salud_dice_que_credenciales_faltan_sin_mostrarlas(configuracion, pey, reloj) -> None:
-    """Con llave y sin secreto, /salud solo dice booleanos (RF-036, RF-038)."""
+    """Con llave y sin secreto, /salud no muestra los valores (RF-036, RF-038).
+
+    Sin DATABASE_URL la base queda «sin configurar» (spec 003, RF-023).
+    """
     sin_secreto = configuracion.model_copy(update={"pey_webhook_secret": SecretStr("")})
     http = httpx.AsyncClient(transport=httpx.MockTransport(pey))
     cliente_pey = ClientePey(BASE_PEY_DE_PRUEBA, LLAVE_FALSA, http)
-    with TestClient(crear_app(sin_secreto, cliente_pey, reloj)) as cliente_http:
+    with TestClient(
+        crear_app(sin_secreto, cliente_pey, reloj, tareas_en_segundo_plano=False)
+    ) as cliente_http:
         respuesta = cliente_http.get("/salud")
     assert respuesta.status_code == 200
     assert respuesta.json() == {
         "estado": "ok",
         "llave_pey": True,
         "secreto_aviso_pey": False,
+        "base_de_datos": "sin configurar",
     }
     assert LLAVE_FALSA not in respuesta.text
     assert SECRETO_FALSO not in respuesta.text
@@ -149,3 +155,67 @@ def test_los_registros_dejan_cobro_error_de_pey_pago_y_aviso_ignorado(cliente, p
     )
     assert any("qr-no" in mensaje for _, mensaje in lineas)
     assert any("rechaz" in mensaje.lower() for _, mensaje in lineas)
+
+
+def test_la_salud_dice_si_la_base_responde_sin_mostrar_valores(configuracion, pey, reloj) -> None:
+    """La salud dice si la base responde, sin mostrar valores (spec 003, RF-023, RF-021)."""
+    config = configuracion.model_copy(update={"database_url": SecretStr("")})
+    http = httpx.AsyncClient(transport=httpx.MockTransport(pey))
+    cliente_pey = ClientePey(BASE_PEY_DE_PRUEBA, LLAVE_FALSA, http)
+    with TestClient(
+        crear_app(config, cliente_pey, reloj, tareas_en_segundo_plano=False)
+    ) as cliente_http:
+        sin_configurar = cliente_http.get("/salud").json()
+    assert sin_configurar == {
+        "estado": "ok",
+        "llave_pey": True,
+        "secreto_aviso_pey": True,
+        "base_de_datos": "sin configurar",
+    }
+
+    from tests.almacen_de_prueba import AlmacenQueFalla, armar_app
+
+    responde = AlmacenQueFalla(reloj=reloj)
+    caido = AlmacenQueFalla(reloj=reloj)
+    caido.no_responde()
+    for almacen, esperado in ((responde, "responde"), (caido, "no responde")):
+        aplicacion = armar_app(config, pey, reloj, almacen)
+        with TestClient(aplicacion) as cliente_http:
+            respuesta = cliente_http.get("/salud")
+        cuerpo = respuesta.json()
+        assert cuerpo["estado"] == "ok"
+        assert cuerpo["llave_pey"] is True
+        assert cuerpo["secreto_aviso_pey"] is True
+        assert cuerpo["base_de_datos"] == esperado
+        for fragmento in (LLAVE_FALSA, SECRETO_FALSO, "usuario-falso", "clave-falsa"):
+            assert fragmento not in respuesta.text
+
+
+def test_la_salud_guarda_la_respuesta_de_la_base_10_segundos(configuracion, pey, reloj) -> None:
+    """Dos lecturas seguidas consultan la base una vez; a los 10 s, otra.
+
+    (spec 003, RF-023, DP-31).
+    """
+    config = configuracion.model_copy(update={"database_url": SecretStr("")})
+    http = httpx.AsyncClient(transport=httpx.MockTransport(pey))
+    cliente_pey = ClientePey(BASE_PEY_DE_PRUEBA, LLAVE_FALSA, http)
+    with TestClient(
+        crear_app(config, cliente_pey, reloj, tareas_en_segundo_plano=False)
+    ) as cliente_http:
+        assert "base_de_datos" in cliente_http.get("/salud").json()
+
+    from tests.almacen_de_prueba import AlmacenQueFalla, armar_app
+
+    almacen = AlmacenQueFalla(reloj=reloj)
+    aplicacion = armar_app(config, pey, reloj, almacen)
+    with TestClient(aplicacion) as cliente_http:
+        assert cliente_http.get("/salud").json()["base_de_datos"] == "responde"
+        assert cliente_http.get("/salud").json()["base_de_datos"] == "responde"
+        assert _consultas(almacen) == 1
+        reloj.avanzar(10)
+        assert cliente_http.get("/salud").json()["base_de_datos"] == "responde"
+        assert _consultas(almacen) == 2
+
+
+def _consultas(almacen: object) -> int:
+    return sum(llamada.operacion == "responde" for llamada in almacen.llamadas)

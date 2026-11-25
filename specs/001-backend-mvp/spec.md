@@ -2,7 +2,7 @@
 
 - **ID**: `001-backend-mvp`
 - **Fecha**: `2026-11-14`
-- **Estado**: `Aprobada`. Hugo la aprobó el 2026-11-14, después de la entrevista (E-1 a E-7) y de la QA (QA-1 a QA-10, todas aplicadas). Se entrega en dos cortes (§1.2). El cambio C-1 (QR reutilizado y monto distinto en el corte M0) se aprobó y aplicó el 2026-11-14 (§8.2). El cambio C-2 (hora actual del servidor en cada cobro, pedido por la spec 002) se aprobó y aplicó el 2026-11-15.
+- **Estado**: `Aprobada`. Hugo la aprobó el 2026-11-14, después de la entrevista (E-1 a E-7) y de la QA (QA-1 a QA-10, todas aplicadas). Se entrega en dos cortes (§1.2). El cambio C-1 (QR reutilizado y monto distinto en el corte M0) se aprobó y aplicó el 2026-11-14 (§8.2). El cambio C-2 (hora actual del servidor en cada cobro, pedido por la spec 002) se aprobó y aplicó el 2026-11-15. El cambio C-6 (spec 003: cobros, pagos y avisos en la base de datos) se aprobó el 2026-11-20 y se aplicó el 2026-11-24.
 - **Rama**: `feature/18-backend-mvp`
 - **Issues**: #18 (estructura), #62 (crear cobro), #63 (aviso de pago), #65 (despliegue, solo como dependencia)
 - **Entrada**: "iniciemos la entrevista y preparativos de la redaccion de la spec 001"
@@ -234,7 +234,7 @@ Cada RF lleva su corte: **[M0]** para el kickoff o **[C2]** para el corte 2 (§1
 
 **Operar**
 
-- **RF-038** (Dirigido por evento) [M0]: CUANDO se consulta la salud del servidor, EL SISTEMA indicará que responde y si la llave de pey y el secreto del aviso están configurados, sin mostrar sus valores.
+- **RF-038** (Dirigido por evento) [M0]: CUANDO se consulta la salud del servidor, EL SISTEMA indicará que responde, si la llave de pey y el secreto del aviso están configurados y si la base de datos está configurada y responde, sin mostrar sus valores (spec 003, RF-023).
 - **RF-039** (Ubicuo) [M0; cancelación en C2]: EL SISTEMA dejará un registro, visible al correr el servidor, de cada cobro creado o cancelado, cada error de pey con su identificador de solicitud, cada pago registrado y cada aviso ignorado o rechazado.
 
 > Los RF-040 a RF-043 salieron de la QA (QA-2, QA-7, QA-8 y QA-5) y se colocaron en su grupo para leerlos junto a los requisitos con los que se relacionan.
@@ -252,7 +252,7 @@ Cada RF lleva su corte: **[M0]** para el kickoff o **[C2]** para el corte 2 (§1
 |---|---|---|
 | QR vencido sin pago | A los 10 minutos el cobro pasa a *vencido* y el canal lo avisa en menos de 15 s. Desde el corte 2, el canal sigue abierto 10 minutos más por si llega un pago tardío. | RF-021, RF-030, RF-022 |
 | **Pago tardío** (hasta 10 minutos después de vencer) | Desde el corte 2, pasa a *pagado* y se avisa por el canal, igual que un pago a tiempo (principio VIII). En el corte M0, si llega por el aviso de pey, pasa a *pagado* pero el canal ya está cerrado. | RF-017, RF-022 |
-| Pago después de la ventana de escucha | Si llega por el aviso de pey, se registra en el cobro y queda en el registro, pero el canal ya está cerrado y la consulta de respaldo ya no pregunta a pey. | RF-012, RF-025, RF-032 |
+| Pago después de la ventana de escucha | Si llega por el aviso de pey, se registra en el cobro y queda en el registro, pero el canal ya está cerrado y la consulta de respaldo ya no pregunta a pey. La conciliación de la spec 003 (RF-061) consulta una vez a pey cuando termina la ventana y registra lo que falte, sin canal. | RF-012, RF-025, RF-032 |
 | Abrir el canal después de la ventana de escucha | Emite el estado actual y se cierra de inmediato. | RF-043 |
 | **QR reutilizado** (varios pagos al mismo QR) | Cada transacción pagada distinta es un pago nuevo: se registra, se numera y se avisa, sin límite (desde el corte M0, C-1). | RF-015, RF-016, RF-029 |
 | **Monto distinto** en un cobro de monto fijo | Con monto fijo el banco cobra exactamente lo pedido, así que no debería ocurrir. Se compara el monto base (o el recibido, si pey no da el desglose); si difiere, se registra, el aviso muestra ambos montos y queda una advertencia. Una propina o comisión reportada en el desglose no cuenta como monto distinto. | RF-018, RF-019, RF-020 |
@@ -265,14 +265,14 @@ Cada RF lleva su corte: **[M0]** para el kickoff o **[C2]** para el corte 2 (§1
 | **Falla del aviso de pey** (no llega) | Con el canal abierto, el servidor le pregunta a pey cada 5 s y avisa el pago; si la pantalla consulta el cobro, también pregunta. | RF-040, RF-025, RF-026 |
 | pey no responde durante la consulta de respaldo | Se devuelve el último estado conocido y se vuelve a preguntar en la siguiente consulta. | RF-027 |
 | Transacción que pey reporta como pendiente | No es un pago: no se registra ni se avisa hasta que pey la reporte como pagada. | RF-014, RF-026 |
-| Aviso de pago de un cobro desconocido (por ejemplo, tras reiniciar el servidor) | Se le responde bien a pey para que no reintente y queda registro. | RF-039 |
+| Aviso de pago de un cobro desconocido | Se le responde bien a pey para que no reintente y queda registro. | RF-039 |
 | Aviso de otro tipo de evento | Se le responde bien a pey y se ignora. | RF-013 |
 | Aviso reenviado o transacción repetida | Se responde bien; el pago no se registra dos veces. | RF-014 |
 | Secreto del aviso sin configurar | Todo aviso se rechaza sin procesarlo; el respaldo sigue detectando pagos. | RF-037, RF-040 |
 | Llave de pey sin configurar | Crear cobro responde "falta configuración". | RF-010 |
 | Muchos visitantes detrás del mismo proxy del hosting | Cada IP del cliente tiene su propio límite. | RF-034 |
 | Una IP abre más de 10 canales | El siguiente canal se rechaza con "cierra otras pantallas". | RF-041 |
-| Reinicio del servidor | Se pierden los cobros guardados. Limitación aceptada hasta #23. | — |
+| Reinicio del servidor | Los cobros, pagos y avisos se conservan (spec 003). | — |
 | **Devolución** (incluido un pago repetido por error) | Fuera de alcance: pey no ofrece devoluciones por API; el negocio la hace desde su banco. | — |
 
 ---
@@ -285,7 +285,7 @@ Cada RF lleva su corte: **[M0]** para el kickoff o **[C2]** para el corte 2 (§1
 | Despliegue con HTTPS y alta del aviso en el portal de pey | #65 |
 | QR permanente o con vigencia elegida por el dueño (por ejemplo, impreso en el mostrador) | Issue por crear |
 | Registro e inicio de sesión de negocios: hay un solo negocio de demo | #24 |
-| Base de datos: los cobros se pierden al reiniciar | #19, #23 |
+| Base de datos | Resuelto por la spec 003: los cobros, pagos y avisos se guardan |
 | Cuenta bancaria propia por negocio | Issue por crear |
 | Enlaces de pago y cobro por notificación push CoDi | #36 |
 | Historial y corte del día | #38 |
@@ -365,6 +365,7 @@ No hay specs previas. Cambios a **esta** spec después de aprobada:
 |---|---|---|---|---|
 | C-1 | El QR reutilizado (varios pagos numerados) y el monto distinto visible pasan del corte 2 al corte M0. Se quitan de §1.2 los puntos temporales "solo el primer pago se registra y se avisa" y "el cobro todavía no muestra ambos montos". | QT-3 de `tasks.md`: con la regla temporal, el segundo pago a un QR no se avisaba, en choque con el principio VIII ("se registra… y se avisa"). Hugo prefirió adelantar el QR reutilizado a registrar una excepción temporal. | §1.2, historia 2 (escenarios 2 y 6), RF-015, RF-016, RF-019, RF-020, §4 (QR reutilizado y monto distinto), CE-006; QA-1 queda modificada en ese punto | Aprobado y aplicado por Hugo el 2026-11-14 |
 | C-2 | RF-008 agrega "la hora actual del servidor" a cada cobro que se devuelve (crear, ver y cancelar) y a los eventos del canal de avisos. | QA-2 de la spec 002: `creado_en` se fija antes de pedirle el QR a pey (`main.py:181-185`), y sin la hora del servidor la pantalla no puede mostrar la cuenta regresiva con 2 s de error si el reloj del celular está desfasado (spec 002, RF-019). | RF-008, `contracts/crear-cobro.md` (objeto cobro), `contracts/canal-avisos.md`, pruebas del objeto cobro | Aprobado por Hugo el 2026-11-15 y aplicado el mismo día (campo `hora_servidor`; plan TK-6, tasks F9) |
+| C-6 | Los cobros, pagos y avisos se guardan en la base de datos (spec 003): se conservan al reiniciar; la salud indica si la base de datos está configurada y responde; un `amount` de 0 o negativo en el evento de pago se rechaza con 400 sin marcar el `webhook-id`; el servidor solo escucha en `127.0.0.1`; la conciliación (RF-061 de la 003) consulta una vez a pey cuando termina la ventana y registra lo que falte, sin canal. | Aprobado por Hugo el 2026-11-20 (spec 003, QP-11) para que esta spec no contradiga el guardado. | §4, §5, RF-038, `contracts/salud.md`, `data-model.md`, `quickstart.md`, `contracts/ver-cobro.md`, `contracts/aviso-pey.md`, `backend/README.md` | Aprobado por Hugo el 2026-11-20 y aplicado el 2026-11-24 (F5 de la spec 003) |
 
 ### 8.3 Propuestas
 

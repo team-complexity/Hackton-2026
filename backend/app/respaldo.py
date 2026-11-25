@@ -3,6 +3,7 @@
 import logging
 from decimal import Decimal
 
+from app.almacen import ErrorDeAlmacen, ErrorDeDatos, registrar_falla
 from app.cobros import Cobro, Pago, RepositorioCobros
 from app.eventos import Difusor
 from app.pey import ClientePey, ErrorPey
@@ -26,7 +27,7 @@ class ConsultaDeRespaldo:
         self._difusor = difusor
         self._reloj = reloj
 
-    def registrar_y_avisar(
+    async def registrar_y_avisar(
         self,
         cobro: Cobro,
         transaccion_id: str,
@@ -34,10 +35,22 @@ class ConsultaDeRespaldo:
         monto_base: Decimal | None,
         pagado_en: int | None,
         fuente: str,
+        webhook_id: str | None = None,
+        tipo_aviso: str = "",
     ) -> Pago | None:
-        """Registra el pago y, si es nuevo, publica el evento pago (spec 001, RF-014, RF-029)."""
-        pago = self._repositorio.registrar_pago(
-            cobro, transaccion_id, monto_recibido, monto_base, pagado_en, fuente
+        """Si el pago es nuevo y ya quedó guardado, publica el evento (spec 003, RF-002).
+
+        ``ErrorDeAlmacen`` y ``ErrorDeDatos`` salen hacia quien llama (TK-16).
+        """
+        pago = await self._repositorio.registrar_pago(
+            cobro,
+            transaccion_id,
+            monto_recibido,
+            monto_base,
+            pagado_en,
+            fuente,
+            webhook_id=webhook_id,
+            tipo_aviso=tipo_aviso,
         )
         if pago is None:
             return None
@@ -56,7 +69,7 @@ class ConsultaDeRespaldo:
         return pago
 
     async def consultar(self, cobro: Cobro, intervalo_minimo: float) -> None:
-        """Consulta a pey si toca, y tolera sus fallas (spec 001, RF-025, RF-027, RF-039)."""
+        """Consulta a pey si toca. Si el almacén falla, se registra y sigue (spec 003, RF-016)."""
         ahora = self._reloj.ahora()
         if not cobro.en_ventana(ahora):
             return
@@ -64,7 +77,9 @@ class ConsultaDeRespaldo:
             return
         cobro.ultima_consulta_pey = ahora
         try:
-            resultado = await self._pey.pagos_del_qr(cobro.codi_qr_id, self._repositorio.vistas)
+            # Las transacciones son las de este cobro: tras un reinicio no hay un conjunto global.
+            transacciones = {pago.transaccion_id for pago in cobro.pagos}
+            resultado = await self._pey.pagos_del_qr(cobro.codi_qr_id, transacciones)
         except ErrorPey as error:
             registro.warning(
                 "No se pudo consultar el cobro %s en pey (requestId=%s)",
@@ -74,14 +89,19 @@ class ConsultaDeRespaldo:
             return
         nuevos = 0
         for pago_pey in resultado.pagos:
-            if self.registrar_y_avisar(
-                cobro,
-                pago_pey.id,
-                pago_pey.monto,
-                pago_pey.monto_base,
-                pago_pey.pagado_en,
-                "consulta",
-            ):
+            try:
+                quedo = await self.registrar_y_avisar(
+                    cobro,
+                    pago_pey.id,
+                    pago_pey.monto,
+                    pago_pey.monto_base,
+                    pago_pey.pagado_en,
+                    "consulta",
+                )
+            except (ErrorDeAlmacen, ErrorDeDatos) as error:
+                registrar_falla(error, cobro.id)
+                continue
+            if quedo:
                 nuevos += 1
         if resultado.request_id:
             registro.info(

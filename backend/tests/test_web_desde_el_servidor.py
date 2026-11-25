@@ -31,7 +31,7 @@ def _cliente(reloj: RelojFalso, carpeta_web: str | None = None) -> TestClient:
     config = Configuracion(**datos)
     http = httpx.AsyncClient(transport=httpx.MockTransport(PeySimulado()))
     cliente_pey = ClientePey(BASE_PEY_DE_PRUEBA, LLAVE_FALSA, http)
-    return TestClient(crear_app(config, cliente_pey, reloj))
+    return TestClient(crear_app(config, cliente_pey, reloj, tareas_en_segundo_plano=False))
 
 
 def test_con_carpeta_web_el_servidor_entrega_la_web(tmp_path: Path) -> None:

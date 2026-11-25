@@ -190,7 +190,9 @@ def test_sin_secreto_configurado_todo_aviso_se_rechaza(configuracion, pey, reloj
     sin_secreto = configuracion.model_copy(update={"pey_webhook_secret": SecretStr("")})
     http = httpx.AsyncClient(transport=httpx.MockTransport(pey))
     cliente_pey = ClientePey(BASE_PEY_DE_PRUEBA, LLAVE_FALSA, http)
-    with TestClient(crear_app(sin_secreto, cliente_pey, reloj)) as cliente_http:
+    with TestClient(
+        crear_app(sin_secreto, cliente_pey, reloj, tareas_en_segundo_plano=False)
+    ) as cliente_http:
         cliente_http.post("/api/cobros", json={"monto": 0.01, "concepto": "Tacos"})
         respuesta = cliente_http.post("/webhooks/pey", json=pago())
         assert respuesta.status_code == 503

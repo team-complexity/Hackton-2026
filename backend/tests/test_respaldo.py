@@ -6,6 +6,7 @@ from decimal import Decimal
 import httpx
 import pytest
 
+from app.almacen import AlmacenEnMemoria
 from app.cobros import RepositorioCobros
 from app.eventos import Difusor
 from app.pey import ClientePey, ErrorPey, PagoPey
@@ -108,18 +109,19 @@ async def test_si_pey_tarda_mas_de_4_segundos_la_consulta_cuenta_como_sin_respue
     assert pey.solicitudes[0].extensions["timeout"]["read"] == 4.0
 
 
-def _armado():
+async def _armado():
     from app.respaldo import ConsultaDeRespaldo
 
     reloj = RelojFalso(inicio=1_794_700_000)
-    repositorio = RepositorioCobros(reloj)
+    repositorio = RepositorioCobros(AlmacenEnMemoria(reloj=reloj), reloj)
     difusor = Difusor()
     pey = PeySimulado()
     http = httpx.AsyncClient(transport=httpx.MockTransport(pey))
     cliente_pey = ClientePey(BASE_PEY_DE_PRUEBA, "llave", http)
     consulta = ConsultaDeRespaldo(cliente_pey, repositorio, difusor, reloj)
     cobro = repositorio.nuevo(Decimal("0.01"), "Tacos", 600, ahora=reloj.ahora())
-    repositorio.vincular_qr(cobro, "ab12cd34ef", "qr", None)
+    await repositorio.guardar_nuevo(cobro)
+    await repositorio.vincular_qr(cobro, "ab12cd34ef", "qr", None)
     return reloj, difusor, pey, cliente_pey, consulta, cobro
 
 
@@ -130,7 +132,7 @@ def _gets(pey: PeySimulado) -> int:
 @pytest.mark.asyncio
 async def test_la_consulta_respeta_el_intervalo_y_avisa_el_pago() -> None:
     """El intervalo de 3 s y 5 s es compartido, y un pago nuevo publica el evento (RF-029)."""
-    reloj, difusor, pey, cliente_pey, consulta, cobro = _armado()
+    reloj, difusor, pey, cliente_pey, consulta, cobro = await _armado()
     try:
         await consulta.consultar(cobro, 3)
         await consulta.consultar(cobro, 5)
@@ -159,14 +161,14 @@ async def test_la_consulta_respeta_el_intervalo_y_avisa_el_pago() -> None:
 async def test_fuera_de_la_ventana_no_consulta_y_un_error_no_se_propaga(caplog) -> None:
     """Fuera de la ventana no hay petición. Si pey falla, queda un WARNING (RF-027)."""
     caplog.set_level(logging.WARNING, logger="pago_facil")
-    reloj, _difusor, pey, cliente_pey, consulta, cobro = _armado()
+    reloj, _difusor, pey, cliente_pey, consulta, cobro = await _armado()
     try:
         reloj.avanzar(600)
         await consulta.consultar(cobro, 3)
         assert _gets(pey) == 0
     finally:
         await cliente_pey.cerrar()
-    _reloj, _difusor, pey, cliente_pey, consulta, cobro = _armado()
+    _reloj, _difusor, pey, cliente_pey, consulta, cobro = await _armado()
     try:
         pey.estado_consulta = 500
         await consulta.consultar(cobro, 3)
@@ -187,7 +189,7 @@ async def test_fuera_de_la_ventana_no_consulta_y_un_error_no_se_propaga(caplog) 
 async def test_cada_consulta_a_pey_deja_una_linea_en_el_registro(caplog) -> None:
     """Cada consulta deja páginas, pagos nuevos y requestId, aunque no haya pagos (RF-039)."""
     caplog.set_level(logging.INFO, logger="pago_facil")
-    _reloj, _difusor, pey, cliente_pey, consulta, cobro = _armado()
+    _reloj, _difusor, pey, cliente_pey, consulta, cobro = await _armado()
     try:
         pey.request_id = "req-consulta"
         await consulta.consultar(cobro, 3)
@@ -251,10 +253,10 @@ def test_el_mismo_pago_no_se_registra_dos_veces_por_aviso_ni_por_consulta() -> N
     import asyncio
 
     async def escenario() -> None:
-        _reloj, difusor, pey, cliente_pey, consulta, cobro = _armado()
+        _reloj, difusor, pey, cliente_pey, consulta, cobro = await _armado()
         try:
             cola = difusor.suscribir(cobro.id)
-            consulta.registrar_y_avisar(cobro, "tx-1", Decimal("0.01"), None, 100, "aviso")
+            await consulta.registrar_y_avisar(cobro, "tx-1", Decimal("0.01"), None, 100, "aviso")
             pey.transacciones = [{"id": "tx-1", "status": "PAID", "amount": 0.01, "datePaid": 100}]
             await consulta.consultar(cobro, 3)
             assert cobro.numero_de_pagos == 1
@@ -270,3 +272,91 @@ def test_un_cobro_que_no_existe_da_404(cliente) -> None:
     respuesta = cliente.get("/api/cobros/nada")
     assert respuesta.status_code == 404
     assert respuesta.json()["detail"] == "Ese cobro no existe"
+
+
+@pytest.mark.asyncio
+async def test_si_el_almacen_falla_la_consulta_registra_la_falla_y_la_reintenta(caplog) -> None:
+    """Un pago que no se guarda no se emite. La consulta sigue y la siguiente lo registra.
+
+    (spec 003, RF-002, RF-016).
+    """
+    from app.respaldo import ConsultaDeRespaldo
+    from tests.almacen_de_prueba import AlmacenQueFalla
+
+    caplog.set_level(logging.WARNING, logger="pago_facil")
+    reloj = RelojFalso(inicio=1_794_700_000)
+    almacen = AlmacenQueFalla(reloj=reloj)
+    repositorio = RepositorioCobros(almacen, reloj)
+    difusor = Difusor()
+    pey = PeySimulado()
+    cliente_pey = ClientePey(
+        BASE_PEY_DE_PRUEBA, "llave", httpx.AsyncClient(transport=httpx.MockTransport(pey))
+    )
+    consulta = ConsultaDeRespaldo(cliente_pey, repositorio, difusor, reloj)
+    cobro = repositorio.nuevo(Decimal("0.01"), "Tacos", 600, ahora=reloj.ahora())
+    await repositorio.guardar_nuevo(cobro)
+    await repositorio.vincular_qr(cobro, "ab12cd34ef", "qr", None)
+    cola = difusor.suscribir(cobro.id)
+    pey.transacciones = [{"id": "tx-1", "status": "PAID", "amount": 0.01, "datePaid": 100}]
+    almacen.fallar("registrar_pago", veces=1)
+    try:
+        reloj.avanzar(3)
+        await consulta.consultar(cobro, 3)
+        assert cobro.pagos == []
+        assert cola.empty()
+        lineas = [
+            registro.getMessage()
+            for registro in caplog.records
+            if registro.name == "pago_facil" and registro.levelno >= logging.WARNING
+        ]
+        assert any(
+            "sin respuesta" in linea
+            and "registrar pago" in linea
+            and cobro.id in linea
+            and "OperationalError" in linea
+            for linea in lineas
+        )
+        reloj.avanzar(3)
+        await consulta.consultar(cobro, 3)
+        assert len(cobro.pagos) == 1
+        assert cola.get_nowait()[0] == "pago"
+    finally:
+        await cliente_pey.cerrar()
+
+
+@pytest.mark.asyncio
+async def test_si_el_almacen_rechaza_los_datos_la_consulta_lo_registra_como_rechazo(
+    caplog,
+) -> None:
+    """Un dato rechazado no se dice «sin respuesta»: la línea lo distingue (spec 003, DP-34)."""
+    from app.respaldo import ConsultaDeRespaldo
+    from tests.almacen_de_prueba import CLASE_DE_DATOS, AlmacenQueFalla
+
+    caplog.set_level(logging.WARNING, logger="pago_facil")
+    reloj = RelojFalso(inicio=1_794_700_000)
+    almacen = AlmacenQueFalla(reloj=reloj)
+    repositorio = RepositorioCobros(almacen, reloj)
+    pey = PeySimulado()
+    cliente_pey = ClientePey(
+        BASE_PEY_DE_PRUEBA, "llave", httpx.AsyncClient(transport=httpx.MockTransport(pey))
+    )
+    consulta = ConsultaDeRespaldo(cliente_pey, repositorio, Difusor(), reloj)
+    cobro = repositorio.nuevo(Decimal("0.01"), "Tacos", 600, ahora=reloj.ahora())
+    await repositorio.guardar_nuevo(cobro)
+    await repositorio.vincular_qr(cobro, "ab12cd34ef", "qr", None)
+    pey.transacciones = [{"id": "tx-1", "status": "PAID", "amount": 0.01, "datePaid": 100}]
+    almacen.fallar_datos("registrar_pago")
+    try:
+        reloj.avanzar(3)
+        await consulta.consultar(cobro, 3)
+    finally:
+        await cliente_pey.cerrar()
+    lineas = [r.getMessage() for r in caplog.records if r.name == "pago_facil"]
+    assert any(
+        "rechazó los datos" in linea
+        and "registrar pago" in linea
+        and cobro.id in linea
+        and CLASE_DE_DATOS in linea
+        for linea in lineas
+    )
+    assert not any("sin respuesta" in linea for linea in lineas)

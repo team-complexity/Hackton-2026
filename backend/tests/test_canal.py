@@ -8,6 +8,7 @@ import httpx
 import pytest
 from fastapi.testclient import TestClient
 
+from app.almacen import AlmacenEnMemoria
 from app.cobros import RepositorioCobros
 from app.eventos import Difusor
 from app.pey import ClientePey
@@ -27,16 +28,17 @@ def _consulta():
     return ConsultaDeRespaldo
 
 
-def _mundo(gracia: int = 0, inicio: float = 1_794_700_000):
+async def _mundo(gracia: int = 0, inicio: float = 1_794_700_000):
     reloj = RelojFalso(inicio=inicio)
-    repositorio = RepositorioCobros(reloj, gracia_segundos=gracia)
+    repositorio = RepositorioCobros(AlmacenEnMemoria(reloj=reloj), reloj, gracia_segundos=gracia)
     difusor = Difusor()
     simulado = PeySimulado()
     http = httpx.AsyncClient(transport=httpx.MockTransport(simulado))
     cliente_pey = ClientePey(BASE_PEY_DE_PRUEBA, "llave", http)
     consulta = _consulta()(cliente_pey, repositorio, difusor, reloj)
     cobro = repositorio.nuevo(Decimal("10"), "Tacos", 600, ahora=reloj.ahora())
-    repositorio.vincular_qr(cobro, "ab12cd34ef", "qr", None)
+    await repositorio.guardar_nuevo(cobro)
+    await repositorio.vincular_qr(cobro, "ab12cd34ef", "qr", None)
     return reloj, repositorio, difusor, simulado, cliente_pey, consulta, cobro
 
 
@@ -59,10 +61,10 @@ async def _hasta(gen, texto: str, maximo: int = 400) -> list[str]:
 @pytest.mark.asyncio
 async def test_el_canal_emite_el_estado_al_abrirse() -> None:
     """Al abrir sale retry y el estado, con los pagos que el cobro ya tiene (RF-031)."""
-    _reloj, repo, difusor, _pey, cliente_pey, consulta, cobro = _mundo()
+    _reloj, repo, difusor, _pey, cliente_pey, consulta, cobro = await _mundo()
     try:
-        repo.registrar_pago(cobro, "tx-1", Decimal("4"), None, 100, "aviso")
-        repo.registrar_pago(cobro, "tx-2", Decimal("6"), None, 200, "aviso")
+        await repo.registrar_pago(cobro, "tx-1", Decimal("4"), None, 100, "aviso")
+        await repo.registrar_pago(cobro, "tx-2", Decimal("6"), None, 200, "aviso")
         gen = _flujo()(cobro, difusor, consulta, _reloj)
         assert (await anext(gen)).startswith("retry: 3000")
         estado = _datos(await anext(gen))
@@ -76,13 +78,13 @@ async def test_el_canal_emite_el_estado_al_abrirse() -> None:
 @pytest.mark.asyncio
 async def test_el_canal_avisa_el_pago_en_cuanto_se_registra() -> None:
     """Un pago publicado llega en el siguiente evento, sin mover el reloj (CE-003)."""
-    reloj, _repo, difusor, _pey, cliente_pey, consulta, cobro = _mundo()
+    reloj, _repo, difusor, _pey, cliente_pey, consulta, cobro = await _mundo()
     marca = reloj.ahora()
     try:
         gen = _flujo()(cobro, difusor, consulta, reloj)
         await anext(gen)
         await anext(gen)
-        consulta.registrar_y_avisar(cobro, "tx-1", Decimal("10"), None, 100, "aviso")
+        await consulta.registrar_y_avisar(cobro, "tx-1", Decimal("10"), None, 100, "aviso")
         aviso = _datos(await anext(gen))
         assert aviso["pago"]["numero"] == 1
         assert aviso["cobro"]["estado"] == "pagado"
@@ -94,7 +96,7 @@ async def test_el_canal_avisa_el_pago_en_cuanto_se_registra() -> None:
 @pytest.mark.asyncio
 async def test_el_canal_avisa_cancelado_en_menos_de_15_segundos() -> None:
     """Al publicar la cancelación, el canal emite el cobro antes de 15 s (RF-030)."""
-    reloj, _repo, difusor, _pey, cliente_pey, consulta, cobro = _mundo()
+    reloj, _repo, difusor, _pey, cliente_pey, consulta, cobro = await _mundo()
     inicio = reloj.ahora()
     try:
         gen = _flujo()(cobro, difusor, consulta, reloj)
@@ -115,14 +117,14 @@ async def test_el_canal_avisa_cancelado_en_menos_de_15_segundos() -> None:
 @pytest.mark.asyncio
 async def test_el_canal_avisa_cada_pago_con_su_numero_y_el_total() -> None:
     """Dos pagos al mismo QR salen con su número y el total acumulado (C-1, CE-006)."""
-    reloj, _repo, difusor, _pey, cliente_pey, consulta, cobro = _mundo()
+    reloj, _repo, difusor, _pey, cliente_pey, consulta, cobro = await _mundo()
     try:
         gen = _flujo()(cobro, difusor, consulta, reloj)
         await anext(gen)
         await anext(gen)
-        consulta.registrar_y_avisar(cobro, "tx-1", Decimal("4"), None, 100, "aviso")
+        await consulta.registrar_y_avisar(cobro, "tx-1", Decimal("4"), None, 100, "aviso")
         primero = _datos(await anext(gen))
-        consulta.registrar_y_avisar(cobro, "tx-2", Decimal("6"), None, 200, "aviso")
+        await consulta.registrar_y_avisar(cobro, "tx-2", Decimal("6"), None, 200, "aviso")
         segundo = _datos(await anext(gen))
         assert primero["pago"]["numero"] == 1
         assert primero["cobro"]["total_recibido"] == 4
@@ -135,7 +137,7 @@ async def test_el_canal_avisa_cada_pago_con_su_numero_y_el_total() -> None:
 @pytest.mark.asyncio
 async def test_el_canal_avisa_vencido_en_menos_de_15_segundos() -> None:
     """Con gracia, vencido sale antes de 15 s después de expira_en (RF-030)."""
-    reloj, _repo, difusor, _pey, cliente_pey, consulta, cobro = _mundo(gracia=600)
+    reloj, _repo, difusor, _pey, cliente_pey, consulta, cobro = await _mundo(gracia=600)
     try:
         gen = _flujo()(cobro, difusor, consulta, reloj)
         await anext(gen)
@@ -149,7 +151,7 @@ async def test_el_canal_avisa_vencido_en_menos_de_15_segundos() -> None:
 @pytest.mark.asyncio
 async def test_con_gracia_0_el_canal_emite_vencido_y_luego_fin() -> None:
     """Si vence y cierra a la vez, los dos últimos eventos son vencido y fin (QT-6)."""
-    reloj, _repo, difusor, _pey, cliente_pey, consulta, cobro = _mundo()
+    reloj, _repo, difusor, _pey, cliente_pey, consulta, cobro = await _mundo()
     try:
         gen = _flujo()(cobro, difusor, consulta, reloj)
         vistos: list[str] = []
@@ -167,7 +169,7 @@ async def test_con_gracia_0_el_canal_emite_vencido_y_luego_fin() -> None:
 @pytest.mark.asyncio
 async def test_el_canal_emite_fin_y_se_cierra_al_terminar_la_ventana() -> None:
     """Al llegar a fin_ventana el canal emite fin y el generador termina (RF-032)."""
-    reloj, _repo, difusor, _pey, cliente_pey, consulta, cobro = _mundo(gracia=600)
+    reloj, _repo, difusor, _pey, cliente_pey, consulta, cobro = await _mundo(gracia=600)
     try:
         gen = _flujo()(cobro, difusor, consulta, reloj)
         ultimo = ""
@@ -185,7 +187,7 @@ async def test_el_canal_emite_fin_y_se_cierra_al_terminar_la_ventana() -> None:
 @pytest.mark.asyncio
 async def test_el_canal_manda_senal_de_vida_cada_15_segundos() -> None:
     """Sin otros eventos, a los 15 s sale la señal de vida (RF-033)."""
-    reloj, _repo, difusor, _pey, cliente_pey, consulta, cobro = _mundo(gracia=600)
+    reloj, _repo, difusor, _pey, cliente_pey, consulta, cobro = await _mundo(gracia=600)
     inicio = reloj.ahora()
     try:
         gen = _flujo()(cobro, difusor, consulta, reloj)
@@ -216,7 +218,7 @@ def test_abrir_el_canal_despues_de_la_ventana_emite_estado_y_fin(cliente, reloj)
 @pytest.mark.asyncio
 async def test_con_el_canal_abierto_el_servidor_pregunta_a_pey_cada_5_segundos() -> None:
     """Sin aviso, el pago aparece por la consulta, y dos canales comparten el límite (CE-008)."""
-    reloj, _repo, difusor, pey, cliente_pey, consulta, cobro = _mundo(gracia=600)
+    reloj, _repo, difusor, pey, cliente_pey, consulta, cobro = await _mundo(gracia=600)
     try:
         primero = _flujo()(cobro, difusor, consulta, reloj)
         segundo = _flujo()(cobro, difusor, consulta, reloj)
@@ -245,7 +247,9 @@ def test_sin_secreto_el_canal_avisa_el_pago_por_la_consulta(configuracion, pey, 
     sin_secreto = configuracion.model_copy(update={"pey_webhook_secret": SecretStr("")})
     http = httpx.AsyncClient(transport=httpx.MockTransport(pey))
     cliente_pey = ClientePey(BASE_PEY_DE_PRUEBA, LLAVE_FALSA, http)
-    with TestClient(crear_app(sin_secreto, cliente_pey, reloj)) as cliente_http:
+    with TestClient(
+        crear_app(sin_secreto, cliente_pey, reloj, tareas_en_segundo_plano=False)
+    ) as cliente_http:
         cobro = cliente_http.post("/api/cobros", json={"monto": 0.01, "concepto": "Tacos"}).json()
         rechazo = cliente_http.post("/webhooks/pey", json=pago())
         assert rechazo.status_code == 503
@@ -260,7 +264,7 @@ async def test_un_pago_5_minutos_despues_de_vencer_se_avisa_por_el_canal() -> No
     from app.config import Configuracion
 
     gracia = Configuracion(_env_file=None).gracia_segundos
-    reloj, _repo, difusor, pey, cliente_pey, consulta, cobro = _mundo(gracia=gracia)
+    reloj, _repo, difusor, pey, cliente_pey, consulta, cobro = await _mundo(gracia=gracia)
     try:
         gen = _flujo()(cobro, difusor, consulta, reloj)
         await anext(gen)
@@ -284,12 +288,12 @@ async def test_un_pago_5_minutos_despues_de_vencer_se_avisa_por_el_canal() -> No
 @pytest.mark.asyncio
 async def test_un_cobro_cancelado_sigue_escuchando_y_avisa_el_pago() -> None:
     """Tras cancelar, el canal sigue abierto, no emite vencido y avisa el pago (RF-017, RF-022)."""
-    reloj, repositorio, difusor, pey, cliente_pey, consulta, cobro = _mundo(gracia=600)
+    reloj, repositorio, difusor, pey, cliente_pey, consulta, cobro = await _mundo(gracia=600)
     try:
         gen = _flujo()(cobro, difusor, consulta, reloj)
         await anext(gen)
         await anext(gen)
-        repositorio.cancelar(cobro, reloj.ahora())
+        await repositorio.cancelar(cobro, reloj.ahora())
         difusor.publicar(cobro.id, "cancelado", cobro.publico())
         assert "event: cancelado" in await anext(gen)
         vistos = []
@@ -311,7 +315,7 @@ async def test_un_cobro_cancelado_sigue_escuchando_y_avisa_el_pago() -> None:
 @pytest.mark.asyncio
 async def test_una_consulta_lenta_no_deja_mudo_el_canal() -> None:
     """Aunque la consulta se agote, la señal de vida y vencido salen a tiempo (QP-1)."""
-    reloj, _repo, difusor, pey, cliente_pey, consulta, cobro = _mundo(gracia=600)
+    reloj, _repo, difusor, pey, cliente_pey, consulta, cobro = await _mundo(gracia=600)
     pey.tiempo_agotado = True
     inicio = reloj.ahora()
     arranque = time.perf_counter()

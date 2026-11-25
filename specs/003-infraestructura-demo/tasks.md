@@ -56,7 +56,7 @@
 | Dependencia | Qué bloquea | Estado |
 |---|---|---|
 | PR #72 y PR #96 unidos a `main` (C-8) y rama de la 003 rebasada sobre `main` (QP-10) | F1 y F2 | Listo el 2026-11-21 (`f01f732`; rama en `2d73373` y después `17bdbf0`) |
-| C-6 y C-7 aprobados (QP-11) | T021 (C-7, F2) y T064 (C-6, F5) | C-7 aplicado el 2026-11-21 (F2). C-6 aprobado el 2026-11-20 · sin aplicar (F5) |
+| C-6 y C-7 aprobados (QP-11) | T021 (C-7, F2) y T064 (C-6, F5) | C-7 aplicado el 2026-11-21 (F2). C-6 aplicado el 2026-11-24 (F5) |
 | Cuenta de Tailscale de Hugo con HTTPS, MagicDNS y el permiso `funnel` (DP-38) | F0 y todo lo demás de la demo | Pendiente (T001) |
 | Llave de pey de la demo y su secreto en `backend/.env.demo` (Hugo) | F0, F2, F3 y F6 | Pendiente (T002) |
 | Aviso de pey de la llave de la demo con la dirección del túnel (Hugo, en el portal) | El pago real de F3 (RF-025) | Dado de alta el 2026-11-22 (T025); la firma válida se comprueba con el primer pago (T030) |
@@ -525,7 +525,7 @@
 
 ### Pruebas de F5 (primero, deben fallar antes de implementar)
 
-- [ ] T050 [P] [US1] Ayudas de prueba del almacén en `backend/tests/almacen_de_prueba.py` (archivo nuevo) y en `backend/tests/conftest.py`
+- [x] T050 [P] [US1] Ayudas de prueba del almacén en `backend/tests/almacen_de_prueba.py` (archivo nuevo) y en `backend/tests/conftest.py`
   - `AlmacenQueFalla`: envuelve un `AlmacenEnMemoria`, dice `configurado = True` y permite `fallar(operacion, veces=None)` (lanza `ErrorDeAlmacen`), `fallar_datos(operacion)` (lanza `ErrorDeDatos`), `no_responde()` (la salud) y `pausar(operacion)` (un `asyncio.Event` que la prueba suelta, para simular dos peticiones a la vez sin tiempo real). Guarda cada llamada con su operación y su `espera`.
   - `reiniciar(app)`: una app nueva con un almacén nuevo sobre los **mismos** datos en memoria, el mismo `RelojFalso` y el mismo `PeySimulado` (plan §7).
   - `RelojDetenido`: `RelojFalso` cuyo `dormir` espera para siempre (para arrancar la tarea de fondo una sola vuelta en T060).
@@ -534,7 +534,7 @@
   - **RF**: — (principio V, DP-6)
   - **Dep.**: T049
   - **Hecho cuando**: el archivo existe; las pruebas nuevas que lo usan fallan porque `app.almacen` no existe, y las de la 001 siguen en verde.
-- [ ] T051 [P] [US1] Pruebas del contrato del almacén en `backend/tests/test_almacen.py` (archivo nuevo)
+- [x] T051 [P] [US1] Pruebas del contrato del almacén en `backend/tests/test_almacen.py` (archivo nuevo)
   - Una fixture `almacen` parametrizada: `memoria` siempre, y `postgres` con `base_vacia` (T035), las migraciones aplicadas con la función interna del comando y `AlmacenPostgres` con un `RelojFalso` (se salta sin `PRUEBAS_DATABASE_URL`).
   - Pruebas para los dos:
     - `test_un_cobro_guardado_se_carga_igual`: `guardar_cobro` y `cargar_por_id` devuelven los mismos campos; monto `Decimal`, monto libre `None`, `codi_qr_id` y `qr` vacíos (`""` en memoria, `null` en la base), sin pagos.
@@ -552,7 +552,7 @@
   - **RF**: RF-001 a RF-008, RF-010, RF-011, RF-021, RF-052, RF-061
   - **Dep.**: T050
   - **Hecho cuando**: las pruebas existen y fallan porque no existe `app.almacen`.
-- [ ] T052 [P] [US1] Pruebas de guardar y de reinicio por la API en `backend/tests/test_guardar_cobros.py` (archivo nuevo)
+- [x] T052 [P] [US1] Pruebas de guardar y de reinicio por la API en `backend/tests/test_guardar_cobros.py` (archivo nuevo)
   - Nombres del plan §7, con el almacén en memoria y `reiniciar(app)`:
     - `test_un_cobro_creado_queda_guardado_con_su_imagen_del_qr` (RF-001, RF-010).
     - `test_el_pago_se_guarda_antes_de_emitirse_por_el_canal`: con `registrar_pago` en falla no se emite nada; sin falla, cuando llega el evento `pago` el almacén ya lo tiene (RF-002).
@@ -570,7 +570,7 @@
   - **RF**: RF-001 a RF-011
   - **Dep.**: T050
   - **Hecho cuando**: las pruebas existen y fallan por la razón esperada.
-- [ ] T053 [P] [US1] Pruebas de fallas de la base de datos en `backend/tests/test_fallas_base_de_datos.py` (archivo nuevo)
+- [x] T053 [P] [US1] Pruebas de fallas de la base de datos en `backend/tests/test_fallas_base_de_datos.py` (archivo nuevo)
   - Con `AlmacenQueFalla`; códigos y textos `detail` del [contrato de fallas](contracts/fallas-base-de-datos.md):
     - `test_si_la_base_no_responde_al_crear_no_se_llama_a_pey`: 503 "No se pudo guardar el cobro. Intenta de nuevo en un momento." y `pey.solicitudes` vacío (RF-012, escenario 7).
     - `test_si_pey_falla_el_cobro_guardado_se_borra`: con `pey.estado_crear = 500`, el almacén ya no tiene el cobro y la respuesta es la de la 001; si el borrado también falla, se registra y la respuesta no cambia (RF-052, RF-016).
@@ -588,7 +588,7 @@
   - **RF**: RF-004, RF-012 a RF-016, RF-021, RF-048, RF-052
   - **Dep.**: T050
   - **Hecho cuando**: las pruebas existen y fallan por la razón esperada.
-- [ ] T054 [P] [US1] Pruebas de la salud con la base de datos en `backend/tests/test_salud_y_registros.py`
+- [x] T054 [P] [US1] Pruebas de la salud con la base de datos en `backend/tests/test_salud_y_registros.py`
   - `test_la_salud_dice_si_la_base_responde_sin_mostrar_valores`: tres casos, `"responde"`, `"no responde"` (`AlmacenQueFalla.no_responde()`) y `"sin configurar"` (almacén en memoria sin `DATABASE_URL`); los otros tres campos no cambian ([contrato de salud](contracts/salud.md)).
   - `test_la_salud_guarda_la_respuesta_de_la_base_10_segundos`: dos peticiones seguidas consultan la base una vez; después de avanzar el `RelojFalso` 10 s, otra vez (DP-31).
   - **RF**: RF-023, RF-021
@@ -597,7 +597,7 @@
 
 ### Implementación de F5
 
-- [ ] T055 [US1] Interfaz y almacén en memoria en `backend/app/almacen.py` (archivo nuevo, DP-6, plan §4)
+- [X] T055 [US1] Interfaz y almacén en memoria en `backend/app/almacen.py` (archivo nuevo, DP-6, plan §4)
   - `ErrorDeAlmacen(operacion: str, clase: str)`: la base de datos no responde; su texto es "Base de datos sin respuesta al <operacion> (<clase>)", nunca el texto del error original (DP-15).
   - `ErrorDeDatos(operacion, clase)`: PostgreSQL rechazó el valor (DP-34).
   - `Almacen` (clase abstracta) con operaciones asíncronas, cada una con `espera: float = 5`: `guardar_cobro`, `guardar_qr`, `borrar_cobro`, `cancelar`, `registrar_pago` (devuelve si el pago es nuevo y guarda el `webhook_id` en la misma transacción), `guardar_aviso`, `aviso_visto`, `cargar_por_id`, `cargar_por_codi_qr`, `cobros_con_ventana_terminada(desde, hasta)`, `leer_conciliado_hasta`, `guardar_conciliado_hasta`, `responde`; y `configurado: bool`, `abrir()` y `cerrar()`.
@@ -605,7 +605,7 @@
   - **RF**: RF-001 a RF-005, RF-007, RF-061
   - **Dep.**: T051
   - **Hecho cuando**: las pruebas de T051 con `memoria` pasan.
-- [ ] T056 [US1] Almacén de PostgreSQL en `backend/app/almacen_postgres.py` (archivo nuevo, data-model §2 y §3)
+- [X] T056 [US1] Almacén de PostgreSQL en `backend/app/almacen_postgres.py` (archivo nuevo, data-model §2 y §3)
   - `AlmacenPostgres(url: SecretStr, reloj: Reloj)`: `psycopg_pool.AsyncConnectionPool` de 1 a 3 conexiones, creado con `open=False`; `abrir()` lo abre sin esperar a la base de datos (`wait=False`), para que el servidor arranque aunque no responda; `cerrar()`.
   - El constructor **no hace I/O** (QT-8): `backend/app/main.py:330` arma la app al importarse y las pruebas importan `app.main`; si el constructor se conectara, en una computadora con `DATABASE_URL` en `backend/.env` las pruebas tocarían la base real (CE-011).
   - SQL de data-model §3, siempre con parámetros de psycopg. Traduce Unix ↔ `timestamptz` en UTC y `""` ↔ `null`. Escribe **todas** las horas con el `Reloj` (`creado_en`, `expira_en`, `fin_ventana`, `cancelado_en`, `registrado_en`, `recibido_en`, `conciliado_hasta`), nunca con `default now()` (DP-10, RF-006). `ultima_consulta_pey` no se escribe (DP-12).
@@ -615,7 +615,7 @@
   - **RF**: RF-001 a RF-009, RF-020, RF-021, RF-022
   - **Dep.**: T055
   - **Hecho cuando**: las pruebas de T051 con `postgres` pasan (en el CI o con `PRUEBAS_DATABASE_URL`).
-- [ ] T057 [US1] `RepositorioCobros` como caché de escritura directa en `backend/app/cobros.py` (DP-7, DP-8, DP-11, DP-13, DP-33)
+- [X] T057 [US1] `RepositorioCobros` como caché de escritura directa en `backend/app/cobros.py` (DP-7, DP-8, DP-11, DP-13, DP-33)
   - El constructor recibe el almacén. `nuevo` sigue armando el `Cobro` en memoria; métodos asíncronos nuevos o cambiados: `guardar_nuevo(cobro, espera=2)`, `vincular_qr(…, espera=2)`, `descartar`, `obtener(id)` y `por_codi_qr(codi_qr_id)` (primero memoria, después almacén; si otra petición lo cargó mientras tanto, se usa el que ya está, sin `await` entre comprobar y guardar), `aviso_ya_visto` (memoria, después almacén), `marcar_aviso(webhook_id, tipo)`, `registrar_pago(…, webhook_id=None, tipo_aviso="")` y `cancelar`.
   - `registrar_pago` corre dentro de un `asyncio.Lock` por cobro: comprueba si la transacción ya está en `cobro.pagos`, calcula `numero = len(cobro.pagos) + 1`, guarda en el almacén y solo si el almacén dijo "nuevo" lo agrega a la memoria.
   - Se quita el conjunto global `vistas`; las transacciones de un cobro salen de sus pagos (DP-13).
@@ -627,21 +627,21 @@
   - **RF**: RF-002, RF-005 a RF-008
   - **Dep.**: T055
   - **Hecho cuando**: las pruebas de T052 de numeración y carga a la vez pasan. Las que pasan por la consulta de respaldo (y la deduplicación aviso-consulta) pueden fallar hasta T058, porque `respaldo.py` todavía usa `vistas` y llamadas síncronas; T057 y T058 se hacen seguidas.
-- [ ] T058 [US1] Consulta de respaldo con `await` y las transacciones del cobro en `backend/app/respaldo.py`
+- [X] T058 [US1] Consulta de respaldo con `await` y las transacciones del cobro en `backend/app/respaldo.py`
   - `registrar_y_avisar` pasa a `async`, publica el evento `pago` solo si el pago es nuevo y guardado (RF-002).
   - `consultar` pasa a `pagos_del_qr` las transacciones **de ese cobro** (DP-13). Si el almacén falla al registrar, deja la línea del contrato (operación `registrar pago`) y sigue; se reintenta en la próxima consulta (RF-016).
   - `backend/app/canal.py` solo cambia si hace falta un `await` nuevo.
   - **RF**: RF-002, RF-005, RF-007, RF-016
   - **Dep.**: T057
   - **Hecho cuando**: `test_tras_un_reinicio_la_consulta_de_respaldo_encuentra_el_pago`, `test_el_aviso_y_la_consulta_a_la_vez_registran_un_solo_pago` y las demás de deduplicación de T052 pasan, y todas las pruebas de la 001 siguen en verde (ajustadas solo con `await`, `async` o la fixture del almacén).
-- [ ] T059 [US1] Lista de reintentos de avisos en `backend/app/tareas.py` (archivo nuevo, data-model §4)
+- [X] T059 [US1] Lista de reintentos de avisos en `backend/app/tareas.py` (archivo nuevo, data-model §4)
   - `ReintentosDeAvisos`: diccionario por `webhook_id` con `codi_qr_id`, `transaccion_id`, `monto_recibido`, `pagado_en` e `intentos` (nada de `metadata`, RF-009). `agregar(...)` no duplica un `webhook_id` que ya está.
   - `una_vez()`: por cada aviso, busca el cobro (`por_codi_qr`), registra el pago con su `webhook_id` y, si es nuevo, lo emite por el canal como la consulta de respaldo; lo quita de la lista. Si el almacén falla, suma un intento y deja su línea. Si el cobro no existe, guarda el aviso como ignorado y lo quita.
   - `correr_tareas(reintentos, reloj, …)`: bucle que llama a `reintentos.una_vez()` y después `await reloj.dormir(15)` (DP-14). F6 le agrega el latido.
   - **RF**: RF-009, RF-014, RF-048
   - **Dep.**: T057
   - **Hecho cuando**: las dos pruebas de RF-048 de T053 pasan.
-- [ ] T060 [US1] Usar el almacén en `backend/app/main.py`: creación, rutas, aviso, salud y ciclo de vida
+- [X] T060 [US1] Usar el almacén en `backend/app/main.py`: creación, rutas, aviso, salud y ciclo de vida
   - `crear_app` (firma de T057): si no se da almacén, `AlmacenPostgres` con `config.database_url` o, sin ella, `AlmacenEnMemoria` con el `WARNING` "Sin DATABASE_URL: los cobros se guardan en memoria" (DP-16).
   - Ciclo de vida: `await almacen.abrir()`; si `tareas_en_segundo_plano`, crea la tarea de `correr_tareas` y la cancela al apagar; `await almacen.cerrar()`. El *pool* solo se abre aquí, nunca al crear la app (QT-8, CE-011).
   - `crear_cobro`: `guardar_nuevo` (falla → 503 sin llamar a pey); pey; si pey falla, `descartar` (si también falla, se registra y la respuesta de la 001 no cambia); `vincular_qr` (falla → 503 sin QR y el cobro sale de la memoria). Esperas de 2 s (DP-35).
@@ -652,23 +652,23 @@
   - **RF**: RF-001, RF-003 a RF-005, RF-012 a RF-016, RF-023, RF-048, RF-052
   - **Dep.**: T056, T058, T059
   - **Hecho cuando**: T052, T053 y T054 pasan.
-- [ ] T061 [US1] Revisar el diff de las pruebas que ya existían en `backend/tests/` (ajustadas en T057 y T058)
+- [X] T061 [US1] Revisar el diff de las pruebas que ya existían en `backend/tests/` (ajustadas en T057 y T058)
   - `backend/tests/test_modelo.py` y las demás que llaman directo a `RepositorioCobros` o `ConsultaDeRespaldo`: el diff solo agrega `await`, `async` o la fixture del almacén. No se cambia ninguna comprobación de comportamiento (plan §7).
   - **RF**: — (CE-011)
   - **Dep.**: T060
   - **Hecho cuando**: las pruebas que ya existían pasan y la revisión del diff queda anotada en la sección F5 de la guía.
-- [ ] T062 [P] [US1] Documentar `DATABASE_URL` en la tabla de variables de `backend/README.md` y en `backend/.env.example`
+- [X] T062 [P] [US1] Documentar `DATABASE_URL` en la tabla de variables de `backend/README.md` y en `backend/.env.example`
   - README: fila `DATABASE_URL` · "URL del *pooler* de Supabase en modo sesión. Sin ella, el servidor guarda en memoria y la salud dice `sin configurar`" · vacío.
   - `.env.example`: el comentario de `DATABASE_URL` dice lo mismo y "nunca en el repositorio".
   - **RF**: RF-020, RF-023
   - **Dep.**: T060
   - **Hecho cuando**: las dos líneas están y no se tocó nada más de esos archivos (C-6 toca otras líneas de `backend/README.md` en T064).
-- [ ] T063 [US1] Revisar los registros y respuestas contra los datos de quien paga
+- [X] T063 [US1] Revisar los registros y respuestas contra los datos de quien paga
   - `git grep -n "metadata" backend/app` solo muestra que no se leen (`pey.py`) y la lista de reintentos no los guarda.
   - **RF**: RF-009
   - **Dep.**: T060
   - **Hecho cuando**: la revisión queda anotada en la sección F5 de la guía.
-- [ ] T064 [US1] Aplicar el cambio C-6 a la spec 001 (QP-11)
+- [X] T064 [US1] Aplicar el cambio C-6 a la spec 001 (QP-11)
   - Las líneas citadas en C-6 (spec 003 §8.2) pudieron moverse: se busca el texto.
   - (a) `specs/001-backend-mvp/spec.md` §4, fila "Reinicio del servidor": se conservan (spec 003).
   - (b) §4, fila "Aviso de pago de un cobro desconocido": quitar "por ejemplo, tras reiniciar el servidor".
@@ -683,18 +683,18 @@
   - **RF**: RF-023, RF-061 (C-6)
   - **Dep.**: T060
   - **Hecho cuando**: `git grep -n "se perdió al reiniciar\|0.0.0.0" specs/001-backend-mvp backend/README.md` no encuentra nada vigente y la fila C-6 dice "aplicado".
-- [ ] T065 [US1] Comprobar `git grep` de credenciales después de los cambios de F5
+- [X] T065 [US1] Comprobar `git grep` de credenciales después de los cambios de F5
   - `git grep -nE "postgres(ql)?://[^ ]+:[^ ]+@" -- ':!backend/tests'` no encuentra nada, y en `backend/tests` solo valores falsos (`usuario-falso`, `clave-falsa`, `prueba`).
   - **RF**: RF-020, RF-021 (CE-010)
   - **Dep.**: T060
   - **Hecho cuando**: la búsqueda queda anotada en la sección F5 de la guía.
-- [ ] T066 [US1] Comprobar en desarrollo el guardado y el reinicio
+- [X] T066 [US1] Comprobar en desarrollo el guardado y el reinicio
   - **Quién**: Hugo, con `backend/.env` (base de desarrollo y segunda llave), en el puerto 8001 si la demo está encendida.
   - `/salud` dice `"base_de_datos": "responde"`. Crear un cobro de $0.01 (QR real **sin pagar**, con su autorización), parar el servidor por su PID, arrancarlo y pedir `GET /api/cobros/<id>`: vuelve con su QR, su imagen y su tiempo restante.
   - **RF**: RF-001, RF-005, RF-010, RF-023
   - **Dep.**: T046, T048, T060
   - **Hecho cuando**: el resultado queda anotado en la sección F5 de la guía.
-- [ ] T067 Cierre de F5: todo en verde, sección F5 en la guía de verificación y commit sugerido
+- [X] T067 Cierre de F5: todo en verde, sección F5 en la guía de verificación y commit sugerido
   - Commit sugerido: `feat(003): guardar cobros, pagos y avisos en la base de datos, y C-6 (F5)`.
   - **RF**: RF-001 a RF-016, RF-020 a RF-023, RF-048, RF-052
   - **Dep.**: T061 a T066
