@@ -465,8 +465,8 @@ Resultado: **pasó**.
 | T064 C-6 | Aplicado el 2026-11-24 |
 | T065 credenciales | Solo valores falsos; el host del *pooler* no aparece |
 | T066 reinicio en desarrollo | Pasó: el cobro volvió con QR, imagen y tiempo restante |
-| T067 cierre de F5 | Sin marcar: espera el trabajo `base-de-datos` del CI y tu aprobación |
+| T067 cierre de F5 | Cerrada el 2026-11-25: PR #142 con el CI en verde (`base-de-datos`, `servidor` y `web`) y aprobación de Hugo |
 
-- **Qué queda para Hugo:** el PR de F5, ver el CI en verde y aprobar el cierre de T067.
+- **Qué queda para Hugo:** unir el PR #142 con `main`.
 - **Lo que sigue abierto:** F6 (conciliación y demo con base de datos).
 - **Commit sugerido:** `docs(003): revisión de pruebas, DATABASE_URL, revisión de credenciales y cambio C-6 aplicado (F5, T061 a T065)`.

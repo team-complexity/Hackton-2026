@@ -694,7 +694,7 @@
   - **RF**: RF-001, RF-005, RF-010, RF-023
   - **Dep.**: T046, T048, T060
   - **Hecho cuando**: el resultado queda anotado en la sección F5 de la guía.
-- [ ] T067 Cierre de F5: todo en verde, sección F5 en la guía de verificación y commit sugerido
+- [X] T067 Cierre de F5: todo en verde, sección F5 en la guía de verificación y commit sugerido
   - Commit sugerido: `feat(003): guardar cobros, pagos y avisos en la base de datos, y C-6 (F5)`.
   - **RF**: RF-001 a RF-016, RF-020 a RF-023, RF-048, RF-052
   - **Dep.**: T061 a T066
