@@ -3,7 +3,7 @@
 import logging
 from decimal import Decimal
 
-from app.almacen import ErrorDeAlmacen, ErrorDeDatos
+from app.almacen import ErrorDeAlmacen, ErrorDeDatos, registrar_falla
 from app.cobros import Cobro, Pago, RepositorioCobros
 from app.eventos import Difusor
 from app.pey import ClientePey, ErrorPey
@@ -99,15 +99,7 @@ class ConsultaDeRespaldo:
                     "consulta",
                 )
             except (ErrorDeAlmacen, ErrorDeDatos) as error:
-                # Solo el nombre de la clase y la operación: nunca el texto original (RF-021).
-                frase = (
-                    "Base de datos sin respuesta"
-                    if isinstance(error, ErrorDeAlmacen)
-                    else "La base de datos rechazó los datos"
-                )
-                registro.error(
-                    "%s al %s cobro=%s (%s)", frase, error.operacion, cobro.id, error.clase
-                )
+                registrar_falla(error, cobro.id)
                 continue
             if quedo:
                 nuevos += 1

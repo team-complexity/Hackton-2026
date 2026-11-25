@@ -20,7 +20,8 @@ def _cliente(configuracion, pey, reloj, **cambios) -> TestClient:
         config.pey_api_key.get_secret_value(),
         http,
     )
-    return TestClient(crear_app(config, cliente_pey, reloj))
+    # Con RelojFalso el bucle de reintentos adelantaría el reloj y el límite no se llenaría.
+    return TestClient(crear_app(config, cliente_pey, reloj, tareas_en_segundo_plano=False))
 
 
 def test_limite_de_cobros_por_ip(configuracion, pey, reloj) -> None:

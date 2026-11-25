@@ -1,5 +1,6 @@
 """API de PAGO FÁCIL: crea cobros CoDi con pey y avisa a la web cuando se pagan."""
 
+import asyncio
 import json
 import logging
 from collections.abc import AsyncIterator
@@ -15,7 +16,8 @@ from fastapi.staticfiles import StaticFiles
 from standardwebhooks.webhooks import Webhook, WebhookVerificationError
 from uvicorn.middleware.proxy_headers import ProxyHeadersMiddleware
 
-from app.almacen import Almacen, AlmacenEnMemoria
+from app.almacen import Almacen, AlmacenEnMemoria, ErrorDeAlmacen, ErrorDeDatos, registrar_falla
+from app.almacen_postgres import AlmacenPostgres
 from app.canal import flujo_de_avisos
 from app.cobros import Cobro, NoSePuedeCancelar, RepositorioCobros
 from app.config import RAIZ_BACKEND, Configuracion, obtener_configuracion
@@ -23,16 +25,21 @@ from app.eventos import Difusor, LimiteDeCanales, LimitePorIp
 from app.pey import ClientePey, ErrorPey
 from app.reloj import Reloj
 from app.respaldo import ConsultaDeRespaldo
+from app.tareas import EVENTO_QR_PAGADO, ReintentosDeAvisos, correr_tareas
 
 registro = logging.getLogger("pago_facil")
 _registro_listo = False
 
-EVENTO_QR_PAGADO = "codi.qr.payment_received"
-
-
 MENSAJE_MONTO = "Escribe un monto mayor a $0 con máximo 2 decimales"
 MENSAJE_CONCEPTO_LARGO = "El concepto puede tener máximo 40 letras"
 MENSAJE_CONCEPTO_RARO = "El concepto tiene caracteres no válidos"
+MENSAJE_GUARDAR = "No se pudo guardar el cobro. Intenta de nuevo en un momento."
+MENSAJE_CONSULTAR = "No se pudo consultar el cobro. Intenta de nuevo."
+MENSAJE_CANCELAR = "No se pudo cancelar el cobro. Intenta de nuevo."
+MENSAJE_AVISO_PENDIENTE = "No se pudo registrar el aviso. Se reintentará."
+MENSAJE_AVISO_INVALIDO = "Aviso con datos no válidos"
+AVISO_SIN_BASE = "Sin DATABASE_URL: los cobros se guardan en memoria"
+CACHE_SALUD_SEGUNDOS = 10
 
 
 def validar_monto(valor: object, maximo: Decimal) -> Decimal | None:
@@ -111,6 +118,50 @@ def configurar_registros() -> None:
     registro.info("Registros de pago_facil activos")
 
 
+def _monto_del_aviso(datos: dict) -> Decimal | None:
+    """Amount finito, o None si falta o no se puede leer (spec 003, DP-34)."""
+    if "amount" not in datos:
+        return None
+    valor = datos["amount"]
+    if isinstance(valor, bool) or valor is None:
+        return None
+    try:
+        monto = Decimal(str(valor))
+    except (InvalidOperation, ValueError):
+        return None
+    if not monto.is_finite():
+        return None
+    return monto
+
+
+def _pago_para_reintento(
+    datos: dict, monto: Decimal | None
+) -> tuple[str, str, Decimal, int | None] | None:
+    """Datos del pago válido para reintentar, sin metadata (spec 003, RF-014, RF-009)."""
+    if datos.get("type") != EVENTO_QR_PAGADO or monto is None or monto <= 0:
+        return None
+    codi_qr_id = datos.get("codiQrId")
+    transaccion_id = datos.get("transactionId")
+    if not codi_qr_id or not transaccion_id:
+        return None
+    pagado = datos.get("datePaid")
+    pagado_en = pagado if isinstance(pagado, int) and not isinstance(pagado, bool) else None
+    return str(codi_qr_id), str(transaccion_id), monto, pagado_en
+
+
+def _elegir_almacen(config: Configuracion, reloj: Reloj, almacen: Almacen | None) -> Almacen:
+    """El que se inyecta, PostgreSQL si hay URL, o la memoria con aviso (spec 003, DP-16).
+
+    Elegir no abre el pool: eso queda en el ciclo de vida (QT-8, CE-011).
+    """
+    if almacen is not None:
+        return almacen
+    if config.database_url.get_secret_value():
+        return AlmacenPostgres(config.database_url, reloj)
+    registro.warning(AVISO_SIN_BASE)
+    return AlmacenEnMemoria(reloj=reloj)
+
+
 def crear_app(
     config: Configuracion | None = None,
     cliente_pey: ClientePey | None = None,
@@ -118,13 +169,11 @@ def crear_app(
     almacen: Almacen | None = None,
     tareas_en_segundo_plano: bool = True,
 ) -> FastAPI:
-    """Crea la API con reloj, registros y el almacén de cobros (spec 001, RF-008; spec 003, DP-6).
+    """Crea la API con reloj, almacén y la lista de reintentos (spec 003, RF-020, RF-048).
 
     Si `carpeta_web` tiene valor, entrega esa carpeta en `/` después de las rutas
-    del API (spec 003, RF-024, RF-029). Sin `almacen`, los cobros se guardan en memoria.
-    `tareas_en_segundo_plano` se acepta para T060, que arrancará el trabajo de fondo.
+    del API (spec 003, RF-024, RF-029). El pool solo se abre al arrancar.
     """
-    del tareas_en_segundo_plano
     config = config or obtener_configuracion()
     configurar_registros()
     reloj_de_la_app = reloj or Reloj()
@@ -132,15 +181,42 @@ def crear_app(
     cliente_final = cliente_pey or ClientePey(
         config.pey_api_base_url, config.pey_api_key.get_secret_value()
     )
+    almacen_de_la_app = _elegir_almacen(config, reloj_de_la_app, almacen)
+    cobros = RepositorioCobros(almacen_de_la_app, reloj_de_la_app, config.gracia_segundos)
+    difusor = Difusor()
+    consulta = ConsultaDeRespaldo(cliente_final, cobros, difusor, reloj_de_la_app)
+    reintentos = ReintentosDeAvisos(cobros, consulta)
+    cache_salud: list[tuple[float, str] | None] = [None]
 
     @asynccontextmanager
-    async def ciclo_de_vida(app: FastAPI):
-        app.state.pey = cliente_final
-        yield
-        await cliente_final.cerrar()
+    async def ciclo_de_vida(_app: FastAPI) -> AsyncIterator[None]:
+        """Abre el almacén, corre los reintentos y al apagar cancela y cierra (spec 003, RF-048)."""
+        _app.state.pey = cliente_final
+        tarea: asyncio.Task[None] | None = None
+        try:
+            await almacen_de_la_app.abrir()
+            if tareas_en_segundo_plano:
+                tarea = asyncio.create_task(correr_tareas(reintentos, reloj_de_la_app))
+            yield
+        finally:
+            try:
+                if tarea is not None:
+                    tarea.cancel()
+                    try:
+                        await tarea
+                    except asyncio.CancelledError:
+                        pass
+            finally:
+                try:
+                    await almacen_de_la_app.cerrar()
+                finally:
+                    await cliente_final.cerrar()
 
     app = FastAPI(title="PAGO FÁCIL", version="0.1.0", lifespan=ciclo_de_vida)
     app.state.reloj = reloj_de_la_app
+    app.state.almacen = almacen_de_la_app
+    app.state.cobros = cobros
+    app.state.reintentos = reintentos
     app.add_middleware(
         CORSMiddleware,
         allow_origins=config.origenes_web,
@@ -150,28 +226,44 @@ def crear_app(
     # La IP del límite es la del cliente, no la del proxy del hosting (RF-034, R-5).
     app.add_middleware(ProxyHeadersMiddleware, trusted_hosts=config.proxies_confiables)
 
-    almacen_de_la_app = almacen or AlmacenEnMemoria(reloj=reloj_de_la_app)
-    cobros = RepositorioCobros(almacen_de_la_app, reloj_de_la_app, config.gracia_segundos)
-    app.state.almacen = almacen_de_la_app
-    app.state.cobros = cobros
-    difusor = Difusor()
-    consulta = ConsultaDeRespaldo(cliente_final, cobros, difusor, reloj_de_la_app)
     limite = LimitePorIp(config.limite_cobros_por_minuto, reloj_de_la_app)
     limite_canales = LimiteDeCanales(config.canales_por_ip)
     app.state.limite_canales = limite_canales
 
-    async def buscar(cobro_id: str) -> Cobro:
-        cobro = await cobros.obtener(cobro_id)
+    async def buscar(cobro_id: str, mensaje_falla: str) -> Cobro:
+        try:
+            cobro = await cobros.obtener(cobro_id)
+        except (ErrorDeAlmacen, ErrorDeDatos) as error:
+            registrar_falla(error, cobro_id)
+            raise HTTPException(503, mensaje_falla) from None
         if cobro is None:
             raise HTTPException(404, "Ese cobro no existe")
         return cobro
 
+    async def base_de_datos() -> str:
+        """«sin configurar», o si responde, guardado 10 s (spec 003, RF-023, DP-31)."""
+        if not almacen_de_la_app.configurado:
+            return "sin configurar"
+        ahora = reloj_de_la_app.ahora()
+        guardado = cache_salud[0]
+        if guardado is not None and ahora - guardado[0] < CACHE_SALUD_SEGUNDOS:
+            return guardado[1]
+        try:
+            viva = await almacen_de_la_app.responde(espera=2)
+        except (ErrorDeAlmacen, ErrorDeDatos):
+            viva = False
+        valor = "responde" if viva else "no responde"
+        cache_salud[0] = (ahora, valor)
+        return valor
+
     @app.get("/salud")
     async def salud() -> dict:
+        """Credenciales y si la base responde, sin valores (spec 001, RF-038; spec 003, RF-023)."""
         return {
             "estado": "ok",
             "llave_pey": bool(config.pey_api_key.get_secret_value()),
             "secreto_aviso_pey": bool(config.pey_webhook_secret.get_secret_value()),
+            "base_de_datos": await base_de_datos(),
         }
 
     @app.exception_handler(RequestValidationError)
@@ -198,7 +290,11 @@ def crear_app(
             config.expiracion_segundos,
             ahora=app.state.reloj.ahora(),
         )
-        await cobros.guardar_nuevo(cobro)
+        try:
+            await cobros.guardar_nuevo(cobro)
+        except (ErrorDeAlmacen, ErrorDeDatos) as error:
+            registrar_falla(error, cobro.id)
+            raise HTTPException(503, MENSAJE_GUARDAR) from None
         try:
             # pey usa amount 0 cuando el cliente escribe la cantidad (RF-003).
             qr = await app.state.pey.crear_qr(
@@ -209,7 +305,10 @@ def crear_app(
                 metadata={"cobroId": cobro.id},
             )
         except ErrorPey as error:
-            await cobros.descartar(cobro)
+            try:
+                await cobros.descartar(cobro)
+            except (ErrorDeAlmacen, ErrorDeDatos) as falla:
+                registrar_falla(falla, cobro.id)
             registro.error(
                 "pey no creó el cobro %s (requestId=%s)",
                 cobro.id,
@@ -225,7 +324,13 @@ def crear_app(
                 )
             raise HTTPException(502, "No se pudo crear el cobro con pey. Intenta de nuevo.")
 
-        await cobros.vincular_qr(cobro, qr.id, qr.qr_string, qr.qr_image)
+        try:
+            await cobros.vincular_qr(cobro, qr.id, qr.qr_string, qr.qr_image)
+        except (ErrorDeAlmacen, ErrorDeDatos) as error:
+            # El cobro queda en la base sin QR: se suelta de la memoria (RF-013, TK-16).
+            cobros.olvidar(cobro)
+            registrar_falla(error, cobro.id)
+            raise HTTPException(503, MENSAJE_GUARDAR) from None
         if qr.request_id:
             registro.info(
                 "QR creado cobro=%s codi_qr_id=%s requestId=%s",
@@ -239,20 +344,23 @@ def crear_app(
 
     @app.get("/api/cobros/{cobro_id}")
     async def ver_cobro(cobro_id: str) -> dict:
-        cobro = await buscar(cobro_id)
+        cobro = await buscar(cobro_id, MENSAJE_CONSULTAR)
         await consulta.consultar(cobro, intervalo_minimo=3)
         return cobro.publico()
 
     @app.post("/api/cobros/{cobro_id}/cancelar")
     async def cancelar_cobro(cobro_id: str) -> dict:
-        """Cancela un cobro pendiente y avisa por el canal (spec 001, RF-023, RF-024, RF-030)."""
-        cobro = await buscar(cobro_id)
+        """Cancela un cobro pendiente y avisa por el canal (spec 001, RF-023; spec 003, RF-004)."""
+        cobro = await buscar(cobro_id, MENSAJE_CANCELAR)
         try:
             await cobros.cancelar(cobro, app.state.reloj.ahora())
         except NoSePuedeCancelar:
             raise HTTPException(
                 409, "Solo se puede cancelar un cobro que todavía no se paga ni vence"
-            )
+            ) from None
+        except (ErrorDeAlmacen, ErrorDeDatos) as error:
+            registrar_falla(error, cobro_id)
+            raise HTTPException(503, MENSAJE_CANCELAR) from None
         registro.info("Cobro cancelado cobro=%s", cobro.id)
         difusor.publicar(cobro.id, "cancelado", cobro.publico())
         return cobro.publico()
@@ -260,7 +368,7 @@ def crear_app(
     @app.get("/api/cobros/{cobro_id}/eventos")
     async def eventos_cobro(cobro_id: str, request: Request) -> StreamingResponse:
         """Sirve el canal si la IP todavía tiene lugar (spec 001, RF-028, RF-041)."""
-        cobro = await buscar(cobro_id)
+        cobro = await buscar(cobro_id, MENSAJE_CONSULTAR)
         ip = request.client.host if request.client else "desconocida"
         if not limite_canales.ocupar(ip):
             raise HTTPException(
@@ -282,7 +390,10 @@ def crear_app(
 
     @app.post("/webhooks/pey")
     async def webhook_pey(request: Request) -> dict:
-        """Recibe un aviso firmado y registra el pago sin llamar a pey (RF-011)."""
+        """Recibe un aviso firmado. Si la base falla, el pago válido queda para reintentar.
+
+        (spec 001, RF-011; spec 003, RF-014, RF-048, DP-34).
+        """
         secreto = config.pey_webhook_secret.get_secret_value()
         if not secreto:
             registro.warning("Aviso rechazado")
@@ -292,55 +403,70 @@ def crear_app(
             Webhook(secreto).verify(cuerpo, dict(request.headers))
         except WebhookVerificationError:
             registro.warning("Aviso rechazado")
-            raise HTTPException(401, "Firma no válida")
+            raise HTTPException(401, "Firma no válida") from None
         except json.JSONDecodeError:
             registro.warning("Aviso rechazado")
-            raise HTTPException(400, "Aviso con datos no válidos")
+            raise HTTPException(400, MENSAJE_AVISO_INVALIDO) from None
 
-        webhook_id = request.headers.get("webhook-id", "")
-        if await cobros.aviso_ya_visto(webhook_id):
-            return {"recibido": True, "procesado": False}
+        # Antes del webhook-id: si esa revisión falla, un pago válido igual se reintenta (TK-18).
         try:
             datos = json.loads(cuerpo)
         except ValueError:
             registro.warning("Aviso rechazado")
-            raise HTTPException(400, "Aviso con datos no válidos")
+            raise HTTPException(400, MENSAJE_AVISO_INVALIDO) from None
         if not isinstance(datos, dict):
             registro.warning("Aviso rechazado")
-            raise HTTPException(400, "Aviso con datos no válidos")
+            raise HTTPException(400, MENSAJE_AVISO_INVALIDO)
         tipo = str(datos.get("type") or "")
-        if datos.get("type") != EVENTO_QR_PAGADO:
-            registro.info("Aviso ignorado")
-            await cobros.marcar_aviso(webhook_id, tipo)
-            return {"recibido": True, "procesado": False}
-        try:
-            monto = Decimal(str(datos["amount"]))
-        except (KeyError, InvalidOperation):
-            monto = None
-        # NaN e Infinity se leen como Decimal, pero no son un monto (contrato aviso-pey).
-        if monto is None or not monto.is_finite():
+        monto = _monto_del_aviso(datos)
+        # Solo el evento de pago exige un amount válido; los demás se ignoran como en la 001.
+        if tipo == EVENTO_QR_PAGADO and (monto is None or monto <= 0):
             registro.warning("Aviso rechazado")
-            raise HTTPException(400, "Aviso con datos no válidos")
+            raise HTTPException(400, MENSAJE_AVISO_INVALIDO)
 
-        codi_qr_id = str(datos.get("codiQrId", ""))
-        transaccion_id = datos.get("transactionId")
-        cobro = await cobros.por_codi_qr(codi_qr_id)
-        if cobro is None or not transaccion_id:
-            registro.warning("Aviso ignorado codi_qr_id=%s", codi_qr_id)
-            await cobros.marcar_aviso(webhook_id, tipo)
-            return {"recibido": True, "procesado": False}
-        pago = await consulta.registrar_y_avisar(
-            cobro,
-            str(transaccion_id),
-            monto,
-            None,
-            datos.get("datePaid"),
-            "aviso",
-            webhook_id=webhook_id,
-            tipo_aviso=tipo,
-        )
-        await cobros.marcar_aviso(webhook_id, tipo)
-        return {"recibido": True, "procesado": pago is not None}
+        webhook_id = request.headers.get("webhook-id", "")
+        para_reintento = _pago_para_reintento(datos, monto)
+        cobro: Cobro | None = None
+        try:
+            if await cobros.aviso_ya_visto(webhook_id):
+                return {"recibido": True, "procesado": False}
+            if tipo != EVENTO_QR_PAGADO:
+                registro.info("Aviso ignorado")
+                await cobros.marcar_aviso(webhook_id, tipo)
+                return {"recibido": True, "procesado": False}
+            codi_qr_id = str(datos.get("codiQrId", ""))
+            transaccion_id = datos.get("transactionId")
+            cobro = await cobros.por_codi_qr(codi_qr_id)
+            if cobro is None or not transaccion_id:
+                registro.warning("Aviso ignorado codi_qr_id=%s", codi_qr_id)
+                await cobros.marcar_aviso(webhook_id, tipo)
+                return {"recibido": True, "procesado": False}
+            pago = await consulta.registrar_y_avisar(
+                cobro,
+                str(transaccion_id),
+                monto,
+                None,
+                datos.get("datePaid"),
+                "aviso",
+                webhook_id=webhook_id,
+                tipo_aviso=tipo,
+            )
+            return {"recibido": True, "procesado": pago is not None}
+        except ErrorDeAlmacen as error:
+            registrar_falla(error, None if cobro is None else cobro.id)
+            if para_reintento is not None:
+                codi_qr_id, transaccion_id, monto_recibido, pagado_en = para_reintento
+                reintentos.agregar(
+                    webhook_id,
+                    codi_qr_id=codi_qr_id,
+                    transaccion_id=transaccion_id,
+                    monto_recibido=monto_recibido,
+                    pagado_en=pagado_en,
+                )
+            raise HTTPException(503, MENSAJE_AVISO_PENDIENTE) from None
+        except ErrorDeDatos as error:
+            registrar_falla(error, None if cobro is None else cobro.id)
+            raise HTTPException(400, MENSAJE_AVISO_INVALIDO) from None
 
     if config.carpeta_web:
         # Relativa a backend/, no a la carpeta desde la que arrancó uvicorn (DP-21).

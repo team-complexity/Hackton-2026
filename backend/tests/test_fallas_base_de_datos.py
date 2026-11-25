@@ -337,7 +337,8 @@ def test_cada_falla_de_la_base_deja_registro_sin_datos_de_conexion(
         "guardar QR": id_qr,
         "borrar cobro": id_borrar,
         "registrar pago": cobro["id"],
-        "guardar aviso": cobro["id"],
+        # Un aviso ignorado no trae cobro: no hay id que anotar (contrato §4, «cuando lo hay»).
+        "guardar aviso": None,
         "cancelar": cobro["id"],
         "cargar cobro": cobro["id"],
     }
@@ -348,7 +349,8 @@ def test_cada_falla_de_la_base_deja_registro_sin_datos_de_conexion(
     ]
     for frase, cobro_id in esperados.items():
         assert any(
-            frase in linea and cobro_id in linea and CLASE_DE_FALLA in linea for linea in lineas
+            frase in linea and (cobro_id is None or cobro_id in linea) and CLASE_DE_FALLA in linea
+            for linea in lineas
         )
     unido = "\n".join([*textos, caplog.text])
     for fragmento in FRAGMENTOS_URL:

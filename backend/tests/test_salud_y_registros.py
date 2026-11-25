@@ -57,7 +57,10 @@ def _textos_de(respuesta) -> str:
 
 
 def test_salud_dice_que_credenciales_faltan_sin_mostrarlas(configuracion, pey, reloj) -> None:
-    """Con llave y sin secreto, /salud solo dice booleanos (RF-036, RF-038)."""
+    """Con llave y sin secreto, /salud no muestra los valores (RF-036, RF-038).
+
+    Sin DATABASE_URL la base queda «sin configurar» (spec 003, RF-023).
+    """
     sin_secreto = configuracion.model_copy(update={"pey_webhook_secret": SecretStr("")})
     http = httpx.AsyncClient(transport=httpx.MockTransport(pey))
     cliente_pey = ClientePey(BASE_PEY_DE_PRUEBA, LLAVE_FALSA, http)
@@ -68,6 +71,7 @@ def test_salud_dice_que_credenciales_faltan_sin_mostrarlas(configuracion, pey, r
         "estado": "ok",
         "llave_pey": True,
         "secreto_aviso_pey": False,
+        "base_de_datos": "sin configurar",
     }
     assert LLAVE_FALSA not in respuesta.text
     assert SECRETO_FALSO not in respuesta.text

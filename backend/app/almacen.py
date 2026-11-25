@@ -4,6 +4,7 @@ La memoria no guarda los objetos ``Cobro``. Cada lectura arma uno nuevo con el
 reloj del almacén, igual que hará la base de datos.
 """
 
+import logging
 from abc import ABC, abstractmethod
 from dataclasses import dataclass
 from decimal import Decimal
@@ -11,6 +12,8 @@ from typing import TypedDict
 
 from app.cobros import Cobro, Pago
 from app.reloj import Reloj
+
+registro = logging.getLogger("pago_facil")
 
 
 class ErrorDeAlmacen(Exception):
@@ -37,6 +40,24 @@ class ErrorDeDatos(Exception):
         self.operacion = operacion
         self.clase = clase
         super().__init__(f"La base de datos rechazó los datos al {operacion} ({clase})")
+
+
+def registrar_falla(error: ErrorDeAlmacen | ErrorDeDatos, cobro_id: str | None = None) -> None:
+    """Línea única de una falla del almacén, sin el texto original (spec 003, RF-016, RF-021).
+
+    ``ERROR`` si la base no respondió y ``WARNING`` si rechazó los datos. El id
+    del cobro solo entra cuando quien llama lo tiene (TK-18).
+    """
+    if isinstance(error, ErrorDeAlmacen):
+        nivel = logging.ERROR
+        frase = "Base de datos sin respuesta"
+    else:
+        nivel = logging.WARNING
+        frase = "La base de datos rechazó los datos"
+    texto = f"{frase} al {error.operacion}"
+    if cobro_id is not None:
+        texto = f"{texto} cobro={cobro_id}"
+    registro.log(nivel, "%s (%s)", texto, error.clase)
 
 
 class _PagoPlano(TypedDict):

@@ -634,14 +634,14 @@
   - **RF**: RF-002, RF-005, RF-007, RF-016
   - **Dep.**: T057
   - **Hecho cuando**: `test_tras_un_reinicio_la_consulta_de_respaldo_encuentra_el_pago`, `test_el_aviso_y_la_consulta_a_la_vez_registran_un_solo_pago` y las demás de deduplicación de T052 pasan, y todas las pruebas de la 001 siguen en verde (ajustadas solo con `await`, `async` o la fixture del almacén).
-- [ ] T059 [US1] Lista de reintentos de avisos en `backend/app/tareas.py` (archivo nuevo, data-model §4)
+- [X] T059 [US1] Lista de reintentos de avisos en `backend/app/tareas.py` (archivo nuevo, data-model §4)
   - `ReintentosDeAvisos`: diccionario por `webhook_id` con `codi_qr_id`, `transaccion_id`, `monto_recibido`, `pagado_en` e `intentos` (nada de `metadata`, RF-009). `agregar(...)` no duplica un `webhook_id` que ya está.
   - `una_vez()`: por cada aviso, busca el cobro (`por_codi_qr`), registra el pago con su `webhook_id` y, si es nuevo, lo emite por el canal como la consulta de respaldo; lo quita de la lista. Si el almacén falla, suma un intento y deja su línea. Si el cobro no existe, guarda el aviso como ignorado y lo quita.
   - `correr_tareas(reintentos, reloj, …)`: bucle que llama a `reintentos.una_vez()` y después `await reloj.dormir(15)` (DP-14). F6 le agrega el latido.
   - **RF**: RF-009, RF-014, RF-048
   - **Dep.**: T057
   - **Hecho cuando**: las dos pruebas de RF-048 de T053 pasan.
-- [ ] T060 [US1] Usar el almacén en `backend/app/main.py`: creación, rutas, aviso, salud y ciclo de vida
+- [X] T060 [US1] Usar el almacén en `backend/app/main.py`: creación, rutas, aviso, salud y ciclo de vida
   - `crear_app` (firma de T057): si no se da almacén, `AlmacenPostgres` con `config.database_url` o, sin ella, `AlmacenEnMemoria` con el `WARNING` "Sin DATABASE_URL: los cobros se guardan en memoria" (DP-16).
   - Ciclo de vida: `await almacen.abrir()`; si `tareas_en_segundo_plano`, crea la tarea de `correr_tareas` y la cancela al apagar; `await almacen.cerrar()`. El *pool* solo se abre aquí, nunca al crear la app (QT-8, CE-011).
   - `crear_cobro`: `guardar_nuevo` (falla → 503 sin llamar a pey); pey; si pey falla, `descartar` (si también falla, se registra y la respuesta de la 001 no cambia); `vincular_qr` (falla → 503 sin QR y el cobro sale de la memoria). Esperas de 2 s (DP-35).
