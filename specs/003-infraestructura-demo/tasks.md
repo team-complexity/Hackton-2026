@@ -712,7 +712,7 @@
 
 ### Pruebas de F6 (primero, deben fallar antes de implementar)
 
-- [ ] T068 [US1] Pruebas de la conciliación en `backend/tests/test_conciliacion.py` (archivo nuevo)
+- [X] T068 [US1] Pruebas de la conciliación en `backend/tests/test_conciliacion.py` (archivo nuevo)
   - `PeySimulado` (en `backend/tests/conftest.py`) aprende a responder por QR: un `codi_qr_id` distinto por cada cobro creado y, por cada uno, sus transacciones, un 4xx o una falla pasajera (5xx o sin conexión). Solo se agrega; lo que ya hace no cambia.
   - Con el almacén en memoria, `RelojFalso` y `LatidoDeConciliacion.una_vez()` llamado directo:
     - `test_la_primera_vez_no_se_revisa_hacia_atras`: sin fila en `estado_del_servidor`, se crea con la hora del `Reloj` y no se consulta a pey.
@@ -732,7 +732,7 @@
 
 ### Implementación de F6
 
-- [ ] T069 [US1] `LatidoDeConciliacion` en `backend/app/tareas.py` (data-model §4.1, DP-39, QP-13)
+- [X] T069 [US1] `LatidoDeConciliacion` en `backend/app/tareas.py` (data-model §4.1, DP-39, QP-13)
   - `una_vez()`: lee `conciliado_hasta` (si no hay, lo crea con la hora del `Reloj` y termina); toma los cobros con `fin_ventana` en (`conciliado_hasta`, ahora], en orden; por cada uno, lo carga (memoria o almacén, DP-33), pide a pey sus transacciones con las del cobro (DP-13) y registra cada una que falte con `fuente = consulta`, dentro del candado del cobro, **sin publicar en el canal** (RF-061).
   - 4xx de pey: línea con la operación `conciliar` y el id, y se salta. Falla pasajera de pey o del almacén: línea, contador en memoria por cobro y se para ahí (la marca queda en la `fin_ventana` anterior); con 10 fallas seguidas, línea `ERROR` y se salta.
   - Al final, `guardar_conciliado_hasta` con ahora (o la marca anterior al primer cobro que todavía se reintenta). Esta escritura es el uso diario de RF-039.
@@ -741,7 +741,7 @@
   - **RF**: RF-039, RF-061
   - **Dep.**: T068
   - **Hecho cuando**: T068 pasa.
-- [ ] T070 [US4] Completar `docs/operacion-demo.md` con la base de datos (DP-43, RF-050, RF-051, RF-058)
+- [X] T070 [US4] Completar `docs/operacion-demo.md` con la base de datos (DP-43, RF-050, RF-051, RF-058)
   - **Quién**: borrador de Grok; lo valida Hugo en T074.
   - **Antes de encender** (paso nuevo, antes de arrancar el servidor): exportar una copia de la base de la demo desde el panel de Supabase (cada tabla a CSV; el plan gratuito no tiene respaldos, RF-051), y después `uv run --env-file backend/.env.demo --directory backend python -m app.migraciones estado` y `aplicar` (QP-14). Sin `--env-file`, el comando usa la base de desarrollo.
   - **Comprobar desde fuera**: `/salud` debe decir `"base_de_datos": "responde"` (DP-16: después de T071, `"sin configurar"` en la demo es un error; antes de T071 es lo esperado, por la línea vacía de DP-44).

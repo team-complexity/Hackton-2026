@@ -25,7 +25,7 @@ from app.eventos import Difusor, LimiteDeCanales, LimitePorIp
 from app.pey import ClientePey, ErrorPey
 from app.reloj import Reloj
 from app.respaldo import ConsultaDeRespaldo
-from app.tareas import EVENTO_QR_PAGADO, ReintentosDeAvisos, correr_tareas
+from app.tareas import EVENTO_QR_PAGADO, LatidoDeConciliacion, ReintentosDeAvisos, correr_tareas
 
 registro = logging.getLogger("pago_facil")
 _registro_listo = False
@@ -186,17 +186,18 @@ def crear_app(
     difusor = Difusor()
     consulta = ConsultaDeRespaldo(cliente_final, cobros, difusor, reloj_de_la_app)
     reintentos = ReintentosDeAvisos(cobros, consulta)
+    latido = LatidoDeConciliacion(cobros, cliente_final, reloj_de_la_app, almacen_de_la_app)
     cache_salud: list[tuple[float, str] | None] = [None]
 
     @asynccontextmanager
     async def ciclo_de_vida(_app: FastAPI) -> AsyncIterator[None]:
-        """Abre el almacén, corre los reintentos y al apagar cancela y cierra (spec 003, RF-048)."""
+        """Abre el almacén, corre reintentos y latido, y al apagar cancela (spec 003, RF-061)."""
         _app.state.pey = cliente_final
         tarea: asyncio.Task[None] | None = None
         try:
             await almacen_de_la_app.abrir()
             if tareas_en_segundo_plano:
-                tarea = asyncio.create_task(correr_tareas(reintentos, reloj_de_la_app))
+                tarea = asyncio.create_task(correr_tareas(reintentos, reloj_de_la_app, latido))
             yield
         finally:
             try:
@@ -217,6 +218,7 @@ def crear_app(
     app.state.almacen = almacen_de_la_app
     app.state.cobros = cobros
     app.state.reintentos = reintentos
+    app.state.latido = latido
     app.add_middleware(
         CORSMiddleware,
         allow_origins=config.origenes_web,
