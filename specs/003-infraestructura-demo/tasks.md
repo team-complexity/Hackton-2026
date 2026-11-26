@@ -743,7 +743,7 @@
   - **Hecho cuando**: T068 pasa.
 - [X] T070 [US4] Completar `docs/operacion-demo.md` con la base de datos (DP-43, RF-050, RF-051, RF-058)
   - **Quién**: borrador de Grok; lo valida Hugo en T074.
-  - **Antes de encender** (paso nuevo, antes de arrancar el servidor): exportar una copia de la base de la demo desde el panel de Supabase (cada tabla a CSV; el plan gratuito no tiene respaldos, RF-051), y después `uv run --env-file backend/.env.demo --directory backend python -m app.migraciones estado` y `aplicar` (QP-14). Sin `--env-file`, el comando usa la base de desarrollo.
+  - **Antes de encender** (paso nuevo, antes de arrancar el servidor): exportar una copia de la base de la demo desde el panel de Supabase (cada tabla a CSV; el plan gratuito no tiene respaldos, RF-051), y después `uv run --directory backend --env-file .env.demo python -m app.migraciones estado` y `aplicar` (QP-14). Sin `--env-file`, el comando usa la base de desarrollo.
   - **Comprobar desde fuera**: `/salud` debe decir `"base_de_datos": "responde"` (DP-16: después de T071, `"sin configurar"` en la demo es un error; antes de T071 es lo esperado, por la línea vacía de DP-44).
   - **Supabase pausado** (RF-050): cómo se ve (`"no responde"`), cómo reactivarlo en el panel y volver a pedir la salud. Encender al menos cada 5 días para que no se pause.
   - `DATABASE_URL` de la demo solo en `backend/.env.demo`.
@@ -761,7 +761,7 @@
   - **Hecho cuando**: el comando dice `DISTINTAS`.
 - [ ] T072 [US6] Limpiar y marcar la base de la demo (quickstart §6, paso 2; historia 6, escenario 3)
   - **Quién**: Hugo, siguiendo la guía.
-  - Exportar la copia; correr los `delete` del bloque F de `supabase/consultas_de_verificacion.sql` (datos de prueba del PR #97, H-12); `uv run --env-file backend/.env.demo --directory backend python -m app.migraciones aplicar --entorno demo --ya-aplicada 0001`.
+  - Exportar la copia; correr los `delete` del bloque F de `supabase/consultas_de_verificacion.sql` (datos de prueba del PR #97, H-12); `uv run --directory backend --env-file .env.demo python -m app.migraciones aplicar --entorno demo --ya-aplicada 0001`.
   - **RF**: RF-018, RF-019, RF-051, RF-054
   - **Dep.**: T071
   - **Hecho cuando**: el comando anota 0001 sin correrla, aplica solo 0002 y 0003 sin borrar nada, y `estado` dice `demo`.

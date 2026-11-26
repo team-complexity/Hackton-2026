@@ -29,11 +29,11 @@ Antes de arrancar el servidor, saca una copia de la base de la demo. El plan gra
 Sigue en la raíz. Mira las migraciones y aplica las que falten, contra la base de la demo:
 
 ```bash
-uv run --env-file backend/.env.demo --directory backend python -m app.migraciones estado
-uv run --env-file backend/.env.demo --directory backend python -m app.migraciones aplicar
+uv run --directory backend --env-file .env.demo python -m app.migraciones estado
+uv run --directory backend --env-file .env.demo python -m app.migraciones aplicar
 ```
 
-Sin `--env-file` el comando usa la base de desarrollo, la de `backend/.env`.
+Sin `--env-file` el comando usa la base de desarrollo, la de `backend/.env`. La ruta es `.env.demo`, no `backend/.env.demo`: `uv` entra primero a `backend` por `--directory` y busca el archivo desde ahí.
 
 ## 3. Encender
 
@@ -110,7 +110,7 @@ Comprueba que no quedó túnel: `tailscale funnel status` dice `No serve config`
 - **`/salud` dice `"no responde"` y el proyecto no está pausado.** Desde la raíz:
 
   ```bash
-  uv run --env-file backend/.env.demo --directory backend python -m app.migraciones estado
+  uv run --directory backend --env-file .env.demo python -m app.migraciones estado
   ```
 
   El motivo sale sin la dirección de la base. Puede ser que la contraseña haya cambiado: pasó el 25 nov con la de desarrollo.
