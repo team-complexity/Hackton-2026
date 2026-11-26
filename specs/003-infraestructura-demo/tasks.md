@@ -3,7 +3,7 @@
 - **Spec**: [spec.md](spec.md), estado: Aprobada el 2026-11-20 (QA-12 a QA-20)
 - **Plan**: [plan.md](plan.md), estado: Aprobado el 2026-11-21 (DP-38 Tailscale Funnel, QP-10 a QP-14, C-8 cumplido)
 - **Fecha**: 2026-11-21
-- **Estado**: `Aprobado` el 2026-11-21 por Hugo, con `/speckit-analyze` y la QA de tareas (QT-1 a QT-9) decididos y aplicados (ver «Revisión QA de tasks»). Estado anterior: `En QA`. Lo redactó Claude el 2026-11-21 con `/speckit-tasks`. Aprobar no autoriza empezar F1: se espera a que Hugo lo pida (F0 es suya y puede empezar cuando quiera). **F0 terminada (Hugo, con Claude, 2026-11-21): Tailscale Funnel cumple, sin plan B (TK-5).** **F1 terminada (2026-11-21): CI en `main` con `servidor` y `web` obligatorios, también para administradores (PR #102; prueba del error en el PR #103, TK-6).** **F2 terminada (Grok y Hugo, 2026-11-22): web servida por el servidor, C-7 aplicado, demo por el túnel comprobada en T026 y T027, aviso de pey con `secreto_aviso_pey: true` (T025).** **F3 terminada (Hugo, Grok y Claude, 2026-11-22): pagos reales de $0.01 con aviso de firma válida en Android y en iPhone, QR en 3 a 5 s con C-10 (meta de 5 s), reenvío comprobado por repetición del aviso (TK-8), README con la demo (T032) y la prueba de Leonel en el issue #105 (TK-9). Fin del corte 1.** **F4 en curso (Grok, 2026-11-22): migraciones con un comando.**
+- **Estado**: `Aprobado` el 2026-11-21 por Hugo, con `/speckit-analyze` y la QA de tareas (QT-1 a QT-9) decididos y aplicados (ver «Revisión QA de tasks»). Estado anterior: `En QA`. Lo redactó Claude el 2026-11-21 con `/speckit-tasks`. Aprobar no autoriza empezar F1: se espera a que Hugo lo pida (F0 es suya y puede empezar cuando quiera). **F0 terminada (Hugo, con Claude, 2026-11-21): Tailscale Funnel cumple, sin plan B (TK-5).** **F1 terminada (2026-11-21): CI en `main` con `servidor` y `web` obligatorios, también para administradores (PR #102; prueba del error en el PR #103, TK-6).** **F2 terminada (Grok y Hugo, 2026-11-22): web servida por el servidor, C-7 aplicado, demo por el túnel comprobada en T026 y T027, aviso de pey con `secreto_aviso_pey: true` (T025).** **F3 terminada (Hugo, Grok y Claude, 2026-11-22): pagos reales de $0.01 con aviso de firma válida en Android y en iPhone, QR en 3 a 5 s con C-10 (meta de 5 s), reenvío comprobado por repetición del aviso (TK-8), README con la demo (T032) y la prueba de Leonel en el issue #105 (TK-9). Fin del corte 1.** **F4 terminada (2026-11-24): comando de migraciones, PR #107.** **F5 terminada (2026-11-25): cobros guardados y C-6, PR #142.** **F6 terminada (2026-11-25): conciliación y demo con base, PR #143.** **FN terminada (C-6 y C-7 siguen aplicados, revisión de seguridad sin hallazgos, quickstart alineado con lo hecho, pruebas en verde, 2026-11-25).**
 - **Entrada**: los documentos de `specs/003-infraestructura-demo/`: plan.md, spec.md, research.md, data-model.md, contracts/ y quickstart.md
 
 > **Notas para los comandos de spec-kit.**
@@ -792,12 +792,12 @@
 
 ## Fase N (FN): Cierre · 25 nov
 
-- [ ] T076 Comprobar que C-6 y C-7 están aplicados (QP-11)
+- [X] T076 Comprobar que C-6 y C-7 están aplicados (QP-11)
   - Las dos filas de la spec 003 §8.2 dicen "aplicado", y las búsquedas de T021 y T064 siguen limpias.
   - **RF**: RF-023, RF-029, RF-061
   - **Dep.**: T075
   - **Hecho cuando**: las dos comprobaciones quedan anotadas en la sección FN de la guía.
-- [ ] T077 Revisión de seguridad (constitución, flujo 6; plan §10)
+- [X] T077 Revisión de seguridad (constitución, flujo 6; plan §10)
   - Secretos: `git grep -nE "(PEY_API_KEY|PEY_WEBHOOK_SECRET|DATABASE_URL)=.+"` solo encuentra valores vacíos o falsos de las pruebas; `ci.yml` sin `secrets.` (CE-010, RF-038).
   - Túnel: ninguna llave ni sesión de Tailscale en el repositorio (RF-059); `git grep -n "0.0.0.0" -- docs backend specs/003-infraestructura-demo` solo en textos que dicen no usarlo (RF-056).
   - Base de datos: RLS y `revoke` en todas las tablas, también las del comando y `estado_del_servidor` (T038, RF-022).
@@ -807,12 +807,12 @@
   - **RF**: RF-009, RF-020 a RF-022, RF-027, RF-029, RF-038, RF-056, RF-059
   - **Dep.**: T075
   - **Hecho cuando**: cada punto queda anotado como revisado en la sección FN de la guía.
-- [ ] T078 Validar `quickstart.md` de punta a punta
+- [X] T078 Validar `quickstart.md` de punta a punta
   - Cada sección (§1 a §6) enlazada a su resultado en la guía de verificación; lo que no coincida se corrige en el quickstart o se anota como TK.
   - **RF**: todos (comprobación)
   - **Dep.**: T076, T077
   - **Hecho cuando**: cada sección del quickstart tiene su resultado anotado.
-- [ ] T079 Cierre de FN: guía de verificación completa, PR del corte 2 y commit sugerido
+- [X] T079 Cierre de FN: guía de verificación completa, PR del corte 2 y commit sugerido
   - Commit sugerido: `docs(003): cierre de la spec 003 y guía de verificación completa (FN)`.
   - PR con la plantilla, el enlace a `specs/003-infraestructura-demo/` y `Closes #90, #19, #94`. Lo une Hugo con el CI en verde; Juan y Leonel revisan después.
   - La descripción del PR lleva las comparativas que piden #19 y #94, en lugar de la nota de implementación (constitución 3.0.0; QT-5): librería de PostgreSQL (DP-2, research R-6), herramienta de migraciones (DP-3, R-7) y de dónde sale la imagen del QR (D-2 de la spec).
