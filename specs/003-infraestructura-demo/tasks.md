@@ -765,7 +765,7 @@
   - **RF**: RF-018, RF-019, RF-051, RF-054
   - **Dep.**: T071
   - **Hecho cuando**: el comando anota 0001 sin correrla, aplica solo 0002 y 0003 sin borrar nada, y `estado` dice `demo`.
-- [ ] T073 [US1] Pagos reales con la base de datos (quickstart §6, pasos 3 a 5)
+- [X] T073 [US1] Pagos reales con la base de datos (quickstart §6, pasos 3 a 5)
   - **Quién**: Hugo, con su autorización en ese momento, con la demo encendida por la guía.
   - Paso 3 (CE-001): cobro en la demo, parar y arrancar el servidor, recargar la pantalla y pagar $0.01; vuelve el mismo QR con su tiempo restante y suena "Pago recibido".
   - Paso 4 (RF-061): cobro de $0.01, apagar el servidor, pagar, esperar a que termine la ventana (20 min) y encender; en el primer minuto el registro muestra la conciliación y `GET /api/cobros/<id>` lo da *pagado*, con un solo pago.
@@ -774,13 +774,13 @@
   - **RF**: RF-005, RF-012, RF-015, RF-061
   - **Dep.**: T072
   - **Hecho cuando**: los cuatro resultados quedan anotados en la sección F6 de la guía.
-- [ ] T074 [US4] Encender la demo con la computadora recién prendida siguiendo solo la guía (quickstart §5, CE-016)
+- [X] T074 [US4] Encender la demo con la computadora recién prendida siguiendo solo la guía (quickstart §5, CE-016)
   - **Quién**: Hugo.
   - `/salud` por la dirección del túnel desde un celular con datos móviles.
   - **RF**: RF-023, RF-050, RF-058
   - **Dep.**: T072
   - **Hecho cuando**: dice `"llave_pey": true`, `"secreto_aviso_pey": true` y `"base_de_datos": "responde"`, sin pasos fuera de la guía (lo que faltó se agrega a `docs/operacion-demo.md`).
-- [ ] T075 Cierre de F6: todo en verde, sección F6 en la guía de verificación y commit sugerido
+- [X] T075 Cierre de F6: todo en verde, sección F6 en la guía de verificación y commit sugerido
   - Commit sugerido: `feat(003): conciliación de pagos y demo con base de datos (F6)`.
   - **RF**: RF-039, RF-050, RF-051, RF-058, RF-061
   - **Dep.**: T073, T074

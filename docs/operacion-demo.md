@@ -21,7 +21,7 @@ En la raíz del repositorio, con `main` al día:
 ```bash
 git switch main
 git pull
-cd backend && uv sync --locked
+uv sync --locked --directory backend
 ```
 
 Antes de arrancar el servidor, saca una copia de la base de la demo. El plan gratuito de Supabase no tiene respaldos (RF-051): en el panel del proyecto, exporta cada tabla a CSV.
@@ -46,19 +46,19 @@ open -a Tailscale
 Después el servidor, en `backend/`, con un solo proceso y **sin `--host`**. uvicorn se queda en `127.0.0.1` (RF-056):
 
 ```bash
-cd backend && uv run uvicorn app.main:app --env-file .env.demo --workers 1 --port 8000
+uv run --directory backend uvicorn app.main:app --env-file .env.demo --workers 1 --port 8000
 ```
 
-Anota el PID de ese proceso. En otra terminal:
+En otra terminal, desde la raíz del repositorio:
 
 ```bash
 tailscale funnel --bg 8000
-caffeinate -is -w <PID del servidor>
+caffeinate -is -w $(lsof -nP -iTCP:8000 -sTCP:LISTEN -t)
 ```
 
-`caffeinate` mantiene la Mac despierta mientras ese PID siga vivo. Se queda en primer plano y ocupa esa terminal; para dejarla libre, ábrelo en su propia terminal o agrégale `&` al final.
+`lsof` da el PID del servidor y `caffeinate` mantiene la Mac despierta mientras ese proceso siga vivo. Se queda en primer plano y ocupa esa terminal; para dejarla libre, ábrelo en su propia terminal o agrégale `&` al final.
 
-El PID del servidor lo da `lsof -nP -iTCP:8000 -sTCP:LISTEN -t`.
+Si reinicias el servidor, el PID cambia y ese `caffeinate` termina solo: vuelve a lanzar el último comando. Escribe el comando tal cual, sin cambiar nada: no hay un número que reemplazar.
 
 ## 4. Comprobar desde fuera
 
