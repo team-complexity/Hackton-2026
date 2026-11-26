@@ -43,6 +43,57 @@ Python con FastAPI, web PWA (HTML, CSS y JS), Supabase y el API de pey (CoDi).
 | [`web/`](web/) | Web del negocio como PWA (HTML, CSS, JS): instalable en Android, iPhone y computadora |
 | [`docs/`](docs/) | Plan del hackathon, decisiones y guías |
 
+## Cómo correrlo en local
+
+Necesitas [uv](https://docs.astral.sh/uv/) y Python 3.11 o superior. Los comandos se corren desde la raíz del repositorio.
+
+### 1. Crea tu `.env`
+
+El backend lee su configuración de `backend/.env`. Ese archivo **no está en Git**: `.gitignore` lo ignora y cada quien crea el suyo en su computadora a partir de la plantilla.
+
+```bash
+cp backend/.env.example backend/.env
+```
+
+Abre `backend/.env` y rellena estos valores:
+
+| Variable | Qué poner | ¿Hace falta? |
+|---|---|---|
+| `PEY_API_KEY` | La llave del API de pey | Sí, para crear cobros |
+| `PEY_WEBHOOK_SECRET` | El secreto con el que pey firma sus avisos (webhooks) | Sí, para recibir los avisos de pago |
+| `WEB_ORIGIN` | La dirección de la web, para CORS | Ya trae `http://localhost:5173` |
+
+- La llave y el secreto salen de https://portal.mipey.mx → Desarrollador. Si no tienes acceso, pídeselos a Hugo por mensaje privado o por el gestor de contraseñas, nunca en el grupo ([cómo compartir un secreto](docs/flujo-git-y-secretos.md#3-cómo-compartir-un-secreto-con-el-equipo)).
+- Las demás variables tienen un valor por defecto y no hace falta tocarlas. Están explicadas en [backend/README.md](backend/README.md#variables-de-entorno).
+- `DATABASE_URL`, `SECRET_KEY` y `WHATSAPP_*` vienen en la plantilla, pero el backend todavía no las usa: déjalas vacías.
+- Si una variable también existe en el entorno del sistema, ese valor gana sobre el de `backend/.env`.
+
+### 2. Arranca el backend
+
+La primera vez, instala las dependencias:
+
+```bash
+uv sync --directory backend
+```
+
+Después, cada vez que quieras correrlo:
+
+```bash
+uv run --directory backend uvicorn app.main:app --port 8000
+```
+
+Para comprobar que tomó tu `.env`, abre http://localhost:8000/salud. Debe responder `"llave_pey": true` y `"secreto_aviso_pey": true`. Son solo sí o no: nunca muestra los valores. Si sale `false`, el archivo no está en `backend/.env` o el valor está vacío.
+
+### 3. Abre la web
+
+Pon `servidor: "http://localhost:8000"` en `web/config.js` (no subas ese cambio) y sirve la carpeta `web/`:
+
+```bash
+uv run --directory backend python -m http.server 5173 --directory ../web
+```
+
+Abre http://localhost:5173. Más detalles en [web/README.md](web/README.md#correr-en-local).
+
 ## Organización del trabajo
 
 - **Roles, calendario e issues:** [flujo-de-trabajo.md](flujo-de-trabajo.md) (también en [PDF](flujo-de-trabajo.pdf))
