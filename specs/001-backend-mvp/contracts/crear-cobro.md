@@ -22,15 +22,16 @@ Cuerpo JSON:
 | Código | Cuándo | Cuerpo |
 |---|---|---|
 | 201 | Cobro creado | [Objeto cobro](#objeto-cobro) |
+| 403 | La petición trae `Origin` y no está en `WEB_ORIGIN` ni su host y puerto coinciden con el encabezado `Host`. No se lee el cuerpo, no cuenta para el límite y no se llama a pey | `{"detail": "Origen no permitido"}` |
 | 422 | Monto o concepto no válidos. No se llama a pey | `{"detail": "<mensaje>"}`. Mensajes: "Escribe un monto mayor a $0 con máximo 2 decimales", "El monto máximo de la demo es $100", "El concepto tiene caracteres no válidos", "El concepto puede tener máximo 40 letras" |
 | 429 | La IP del cliente ya pidió el máximo de cobros del minuto. No se llama a pey | `{"detail": "Demasiados cobros seguidos. Espera un minuto."}` |
 | 502 | pey rechazó la llave (401/403) o falló con un error general | `{"detail": "pey rechazó la llave del servidor"}` o `{"detail": "No se pudo crear el cobro con pey. Intenta de nuevo."}` |
 | 503 | Falta la llave de pey, o pey está en mantenimiento (503) | `{"detail": "El servidor no tiene configurada la llave de pey"}` o `{"detail": "pey está en mantenimiento. Intenta de nuevo en unos minutos."}` |
 
-Con 422, 429, 502 y 503 el cobro **no** queda guardado (RF-009).
+Con 422, 429, 502 y 503 el cobro **no** queda guardado (RF-009). Con 403 tampoco: el rechazo ocurre antes de guardarlo (C-11).
 
 - Si pey no responde en **10 s**, se responde 502 "No se pudo crear el cobro con pey. Intenta de nuevo." (QP-1).
-- Las peticiones rechazadas con 422 no cuentan para el límite de 10 por minuto: solo cuentan las que llegan a pedirle el QR a pey.
+- Las peticiones rechazadas con 403 o 422 no cuentan para el límite de 10 por minuto: solo cuentan las que llegan a pedirle el QR a pey.
 
 <a id="objeto-cobro"></a>
 ### Objeto cobro
@@ -103,5 +104,6 @@ Respuesta 201:
 - No requiere autenticación: hay un solo negocio de demo (#24).
 - El límite es por **IP del cliente**, obtenida detrás del proxy del hosting (RF-034, research R-5).
 - CORS: solo los orígenes de `WEB_ORIGIN`, con los métodos `GET` y `POST` (RF-035).
+- Si este POST trae `Origin`, se acepta solo cuando ese valor está en `WEB_ORIGIN` o cuando su host y puerto son los del encabezado `Host` (el origen propio; no se compara el esquema). Si no, 403 antes de leer el cuerpo, de contar el límite por IP y de llamar a pey o al almacén. Sin `Origin` se acepta. `Origin: null` se rechaza (C-11).
 - La petición a pey lleva `metadata: {"cobroId": <id>}` (RF-007) y nunca la devuelve.
 - Nunca se devuelve la llave de pey, ni en los errores (RF-036). Los errores de pey quedan en el registro con su `requestId` (RF-039).

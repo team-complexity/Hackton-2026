@@ -22,6 +22,7 @@ from app.canal import flujo_de_avisos
 from app.cobros import Cobro, NoSePuedeCancelar, RepositorioCobros
 from app.config import RAIZ_BACKEND, Configuracion, obtener_configuracion
 from app.eventos import Difusor, LimiteDeCanales, LimitePorIp
+from app.origen import OrigenEnPosts
 from app.pey import ClientePey, ErrorPey
 from app.reloj import Reloj
 from app.respaldo import ConsultaDeRespaldo
@@ -219,6 +220,9 @@ def crear_app(
     app.state.cobros = cobros
     app.state.reintentos = reintentos
     app.state.latido = latido
+    # Por dentro de los dos: ProxyHeaders ajusta la petición y CORS responde el
+    # preflight antes de este rechazo, que no llega a las rutas (spec 001, C-11).
+    app.add_middleware(OrigenEnPosts, origenes=config.origenes_web)
     app.add_middleware(
         CORSMiddleware,
         allow_origins=config.origenes_web,
