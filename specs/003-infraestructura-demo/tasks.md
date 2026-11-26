@@ -753,13 +753,13 @@
 
 ### Base de la demo y pagos reales (Hugo)
 
-- [ ] T071 [US4] Reemplazar la línea vacía `DATABASE_URL=` de `backend/.env.demo` por la de la demo y comprobar que es distinta de la de desarrollo
+- [X] T071 [US4] Reemplazar la línea vacía `DATABASE_URL=` de `backend/.env.demo` por la de la demo y comprobar que es distinta de la de desarrollo
   - **Quién**: Hugo. URL del *pooler* en modo sesión del proyecto de la demo, en la misma línea que dejó vacía T002 (DP-44).
   - La comparación de T048 con `DATABASE_URL` dice `DISTINTAS`.
   - **RF**: RF-020, RF-049
   - **Dep.**: T070
   - **Hecho cuando**: el comando dice `DISTINTAS`.
-- [ ] T072 [US6] Limpiar y marcar la base de la demo (quickstart §6, paso 2; historia 6, escenario 3)
+- [X] T072 [US6] Limpiar y marcar la base de la demo (quickstart §6, paso 2; historia 6, escenario 3)
   - **Quién**: Hugo, siguiendo la guía.
   - Exportar la copia; correr los `delete` del bloque F de `supabase/consultas_de_verificacion.sql` (datos de prueba del PR #97, H-12); `uv run --directory backend --env-file .env.demo python -m app.migraciones aplicar --entorno demo --ya-aplicada 0001`.
   - **RF**: RF-018, RF-019, RF-051, RF-054

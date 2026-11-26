@@ -470,3 +470,34 @@ Resultado: **pasó**.
 - **Qué queda para Hugo:** unir el PR #142 con `main`.
 - **Lo que sigue abierto:** F6 (conciliación y demo con base de datos).
 - **Commit sugerido:** `docs(003): revisión de pruebas, DATABASE_URL, revisión de credenciales y cambio C-6 aplicado (F5, T061 a T065)`.
+
+## F6 — Conciliación de pagos y demo con base de datos
+
+### T068 a T070 · Código, pruebas y guía (2026-11-25)
+
+Grok escribió las pruebas, el latido y la guía; Claude las revisó (TK-23). Sin PostgreSQL pasan 190 y se saltan 32; con PostgreSQL local, las 222. `ruff check` y `ruff format --check` salen limpios. No se quitó ninguna aserción anterior.
+
+Lo que se comprueba en `backend/tests/test_conciliacion.py` (12 pruebas):
+
+- El primer latido solo crea la marca con la hora del reloj y no consulta a pey.
+- Un pago de una ventana que terminó con el servidor apagado se registra una vez, con `fuente = consulta` y sin publicar en el canal.
+- Un 4xx se anota y se salta; una falla pasajera se reintenta; a la décima hay un `ERROR` y se salta.
+- Si el almacén falla a medias, la marca queda en el cobro anterior (TK-23).
+- Cada consulta registra el `requestId` de pey y ningún dato de quien paga.
+
+### T071 · `DATABASE_URL` de la demo (2026-11-25)
+
+La comparación de `DATABASE_URL` entre `backend/.env` y `backend/.env.demo` dice `DISTINTAS`. No se anota ningún valor.
+
+### T072 · Base de la demo (2026-11-25)
+
+La base es un proyecto nuevo y vacío (TK-25). `aplicar --entorno demo` marcó la base como `demo` y aplicó 0001, 0002 y 0003. `estado` dice `Entorno: demo`, `Aplicadas: 0001, 0002, 0003` y `Pendientes: ninguna`.
+
+Al probar el comando salió un fallo de la guía: `--env-file` va como `.env.demo`, porque `uv` aplica `--directory backend` antes (TK-24).
+
+### Pendiente de Hugo
+
+- **T073**: pagos reales de $0.01 con la base de datos y la medición de 10 cobros.
+- **T074**: encender la demo solo con la guía y comprobar `/salud` desde el celular.
+- **T075**: cierre de F6.
+
