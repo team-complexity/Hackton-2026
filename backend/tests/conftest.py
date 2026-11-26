@@ -50,6 +50,22 @@ class PeySimulado:
         # más de un cobro sin cambiar id_qr: el primero usa ese id y los siguientes, otro.
         self._base_entregada: str | None = None
         self._repeticiones = 0
+        # Consulta de un QR concreto. Vacío: todos siguen la respuesta global.
+        self._por_qr: dict[str, tuple[list[dict] | None, int | None, bool]] = {}
+
+    def para_el_qr(
+        self,
+        codi_qr_id: str,
+        *,
+        transacciones: list[dict] | None = None,
+        estado: int | None = None,
+        sin_conexion: bool = False,
+    ) -> None:
+        """La consulta de este QR responde esto; los demás no cambian (spec 003, T068).
+
+        ``estado`` es un 4xx o un 5xx. ``sin_conexion`` es una falla pasajera sin respuesta.
+        """
+        self._por_qr[codi_qr_id] = (transacciones, estado, sin_conexion)
 
     def __call__(self, solicitud: httpx.Request) -> httpx.Response:
         self.solicitudes.append(solicitud)
@@ -86,6 +102,22 @@ class PeySimulado:
         )
 
     def _respuesta_consulta(self, solicitud: httpx.Request) -> httpx.Response:
+        codi_qr_id = solicitud.url.path.rsplit("/", 1)[-1]
+        propio = self._por_qr.get(codi_qr_id)
+        if propio is not None:
+            transacciones, estado, sin_conexion = propio
+            if sin_conexion:
+                raise httpx.ConnectError("sin conexión")
+            if estado is not None and estado != 200:
+                return self._error(estado)
+            return httpx.Response(
+                200,
+                json={
+                    "items": transacciones if transacciones is not None else [],
+                    "nextToken": None,
+                    "requestId": self.request_id,
+                },
+            )
         if self.estado_consulta != 200:
             return self._error(self.estado_consulta)
         return httpx.Response(200, json=self._pagina(solicitud))

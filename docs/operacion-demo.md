@@ -4,7 +4,7 @@ Guía para encender y apagar la demo de PAGO FÁCIL en la Mac de Hugo (spec 003,
 
 `https://pago-facil.tail8d44cb.ts.net`
 
-Esta parte cubre el corte 1: el servidor y el túnel. La base de datos se agrega en F6.
+Cubre el servidor, el túnel y la base de datos de la demo.
 
 ## 1. Cuándo está encendida
 
@@ -12,7 +12,7 @@ La demo solo está encendida en los momentos que el equipo acordó (RF-060): pru
 
 Fuera de esos momentos se apaga. En cuanto la dirección tuvo HTTPS, llegaron escáneres automáticos (F0).
 
-Además, se enciende y se comprueba la salud al menos una vez cada 5 días, y el día antes de cada momento acordado (RF-050). La parte de reactivar Supabase llega en F6. Esos días la Mac va con la corriente conectada y con las actualizaciones automáticas de macOS en pausa.
+Además, se enciende y se comprueba la salud al menos una vez cada 5 días, y el día antes de cada momento acordado, para que Supabase no pause el proyecto (RF-050). Si ya está pausado, la sección 8 dice cómo reactivarlo. Esos días la Mac va con la corriente conectada y con las actualizaciones automáticas de macOS en pausa.
 
 ## 2. Antes de encender
 
@@ -21,8 +21,19 @@ En la raíz del repositorio, con `main` al día:
 ```bash
 git switch main
 git pull
-cd backend && uv sync --locked
+uv sync --locked --directory backend
 ```
+
+Antes de arrancar el servidor, saca una copia de la base de la demo. El plan gratuito de Supabase no tiene respaldos (RF-051): en el panel del proyecto, exporta cada tabla a CSV.
+
+Sigue en la raíz. Mira las migraciones y aplica las que falten, contra la base de la demo:
+
+```bash
+uv run --directory backend --env-file .env.demo python -m app.migraciones estado
+uv run --directory backend --env-file .env.demo python -m app.migraciones aplicar
+```
+
+Sin `--env-file` el comando usa la base de desarrollo, la de `backend/.env`. La ruta es `.env.demo`, no `backend/.env.demo`: `uv` entra primero a `backend` por `--directory` y busca el archivo desde ahí.
 
 ## 3. Encender
 
@@ -35,19 +46,19 @@ open -a Tailscale
 Después el servidor, en `backend/`, con un solo proceso y **sin `--host`**. uvicorn se queda en `127.0.0.1` (RF-056):
 
 ```bash
-cd backend && uv run uvicorn app.main:app --env-file .env.demo --workers 1 --port 8000
+uv run --directory backend uvicorn app.main:app --env-file .env.demo --workers 1 --port 8000
 ```
 
-Anota el PID de ese proceso. En otra terminal:
+En otra terminal, desde la raíz del repositorio:
 
 ```bash
 tailscale funnel --bg 8000
-caffeinate -is -w <PID del servidor>
+caffeinate -is -w $(lsof -nP -iTCP:8000 -sTCP:LISTEN -t)
 ```
 
-`caffeinate` mantiene la Mac despierta mientras ese PID siga vivo. Se queda en primer plano y ocupa esa terminal; para dejarla libre, ábrelo en su propia terminal o agrégale `&` al final.
+`lsof` da el PID del servidor y `caffeinate` mantiene la Mac despierta mientras ese proceso siga vivo. Se queda en primer plano y ocupa esa terminal; para dejarla libre, ábrelo en su propia terminal o agrégale `&` al final.
 
-El PID del servidor lo da `lsof -nP -iTCP:8000 -sTCP:LISTEN -t`.
+Si reinicias el servidor, el PID cambia y ese `caffeinate` termina solo: vuelve a lanzar el último comando. Escribe el comando tal cual, sin cambiar nada: no hay un número que reemplazar.
 
 ## 4. Comprobar desde fuera
 
@@ -55,7 +66,9 @@ Desde un celular con datos móviles (no desde la wifi de la Mac), abre:
 
 `https://pago-facil.tail8d44cb.ts.net/salud`
 
-Se espera HTTPS sin advertencias y sin páginas intermedias, y un JSON con `"estado": "ok"`. `llave_pey` y `secreto_aviso_pey` son booleanos: dicen si el valor está puesto, no cuál es. Con la demo lista, los dos valen `true`.
+Se espera HTTPS sin advertencias y sin páginas intermedias, y un JSON con `"estado": "ok"`. `llave_pey` y `secreto_aviso_pey` son booleanos: dicen si el valor está puesto, no cuál es. Con la demo lista, los dos valen `true` y `"base_de_datos"` dice `"responde"`.
+
+`"sin configurar"` en la demo es un error: el servidor estaría guardando los cobros en memoria (DP-16). La excepción es mientras `DATABASE_URL` de `backend/.env.demo` siga vacía, que es lo esperado antes de poner la de la demo (DP-44, T071).
 
 La pantalla de cobro es la misma dirección, en `/`: se lee «PAGO FÁCIL» y se ve el teclado.
 
@@ -93,10 +106,18 @@ Comprueba que no quedó túnel: `tailscale funnel status` dice `No serve config`
 - **El túnel no responde.** `tailscale funnel status`. Si la Mac se reinició, abre antes la app de Tailscale (sección 3).
 - **Límites por IP.** F0 mostró la IP real del celular, así que se quedan en 30 cobros por minuto y 30 canales por IP (DP-36, TK-5). Si una comprobación viera `127.0.0.1` en el registro, pasarían a 60 (DP-40).
 - **El canal de un cobro se corta antes de tiempo, o los eventos llegan todos juntos al final.** Se para y Hugo decide el plan B (research R-1). En F0 no pasó.
+- **Supabase pausado.** `/salud` dice `"base_de_datos": "no responde"`. En el panel de Supabase, abre el proyecto de la demo y reactívalo. Vuelve a pedir `/salud` hasta que diga `"responde"`. Encender la demo al menos cada 5 días evita que se pause (RF-050).
+- **`/salud` dice `"no responde"` y el proyecto no está pausado.** Desde la raíz:
+
+  ```bash
+  uv run --directory backend --env-file .env.demo python -m app.migraciones estado
+  ```
+
+  El motivo sale sin la dirección de la base. Puede ser que la contraseña haya cambiado: pasó el 25 nov con la de desarrollo.
 
 ## 9. Secretos
 
-`backend/.env.demo` no se comparte ni se sube. La sesión de Tailscale vive en su app, fuera del repositorio (RF-059).
+`backend/.env.demo` no se comparte ni se sube. La sesión de Tailscale vive en su app, fuera del repositorio (RF-059). `DATABASE_URL` de la demo solo vive en `backend/.env.demo`.
 
 Cada variable que la demo necesita va en `backend/.env.demo`, aunque el valor esté vacío: lo que falta se toma de `backend/.env`, que es el de desarrollo (DP-44). La plantilla, sin secretos, es [`backend/.env.demo.example`](../backend/.env.demo.example) (TK-4). Se actualiza cuando se agrega una variable. Con la demo encendida, `GET /salud` dice si cada credencial está puesta.
 

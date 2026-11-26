@@ -54,5 +54,5 @@ No había nada que aplicar.
 ## 6. Seguridad y reglas
 
 - Nunca imprime `DATABASE_URL` ni el texto de un error de conexión (RF-021).
-- Contra la demo lo corre solo Hugo, al encender la demo y antes de arrancar el servidor, después de exportar una copia de la base (RF-051 y RF-058; pasos en `docs/operacion-demo.md`), con la configuración de la demo: `uv run --env-file backend/.env.demo --directory backend python -m app.migraciones …` (QP-14). Sin `--env-file`, usa `backend/.env`, que es la base de desarrollo.
+- Contra la demo lo corre solo Hugo, al encender la demo y antes de arrancar el servidor, después de exportar una copia de la base (RF-051 y RF-058; pasos en `docs/operacion-demo.md`), con la configuración de la demo: `uv run --directory backend --env-file .env.demo python -m app.migraciones …` (QP-14). Sin `--env-file`, usa `backend/.env`, que es la base de desarrollo.
 - El servidor no comprueba si la estructura está al día (RF-047 se retiró con D-4): si Hugo se salta el paso, la primera escritura que use una columna nueva falla y se responde como en el [contrato de fallas](fallas-base-de-datos.md).

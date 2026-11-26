@@ -712,7 +712,7 @@
 
 ### Pruebas de F6 (primero, deben fallar antes de implementar)
 
-- [ ] T068 [US1] Pruebas de la conciliación en `backend/tests/test_conciliacion.py` (archivo nuevo)
+- [X] T068 [US1] Pruebas de la conciliación en `backend/tests/test_conciliacion.py` (archivo nuevo)
   - `PeySimulado` (en `backend/tests/conftest.py`) aprende a responder por QR: un `codi_qr_id` distinto por cada cobro creado y, por cada uno, sus transacciones, un 4xx o una falla pasajera (5xx o sin conexión). Solo se agrega; lo que ya hace no cambia.
   - Con el almacén en memoria, `RelojFalso` y `LatidoDeConciliacion.una_vez()` llamado directo:
     - `test_la_primera_vez_no_se_revisa_hacia_atras`: sin fila en `estado_del_servidor`, se crea con la hora del `Reloj` y no se consulta a pey.
@@ -732,7 +732,7 @@
 
 ### Implementación de F6
 
-- [ ] T069 [US1] `LatidoDeConciliacion` en `backend/app/tareas.py` (data-model §4.1, DP-39, QP-13)
+- [X] T069 [US1] `LatidoDeConciliacion` en `backend/app/tareas.py` (data-model §4.1, DP-39, QP-13)
   - `una_vez()`: lee `conciliado_hasta` (si no hay, lo crea con la hora del `Reloj` y termina); toma los cobros con `fin_ventana` en (`conciliado_hasta`, ahora], en orden; por cada uno, lo carga (memoria o almacén, DP-33), pide a pey sus transacciones con las del cobro (DP-13) y registra cada una que falte con `fuente = consulta`, dentro del candado del cobro, **sin publicar en el canal** (RF-061).
   - 4xx de pey: línea con la operación `conciliar` y el id, y se salta. Falla pasajera de pey o del almacén: línea, contador en memoria por cobro y se para ahí (la marca queda en la `fin_ventana` anterior); con 10 fallas seguidas, línea `ERROR` y se salta.
   - Al final, `guardar_conciliado_hasta` con ahora (o la marca anterior al primer cobro que todavía se reintenta). Esta escritura es el uso diario de RF-039.
@@ -741,9 +741,9 @@
   - **RF**: RF-039, RF-061
   - **Dep.**: T068
   - **Hecho cuando**: T068 pasa.
-- [ ] T070 [US4] Completar `docs/operacion-demo.md` con la base de datos (DP-43, RF-050, RF-051, RF-058)
+- [X] T070 [US4] Completar `docs/operacion-demo.md` con la base de datos (DP-43, RF-050, RF-051, RF-058)
   - **Quién**: borrador de Grok; lo valida Hugo en T074.
-  - **Antes de encender** (paso nuevo, antes de arrancar el servidor): exportar una copia de la base de la demo desde el panel de Supabase (cada tabla a CSV; el plan gratuito no tiene respaldos, RF-051), y después `uv run --env-file backend/.env.demo --directory backend python -m app.migraciones estado` y `aplicar` (QP-14). Sin `--env-file`, el comando usa la base de desarrollo.
+  - **Antes de encender** (paso nuevo, antes de arrancar el servidor): exportar una copia de la base de la demo desde el panel de Supabase (cada tabla a CSV; el plan gratuito no tiene respaldos, RF-051), y después `uv run --directory backend --env-file .env.demo python -m app.migraciones estado` y `aplicar` (QP-14). Sin `--env-file`, el comando usa la base de desarrollo.
   - **Comprobar desde fuera**: `/salud` debe decir `"base_de_datos": "responde"` (DP-16: después de T071, `"sin configurar"` en la demo es un error; antes de T071 es lo esperado, por la línea vacía de DP-44).
   - **Supabase pausado** (RF-050): cómo se ve (`"no responde"`), cómo reactivarlo en el panel y volver a pedir la salud. Encender al menos cada 5 días para que no se pause.
   - `DATABASE_URL` de la demo solo en `backend/.env.demo`.
@@ -753,19 +753,19 @@
 
 ### Base de la demo y pagos reales (Hugo)
 
-- [ ] T071 [US4] Reemplazar la línea vacía `DATABASE_URL=` de `backend/.env.demo` por la de la demo y comprobar que es distinta de la de desarrollo
+- [X] T071 [US4] Reemplazar la línea vacía `DATABASE_URL=` de `backend/.env.demo` por la de la demo y comprobar que es distinta de la de desarrollo
   - **Quién**: Hugo. URL del *pooler* en modo sesión del proyecto de la demo, en la misma línea que dejó vacía T002 (DP-44).
   - La comparación de T048 con `DATABASE_URL` dice `DISTINTAS`.
   - **RF**: RF-020, RF-049
   - **Dep.**: T070
   - **Hecho cuando**: el comando dice `DISTINTAS`.
-- [ ] T072 [US6] Limpiar y marcar la base de la demo (quickstart §6, paso 2; historia 6, escenario 3)
+- [X] T072 [US6] Limpiar y marcar la base de la demo (quickstart §6, paso 2; historia 6, escenario 3)
   - **Quién**: Hugo, siguiendo la guía.
-  - Exportar la copia; correr los `delete` del bloque F de `supabase/consultas_de_verificacion.sql` (datos de prueba del PR #97, H-12); `uv run --env-file backend/.env.demo --directory backend python -m app.migraciones aplicar --entorno demo --ya-aplicada 0001`.
+  - Exportar la copia; correr los `delete` del bloque F de `supabase/consultas_de_verificacion.sql` (datos de prueba del PR #97, H-12); `uv run --directory backend --env-file .env.demo python -m app.migraciones aplicar --entorno demo --ya-aplicada 0001`.
   - **RF**: RF-018, RF-019, RF-051, RF-054
   - **Dep.**: T071
   - **Hecho cuando**: el comando anota 0001 sin correrla, aplica solo 0002 y 0003 sin borrar nada, y `estado` dice `demo`.
-- [ ] T073 [US1] Pagos reales con la base de datos (quickstart §6, pasos 3 a 5)
+- [X] T073 [US1] Pagos reales con la base de datos (quickstart §6, pasos 3 a 5)
   - **Quién**: Hugo, con su autorización en ese momento, con la demo encendida por la guía.
   - Paso 3 (CE-001): cobro en la demo, parar y arrancar el servidor, recargar la pantalla y pagar $0.01; vuelve el mismo QR con su tiempo restante y suena "Pago recibido".
   - Paso 4 (RF-061): cobro de $0.01, apagar el servidor, pagar, esperar a que termine la ventana (20 min) y encender; en el primer minuto el registro muestra la conciliación y `GET /api/cobros/<id>` lo da *pagado*, con un solo pago.
@@ -774,13 +774,13 @@
   - **RF**: RF-005, RF-012, RF-015, RF-061
   - **Dep.**: T072
   - **Hecho cuando**: los cuatro resultados quedan anotados en la sección F6 de la guía.
-- [ ] T074 [US4] Encender la demo con la computadora recién prendida siguiendo solo la guía (quickstart §5, CE-016)
+- [X] T074 [US4] Encender la demo con la computadora recién prendida siguiendo solo la guía (quickstart §5, CE-016)
   - **Quién**: Hugo.
   - `/salud` por la dirección del túnel desde un celular con datos móviles.
   - **RF**: RF-023, RF-050, RF-058
   - **Dep.**: T072
   - **Hecho cuando**: dice `"llave_pey": true`, `"secreto_aviso_pey": true` y `"base_de_datos": "responde"`, sin pasos fuera de la guía (lo que faltó se agrega a `docs/operacion-demo.md`).
-- [ ] T075 Cierre de F6: todo en verde, sección F6 en la guía de verificación y commit sugerido
+- [X] T075 Cierre de F6: todo en verde, sección F6 en la guía de verificación y commit sugerido
   - Commit sugerido: `feat(003): conciliación de pagos y demo con base de datos (F6)`.
   - **RF**: RF-039, RF-050, RF-051, RF-058, RF-061
   - **Dep.**: T073, T074

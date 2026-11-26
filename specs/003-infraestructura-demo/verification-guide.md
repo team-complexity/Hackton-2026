@@ -470,3 +470,85 @@ Resultado: **pasó**.
 - **Qué queda para Hugo:** unir el PR #142 con `main`.
 - **Lo que sigue abierto:** F6 (conciliación y demo con base de datos).
 - **Commit sugerido:** `docs(003): revisión de pruebas, DATABASE_URL, revisión de credenciales y cambio C-6 aplicado (F5, T061 a T065)`.
+
+## F6 — Conciliación de pagos y demo con base de datos
+
+### T068 a T070 · Código, pruebas y guía (2026-11-25)
+
+Grok escribió las pruebas, el latido y la guía; Claude las revisó (TK-23). Sin PostgreSQL pasan 190 y se saltan 32; con PostgreSQL local, las 222. `ruff check` y `ruff format --check` salen limpios. No se quitó ninguna aserción anterior.
+
+Lo que se comprueba en `backend/tests/test_conciliacion.py` (12 pruebas):
+
+- El primer latido solo crea la marca con la hora del reloj y no consulta a pey.
+- Un pago de una ventana que terminó con el servidor apagado se registra una vez, con `fuente = consulta` y sin publicar en el canal.
+- Un 4xx se anota y se salta; una falla pasajera se reintenta; a la décima hay un `ERROR` y se salta.
+- Si el almacén falla a medias, la marca queda en el cobro anterior (TK-23).
+- Cada consulta registra el `requestId` de pey y ningún dato de quien paga.
+
+### T071 · `DATABASE_URL` de la demo (2026-11-25)
+
+La comparación de `DATABASE_URL` entre `backend/.env` y `backend/.env.demo` dice `DISTINTAS`. No se anota ningún valor.
+
+### T072 · Base de la demo (2026-11-25)
+
+La base es un proyecto nuevo y vacío (TK-25). `aplicar --entorno demo` marcó la base como `demo` y aplicó 0001, 0002 y 0003. `estado` dice `Entorno: demo`, `Aplicadas: 0001, 0002, 0003` y `Pendientes: ninguna`.
+
+Al probar el comando salió un fallo de la guía: `--env-file` va como `.env.demo`, porque `uv` aplica `--directory backend` antes (TK-24).
+
+### T073, paso 3 · El cobro sobrevive a un reinicio (2026-11-26)
+
+Pago real de $0.01, con la autorización de Hugo, en la demo por el túnel y con la base de datos de la demo.
+
+- Primera corrida: el cobro `fglECvUuPaJx` volvió a cargarse con el servidor nuevo (leído de la base), pero Hugo pagó un cobro creado después. No cuenta para CE-001. Ese pago entró por aviso, una sola vez, y quedó guardado.
+- Segunda corrida: se creó `Q5yPSGb8vJKd`, se paró y arrancó el servidor, la pantalla recargó y mostró el mismo QR con menos tiempo, y Hugo pagó ese QR. Pasó a *pagado*.
+- La base tiene un pago de $0.01 en ese cobro. El registro dice `Pago … numero=1 fuente=consulta` y, después, un `POST /webhooks/pey` con ese mismo pago que respondió 200 sin crear otra fila (RF-007).
+
+CE-001: cumplido. No se anota ningún dato de quien paga.
+
+### T073, paso 4 · Conciliación de un pago con el servidor apagado (2026-11-26)
+
+Pago real de $0.01, con la autorización de Hugo.
+
+- Se creó `_mQZ0YVbvhXN` (00:41:43 UTC, `fin_ventana` 01:01:43), se paró el servidor, se pagó y se esperó a que la ventana terminara. La base seguía con 0 pagos y `conciliado_hasta` en 00:41:43.
+- Se encendió el servidor a las 01:06:45 UTC. En el primer latido el registro mostró `Conciliación cobro=… pagos_nuevos=…` para los cobros cuya ventana terminó apagado: tres con `pagos_nuevos=0` y `_mQZ0YVbvhXN` con `pagos_nuevos=1`.
+- La base tiene un pago de $0.01 en ese cobro, número 1 y `fuente = consulta`, registrado 3 segundos después del arranque. `GET /api/cobros/_mQZ0YVbvhXN` dice `pagado`, `numero_de_pagos: 1` y `total_recibido: 0.01`. `conciliado_hasta` avanzó a 01:06:45.
+- El pago no entró por el aviso de pey, así que la prueba sí ejercitó la conciliación (RF-061). Ningún dato de quien paga se anota.
+
+RF-061: cumplido.
+
+### T073, paso 5 · Base de datos caída (2026-11-26)
+
+Servidor de desarrollo en el puerto 8001 con `DATABASE_URL=postgresql://nadie@127.0.0.1:1/x` en la línea de comando (valor falso, no un secreto). Sin dinero.
+
+- `POST /api/cobros` respondió **503** con `"No se pudo guardar el cobro. Intenta de nuevo en un momento."`, sin QR.
+- El registro tiene `ERROR … Base de datos sin respuesta al guardar cobro cobro=<id> (TimeoutError)` y otra del latido. No hay línea de QR creado ni de pey: no se llamó a pey (RF-012). La URL falsa no aparece en el registro.
+
+RF-012 y RF-015: cumplidos para el cobro. (El 503 de `GET` ya lo cubren las pruebas automáticas de F5.)
+
+### T073, medición de CE-003 con la base de datos (2026-11-26)
+
+Celular con datos móviles, por el túnel, 10 cobros de $0.01 sin pagar, de «Cobrar» al QR en pantalla. Hugo dio el rango, no los 10 valores: **nueve entre 3 y 5 s** y el primero tardó hasta unos 10 s.
+
+- Criterio (CE-003 con C-10): 9 de 10 en 5 s o menos. Se cumple, justo (9 de 10).
+- En F3, sin base de datos, los 10 estuvieron entre 3 y 5 s. El primer cobro lento es de un servidor recién reiniciado. Si se repite en una demo real, la acción sería la región del proyecto de Supabase (plan §11).
+
+### T074 · Encender la demo con la guía (2026-11-26)
+
+La demo se encendió con `docs/operacion-demo.md` desde la rama de F6, con acompañamiento. La dirección del túnel responde `{"estado":"ok","llave_pey":true,"secreto_aviso_pey":true,"base_de_datos":"responde"}`, comprobado desde el celular con datos móviles y por la IP del relay.
+
+Lo que faltó o confundió se corrigió en la guía (TK-26): el `<PID>` como marcador, el `cd backend` que dejaba la terminal en `backend` y el `caffeinate` tras un reinicio.
+
+### Resultado de F6 (2026-11-26)
+
+| Tarea | Resultado |
+|---|---|
+| T068 a T070 | 12 pruebas de la conciliación y la guía de operación con la base; revisadas por Claude (TK-23) |
+| T071 | `DATABASE_URL` de la demo distinta de la de desarrollo |
+| T072 | Base nueva marcada `demo`, 0001 a 0003 aplicadas (TK-25) |
+| T073 | Cobro que sobrevive al reinicio y se paga una sola vez (CE-001); pago recuperado por la conciliación con el servidor apagado (RF-061); base caída con 503 y sin llamar a pey (RF-012, RF-015); medición de CE-003 con 9 de 10 en 5 s o menos |
+| T074 | Demo encendida con la guía; `/salud` desde el celular con `llave_pey`, `secreto_aviso_pey` y `base_de_datos: "responde"` (TK-26) |
+| T075 cierre de F6 | Cerrada el 2026-11-26: 190 pruebas pasan y 32 se saltan sin PostgreSQL; 222 con PostgreSQL local; `ruff` limpio |
+
+- **Qué queda para Hugo:** unir el PR #143 con `main` cuando el CI esté en verde.
+- **Lo que sigue abierto:** FN (T076 a T079, el PR final con `Closes #90, #19, #94`).
+- **Commit sugerido:** `docs(003): cierre de F6, resultados de T073 a T075 (F6, TK-26)`.
