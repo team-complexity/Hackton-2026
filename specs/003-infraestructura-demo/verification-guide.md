@@ -495,7 +495,7 @@ La base es un proyecto nuevo y vacío (TK-25). `aplicar --entorno demo` marcó l
 
 Al probar el comando salió un fallo de la guía: `--env-file` va como `.env.demo`, porque `uv` aplica `--directory backend` antes (TK-24).
 
-### T073, paso 3 · El cobro sobrevive a un reinicio (2026-11-26)
+### T073, paso 3 · El cobro sobrevive a un reinicio (2026-11-25)
 
 Pago real de $0.01, con la autorización de Hugo, en la demo por el túnel y con la base de datos de la demo.
 
@@ -505,7 +505,7 @@ Pago real de $0.01, con la autorización de Hugo, en la demo por el túnel y con
 
 CE-001: cumplido. No se anota ningún dato de quien paga.
 
-### T073, paso 4 · Conciliación de un pago con el servidor apagado (2026-11-26)
+### T073, paso 4 · Conciliación de un pago con el servidor apagado (2026-11-25)
 
 Pago real de $0.01, con la autorización de Hugo.
 
@@ -516,7 +516,7 @@ Pago real de $0.01, con la autorización de Hugo.
 
 RF-061: cumplido.
 
-### T073, paso 5 · Base de datos caída (2026-11-26)
+### T073, paso 5 · Base de datos caída (2026-11-25)
 
 Servidor de desarrollo en el puerto 8001 con `DATABASE_URL=postgresql://nadie@127.0.0.1:1/x` en la línea de comando (valor falso, no un secreto). Sin dinero.
 
@@ -525,20 +525,20 @@ Servidor de desarrollo en el puerto 8001 con `DATABASE_URL=postgresql://nadie@12
 
 RF-012 y RF-015: cumplidos para el cobro. (El 503 de `GET` ya lo cubren las pruebas automáticas de F5.)
 
-### T073, medición de CE-003 con la base de datos (2026-11-26)
+### T073, medición de CE-003 con la base de datos (2026-11-25)
 
 Celular con datos móviles, por el túnel, 10 cobros de $0.01 sin pagar, de «Cobrar» al QR en pantalla. Hugo dio el rango, no los 10 valores: **nueve entre 3 y 5 s** y el primero tardó hasta unos 10 s.
 
 - Criterio (CE-003 con C-10): 9 de 10 en 5 s o menos. Se cumple, justo (9 de 10).
 - En F3, sin base de datos, los 10 estuvieron entre 3 y 5 s. El primer cobro lento es de un servidor recién reiniciado. Si se repite en una demo real, la acción sería la región del proyecto de Supabase (plan §11).
 
-### T074 · Encender la demo con la guía (2026-11-26)
+### T074 · Encender la demo con la guía (2026-11-25)
 
 La demo se encendió con `docs/operacion-demo.md` desde la rama de F6, con acompañamiento. La dirección del túnel responde `{"estado":"ok","llave_pey":true,"secreto_aviso_pey":true,"base_de_datos":"responde"}`, comprobado desde el celular con datos móviles y por la IP del relay.
 
 Lo que faltó o confundió se corrigió en la guía (TK-26): el `<PID>` como marcador, el `cd backend` que dejaba la terminal en `backend` y el `caffeinate` tras un reinicio.
 
-### Resultado de F6 (2026-11-26)
+### Resultado de F6 (2026-11-25)
 
 | Tarea | Resultado |
 |---|---|
@@ -547,8 +547,106 @@ Lo que faltó o confundió se corrigió en la guía (TK-26): el `<PID>` como mar
 | T072 | Base nueva marcada `demo`, 0001 a 0003 aplicadas (TK-25) |
 | T073 | Cobro que sobrevive al reinicio y se paga una sola vez (CE-001); pago recuperado por la conciliación con el servidor apagado (RF-061); base caída con 503 y sin llamar a pey (RF-012, RF-015); medición de CE-003 con 9 de 10 en 5 s o menos |
 | T074 | Demo encendida con la guía; `/salud` desde el celular con `llave_pey`, `secreto_aviso_pey` y `base_de_datos: "responde"` (TK-26) |
-| T075 cierre de F6 | Cerrada el 2026-11-26: 190 pruebas pasan y 32 se saltan sin PostgreSQL; 222 con PostgreSQL local; `ruff` limpio |
+| T075 cierre de F6 | Cerrada el 2026-11-25: 190 pruebas pasan y 32 se saltan sin PostgreSQL; 222 con PostgreSQL local; `ruff` limpio |
 
 - **Qué queda para Hugo:** unir el PR #143 con `main` cuando el CI esté en verde.
 - **Lo que sigue abierto:** FN (T076 a T079, el PR final con `Closes #90, #19, #94`).
 - **Commit sugerido:** `docs(003): cierre de F6, resultados de T073 a T075 (F6, TK-26)`.
+
+## FN — Cierre
+
+Fecha: 2026-11-25. Grok. No se cambió código de `backend/` ni de `web/`. No se encendió la demo ni el túnel, y ninguna prueba llamó a pey. No se leyeron `backend/.env` ni `backend/.env.demo`.
+
+### T076 · C-6 y C-7 siguen aplicados
+
+Las dos filas de `specs/003-infraestructura-demo/spec.md` §8.2 dicen aplicado:
+
+- C-6, línea 429: «aplicado el 2026-11-24» (F5).
+- C-7, línea 430: «aplicado el 2026-11-21» (F2).
+
+Búsqueda de T021, ejecutada tal cual (`git grep -n "5173" specs/002-web-mvp web/README.md`). Salida:
+
+| Archivo | Líneas |
+|---|---|
+| `specs/002-web-mvp/plan.md` | 323 (fila histórica QP-2) |
+| `specs/002-web-mvp/verification-guide.md` | 81, 84, 85 (F2, con la nota de flujo anterior); 157, 162, 165, 167, 195, 197 (F3, 2026-11-15, con la nota de flujo anterior); 483, 486 (FN de la 002, 2026-11-15); 520 (revisión del 2026-11-16); 537 (pruebas reales, 2026-11-16); 584 (C-4 y C-5, fecha 2026-11-16) |
+
+`web/README.md` no aparece. Cada coincidencia está en una sección con fecha de esa guía o en la fila histórica QP-2. Cumple el «hecho cuando» de T021.
+
+Búsqueda de T064, ejecutada tal cual (`git grep -n "se perdió al reiniciar\|0.0.0.0" specs/001-backend-mvp backend/README.md`). No escribió ninguna línea (código de salida 1). Nada vigente. Cumple.
+
+### T077 · Revisión de seguridad
+
+Cada punto se marcó leyendo el archivo citado o ejecutando el comando. Ninguno dejó un hallazgo nuevo que haya que corregir.
+
+**Secretos (CE-010, RF-038).** Ejecuté `git grep -nE "(PEY_API_KEY|PEY_WEBHOOK_SECRET|DATABASE_URL)=.+"`. Solo hay textos de la spec, de las tareas y de esta guía: `DATABASE_URL=` vacía a propósito (plan.md:320, tasks.md:97 y :756, verification-guide.md:407) o una URL falsa de las pruebas (tasks.md:417 y :772, verification-guide.md:521). No hay un valor real. `git grep -n "secrets\." -- .github/workflows/ci.yml` no encontró nada (código de salida 1). El flujo declara `permissions: contents: read` (`.github/workflows/ci.yml:19-20`). La contraseña `prueba` de las líneas 65 y 84 es la del PostgreSQL desechable del CI, no un `secrets.` de GitHub. Cumple.
+
+**Túnel (RF-059, RF-056).** `git ls-files` no tiene archivos de Tailscale, de llave ni de sesión. `git grep` de `tskey-`, `TS_AUTHKEY`, `tailscale login`, `authkey` y `TAILSCALE_AUTH` no encontró nada. La dirección pública `*.ts.net` está en la documentación (TK-1); no es una llave ni una sesión. Cumple.
+
+`git grep -n "0.0.0.0" -- docs backend specs/003-infraestructura-demo`, tal como lo escribe T077, también acierta en líneas que no son esa dirección, porque en `git grep` el punto es cualquier carácter (`backend/app/cobros.py:173`, `backend/tests/test_almacen.py:39` y `:326`, `backend/tests/test_guardar_cobros.py:23` y `:25`, `backend/uv.lock:1097`). Con la cadena fija (`git grep -nF "0.0.0.0"` sobre las mismas carpetas) solo quedan textos que dicen no usarla: plan.md:247, research.md:49, spec.md:429 (C-6 h), tasks.md:278, :288, :680, :685 y :802, y verification-guide.md:182. `docs/operacion-demo.md` no aparece. Cumple RF-056.
+
+**Base de datos (RF-022).** Leí `supabase/migraciones/` y el SQL del comando.
+
+| Tabla | RLS | `revoke all … from anon, authenticated` |
+|---|---|---|
+| `negocios`, `cupones`, `cobros`, `pagos`, `avisos_webhook` | `0001_esquema_inicial.sql:145-149` | `:151-152` (también la vista `cobros_con_estado`, que además es `security_invoker`, `:117`) |
+| `estado_del_servidor` | `0003_estado_del_servidor.sql:6` | `:8` |
+| `cambios_de_estructura`, `entorno_de_la_base` | `backend/app/migraciones.py:36-37` | `:38-39` |
+
+`0002_imagen_del_qr.sql` solo agrega `cobros.qr_imagen` a una tabla que ya tiene RLS. Cumple.
+
+**Aviso (DP-34).** Leí `backend/app/main.py`. `Webhook(secreto).verify` está en las líneas 404-408. La primera llamada al almacén es `cobros.aviso_ya_visto` en la línea 433, después de la firma. Un `amount` ilegible, de 0 o negativo en el evento de pago responde 400 en las líneas 425-427, también antes de tocar la base. Cumple.
+
+**Demo pública.** Los límites usan `request.client.host` después de `ProxyHeadersMiddleware` (`main.py:228-229`, `:231-232`, `:285-286`). La plantilla `backend/.env.demo.example:16-17` deja 30 y 30 (DP-36). F0 (T005) ya vio la IP real, así que no se aplicó DP-40. CORS sale de `WEB_ORIGIN` (`config.py:31` y `:48-50`, `main.py:222-226`); en la plantilla es la dirección del túnel (`backend/.env.demo.example:13`) y T027 lo comprobó. La CSP de `web/index.html:8` tiene `connect-src 'self'` y nada más. Cumple. Sigue abierto, ya anotado en F2 (T027) y sin cambio aquí: un `POST` simple desde otro origen puede crear un cobro aunque el navegador no lea la respuesta. Cerrarlo sería un `C-n` a la spec 001.
+
+**Datos de quien paga (RF-009).** Los `insert` de `backend/app/almacen_postgres.py:29-33` y `:50-54` no tienen columnas de quien paga. `_pago_de` (`backend/app/pey.py:183-194`) no lee `metadata`. La conciliación registra cobro, páginas, pagos nuevos y `requestId` (`backend/app/tareas.py:233-248`) y el aviso pendiente solo guarda id del QR, transacción, monto y hora (`tareas.py:24-31`). Las pruebas `test_los_datos_de_quien_paga_no_se_guardan_ni_se_registran` (`backend/tests/test_guardar_cobros.py:366`) y la de la conciliación (`backend/tests/test_conciliacion.py:461-462`) lo comprueban. Cumple.
+
+### T078 · Quickstart de punta a punta
+
+Cada sección queda enlazada a lo que ya está en esta guía. Lo que no coincidía con lo hecho se corrigió en `quickstart.md` y quedó como TK-27.
+
+| Sección | Resultado | Dónde |
+|---|---|---|
+| §1 Pruebas automáticas | En verde, sin pey ni Supabase. Con PostgreSQL local también (abajo, T079). Deduplicación en F5 y conciliación en F6 | F5 (T050 a T060), F6 (T068 a T070), T079 |
+| §2 CI | `servidor` en rojo con una prueba que falla y el PR no se puede unir; sin `secrets.` | F1 (T010 a T014, TK-6). El quickstart ya no dice `assert False` |
+| §3.0 Túnel sin la web | HTTPS, canal de toda la ventana, IP real, misma dirección. Sin plan B | F0 (T001 a T006, TK-5) |
+| §3 Demo con la web | Pantalla por el túnel, canal de 20 min, dos redes, misma dirección, CORS y red local | F2 (T026 y T027) |
+| §4 Pago real | QR en 5 s o menos (C-10), pagos de $0.01 en Android y en iPhone, firma válida | F3 (T029 a T031) |
+| §4 paso 4, reenvío | El portal no reenvía. Se repitió el aviso firmado: un solo pago y no volvió a sonar | F3 (T031, TK-8). Corregido en el quickstart |
+| §4 paso 5, Leonel | No se hizo. Sigue en el issue #105 | F3 (T031, TK-9). El quickstart lo deja pendiente |
+| §5 Encender con la guía | `/salud` por el túnel, desde el celular, con llave, secreto y base que responde | F6 (T074, TK-26) |
+| §6.1 Migraciones en desarrollo | Base vacía: el CI aplica dos veces. Base de desarrollo: el esquema ya estaba a mano y se anotó 0001 | F4 (T045 a T047) y el trabajo `base-de-datos` (F4) |
+| §6.2 Base de la demo | Proyecto nuevo y vacío: `aplicar --entorno demo` aplicó 0001, 0002 y 0003. El comando es `uv run --directory backend --env-file .env.demo` | F6 (T071 y T072, TK-24 y TK-25). Corregido en el quickstart |
+| §6.3 Reinicio con un pago | El mismo QR volvió y se pagó una sola vez | F6 (T073, paso 3) |
+| §6.4 Pago con la demo apagada | La conciliación lo registró al encender, un solo pago | F6 (T073, paso 4) |
+| §6.5 Base caída | 503 para el dueño y el registro dice que no se llamó a pey | F6 (T073, paso 5) |
+
+### T079 · Cierre
+
+Ejecuté, desde la raíz:
+
+| Comando | Resultado |
+|---|---|
+| `uv run --directory backend pytest -q` | 190 passed, 32 skipped, 1 warning (`StarletteDeprecationWarning`) |
+| `uv run --directory backend ruff check .` | All checks passed |
+| `uv run --directory backend ruff format --check .` | 37 files already formatted |
+| `uv run --directory backend ruff check --config pyproject.toml ../web` | All checks passed |
+| `uv run --directory backend ruff format --config pyproject.toml --check ../web` | 12 files already formatted |
+| `uv run --directory backend pytest ../web -q` | 266 passed, 32 skipped, 1 warning (`PytestRemovedIn10Warning`) |
+| Lo mismo del backend con `PRUEBAS_DATABASE_URL` al PostgreSQL local del puerto 5434 (`pg_isready` dijo `accepting connections`) | 222 passed, 1 warning |
+
+La primera corrida de la web, dentro del entorno del agente, falló al arrancar el navegador: Playwright buscaba los binarios en una caché vacía. La repetí apuntando a los navegadores que ya estaban instalados en la máquina. No instalé navegadores ni cambié pruebas.
+
+T076 a T079 quedaron marcadas en `tasks.md`. El estado de ese archivo dice FN terminada el 2026-11-25. La descripción del PR final y el mensaje de commit van en el chat, no en el repositorio: el PR lo abre Hugo.
+
+### Resultado de FN (2026-11-25)
+
+| Tarea | Resultado |
+|---|---|
+| T076 | C-6 y C-7 dicen aplicado; las búsquedas de T021 y T064 siguen limpias |
+| T077 | Los seis puntos de la revisión cumplen. Sin hallazgo nuevo. Sigue el `POST` simple de F2 (T027) |
+| T078 | §1 a §6 enlazadas. Quickstart corregido en §2, §4 y §6 (TK-27) |
+| T079 | Backend 190/32 y 222 con PostgreSQL local; web 266/32; ruff limpio |
+
+- **Qué queda para Hugo:** el commit, el push y el PR con `Closes #90, #19, #94`. La prueba de Leonel sigue en #105.
+- **Commit sugerido:** `docs(003): cierre de la spec 003 y guía de verificación completa (FN)`.

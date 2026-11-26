@@ -29,9 +29,9 @@ uv run --directory backend pytest ../web -q
 
 ## 2. CI (CE-006) — F1
 
-1. Abre un pull request hacia `main` con un `assert False` en una prueba.
+1. Abre un pull request hacia `main` con una prueba que falla a propósito. En F1 se usó `assert 1 + 1 == 3`, no `assert False`: ruff lo rechaza (B011) y el trabajo fallaría en el lint antes de pytest (TK-6).
 2. **Se espera**: el trabajo `servidor` sale en rojo y GitHub no deja unir.
-3. Quita el `assert False`. **Se espera**: los trabajos en verde, y GitHub deja unir sin pedir aprobación.
+3. Quita la prueba que falla. **Se espera**: los trabajos en verde, y GitHub deja unir sin pedir aprobación.
 4. Revisa el flujo: `permissions: contents: read` y ningún `secrets.` ([contrato](contracts/ci.md)).
 
 ## 3.0 Prueba del túnel sin la web — F0 (QP-12)
@@ -60,8 +60,8 @@ Con el servidor actual (que todavía no entrega la web) y la configuración de l
 1. **Aviso de pey (RF-025)**: en el portal de pey, el aviso de la llave de la demo apunta a `https://<dirección del túnel>/webhooks/pey`. **Se espera**: después del primer pago, el registro muestra el aviso con firma válida.
 2. **QR en 5 s o menos (CE-003, C-10)**: crea 10 cobros desde el celular con datos móviles y mide de "Cobrar" al QR. **Se espera**: 9 de 10 en 5 s o menos. Anota los tiempos en la guía de verificación.
 3. **Pago de $0.01** con autorización de Hugo, en un Android y en un iPhone, pagando desde otro celular con la app del banco. **Se espera**: suena y muestra "Pago recibido" en menos de 2 s después de que pey entrega el aviso (hora del aviso en el registro frente a la hora en pantalla). En uno de los dos, paga después del minuto 15 del canal (CE-004).
-4. **Reenvío**: en el portal de pey, reenvía el aviso. **Se espera**: la pantalla no vuelve a sonar y el cobro sigue con un pago.
-5. **Leonel (N-17)**: abre el enlace desde su red y sus celulares y repite 3.1 y 4.2. Avisa a Hugo si algo falla.
+4. **Reenvío**: el portal de pey no ofrece reenviar un aviso (TK-8). La comprobación fue repetir el aviso ya firmado, con la misma transacción, primero con otro `webhook-id` y luego con el mismo. **Se espera**: la pantalla no vuelve a sonar y el cobro sigue con un pago.
+5. **Leonel (N-17)**: abre el enlace desde su red y sus celulares y repite 3.1 y 4.2. Avisa a Hugo si algo falla. En F3 no se pudo ese día y quedó en el issue #105 (TK-9); sigue pendiente.
 
 ## 5. Encender la demo con la guía (CE-016) — F6
 
@@ -76,8 +76,14 @@ Con la computadora recién prendida, Hugo sigue solo `docs/operacion-demo.md` y 
    uv run --directory backend python -m app.migraciones aplicar
    ```
 
-   **Se espera**: la primera aplica 0001, 0002 y 0003 y carga los datos de prueba; la segunda dice "No había nada que aplicar."
-2. **Base de la demo (historia 6, escenario 3; RF-051)**: Hugo exporta una copia, borra los datos de prueba del PR #97 y corre `aplicar --entorno demo --ya-aplicada 0001`. **Se espera**: aplica solo 0002 y 0003, sin borrar nada. El comando lleva `uv run --env-file backend/.env.demo` (QP-14).
+   **Se espera**, en una base vacía (es lo que corre el CI, CE-007): la primera aplica 0001, 0002 y 0003 y carga los datos de prueba; la segunda dice "No había nada que aplicar." En la base de desarrollo de Supabase el esquema del PR #97 ya estaba a mano, así que el primer comando se negó y se usó `aplicar --ya-aplicada 0001 --entorno local --datos-de-prueba` (guía de verificación, F4, T045 a T047): anotó 0001, aplicó 0002 y 0003, cargó los datos de prueba, y la segunda corrida dijo "No había nada que aplicar."
+2. **Base de la demo (historia 6, escenario 3; RF-051)**: en F6 era un proyecto nuevo y vacío (TK-25). Desde la raíz:
+
+   ```text
+   uv run --directory backend --env-file .env.demo python -m app.migraciones aplicar --entorno demo
+   ```
+
+   **Se espera**: marca la base como `demo` y aplica 0001, 0002 y 0003. No hizo falta exportar ni borrar datos de prueba, ni `--ya-aplicada 0001`. Esa opción sigue para una base que alguien migró a mano: anota 0001 y aplica 0002 y 0003. Con `--directory backend`, el archivo es `.env.demo` y no `backend/.env.demo` (TK-24): `uv` entra primero a `backend/` y busca el archivo desde ahí.
 3. **Reinicio con un pago (CE-001)**: crea un cobro en la demo, detén el servidor, vuelve a arrancarlo, recarga la pantalla y paga $0.01. **Se espera**: vuelve el mismo QR con su tiempo restante, y suena "Pago recibido".
 4. **Pago con la demo apagada (RF-061)**: crea un cobro de $0.01, apaga el servidor, paga, espera a que termine la ventana (20 minutos) y vuelve a encender. **Se espera**: en el primer minuto, el registro muestra la conciliación de ese cobro y `GET /api/cobros/{id}` lo devuelve *pagado*, con un solo pago.
 5. **Base de datos caída (RF-012, RF-015)**: con `DATABASE_URL` apuntando a una dirección que no responde, crea un cobro. **Se espera**: un mensaje para el dueño, y el registro dice que no se llamó a pey.
