@@ -6,7 +6,7 @@
 
 ## 2. Requisitos
 
-RF-023, RF-024, RF-030, RF-039.
+RF-023, RF-024, RF-030, RF-035, RF-039.
 
 ## 3. Petición
 
@@ -21,6 +21,7 @@ Sin cuerpo.
 | Código | Cuándo | Cuerpo |
 |---|---|---|
 | 200 | El cobro estaba *pendiente* y queda *cancelado* | [Objeto cobro](crear-cobro.md#objeto-cobro) con `estado: "cancelado"` |
+| 403 | La petición trae `Origin` y no está en `WEB_ORIGIN` ni su host y puerto coinciden con el encabezado `Host`. No se consulta el almacén | `{"detail": "Origen no permitido"}` |
 | 404 | No existe | `{"detail": "Ese cobro no existe"}` |
 | 409 | El cobro está *pagado*, *vencido* o ya *cancelado* | `{"detail": "Solo se puede cancelar un cobro que todavía no se paga ni vence"}` |
 
@@ -33,4 +34,4 @@ Al cancelar, el canal emite `cancelado` en menos de 15 s (RF-030) y queda regist
 ## 6. Seguridad
 
 - Sin autenticación: cualquiera con el `id` puede cancelar (supuesto aceptado, §7 de la spec). Cancelar no borra pagos ni impide registrarlos.
-- Usa `POST`, que CORS ya permite.
+- Usa `POST`. CORS permite ese método, y además, si viene `Origin`, tiene que estar en `WEB_ORIGIN` o coincidir en host y puerto con el encabezado `Host` (no se compara el esquema). Si no, 403 sin cancelar. Sin `Origin` se acepta. `Origin: null` se rechaza (RF-035, C-11).
